@@ -1,12 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:refactor_template/constants.dart';
-import 'package:refactor_template/screens/home/home_screen.dart';
-import 'package:refactor_template/utils/rive_utils.dart';
+import 'package:refactor_template/config/constants/constants.dart';
+import 'package:refactor_template/features/sistema/screens/home/home_screen.dart';
+import 'package:refactor_template/core/utils/rive_utils.dart';
 import 'package:rive/rive.dart';
 
-import '../../model/menu.dart';
+import '../../../../config/menu/menu.dart';
 import 'components/btm_nav_item.dart';
 import 'components/menu_btn.dart';
 import 'components/side_bar.dart';

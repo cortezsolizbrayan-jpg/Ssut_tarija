@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
 
-import '../../../model/menu.dart';
+import '../../../../../config/menu/menu.dart';
 
 class SideMenu extends StatelessWidget {
-  const SideMenu(
-      {super.key,
-      required this.menu,
-      required this.press,
-      required this.riveOnInit,
-      required this.selectedMenu});
+  const SideMenu({
+    super.key,
+    required this.menu,
+    required this.press,
+    required this.riveOnInit,
+    required this.selectedMenu,
+  });
 
   final Menu menu;
   final VoidCallback press;

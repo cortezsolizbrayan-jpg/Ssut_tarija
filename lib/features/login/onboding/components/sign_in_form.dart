@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:refactor_template/screens/entryPoint/entry_point.dart';
+import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 import 'package:rive/rive.dart';
 
 class SignInForm extends StatefulWidget {

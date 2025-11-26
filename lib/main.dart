@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:refactor_template/screens/onboding/onboding_screen.dart';
+import 'package:refactor_template/config/constants/environment.dart';
+import 'package:refactor_template/features/login/onboding/onboding_screen.dart';
 
-void main() {
+void main() async {
+  await Environment.initEnvironment();
   runApp(const MyApp());
 }
 
