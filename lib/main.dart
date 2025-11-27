@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/environment.dart';
 import 'package:refactor_template/features/login/onboding/onboding_screen.dart';
 
+import 'features/login/pages/login_page.dart';
+
 void main() async {
   await Environment.initEnvironment();
   runApp(const MyApp());
@@ -33,6 +35,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: const OnbodingScreen(),
+      // home: const LoginPage(),
     );
   }
 }
