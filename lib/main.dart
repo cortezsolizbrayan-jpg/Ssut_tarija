@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/environment.dart';
-import 'package:refactor_template/features/login/onboding/onboding_screen.dart';
+import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
 
-void main() async {
-  await Environment.initEnvironment();
+void main() {
+  Environment.initEnvironment();
   runApp(const MyApp());
 }
 
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
           errorBorder: defaultInputBorder,
         ),
       ),
-      home: const OnbodingScreen(),
+      home: const DiplomadosScreen(),
     );
   }
 }

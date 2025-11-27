@@ -29,6 +29,7 @@ flutter:
     - assets/icons/
     - assets/RiveAssets/
 
+
   fonts:
     - family: Intel
       fonts:

@@ -1,13 +1,12 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 class Environment {
-  static Future<void> initEnvironment() async {
-    await dotenv.load(fileName: '.env');
-  }
-
-  static String apiUrlPsg =
-      dotenv.env['THE_API_PSG'] ??
+  // Valores por defecto - puedes cambiarlos directamente aquí
+  static const String apiUrlPsg =
       'No hay comunicación con el servicio rest de Posgrado (UPEA)';
+  static const String token = 'No se estableció el token';
 
-  static String token = dotenv.env['TOKEN'] ?? 'No se estableció el token';
+  // Método de inicialización simplificado - ya no necesita ser async
+  static void initEnvironment() {
+    // Ya no cargamos ningún archivo .env
+    // Los valores están definidos directamente arriba
+  }
 }
