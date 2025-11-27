@@ -16,8 +16,8 @@ class AppHeader extends StatelessWidget {
           ],
         ),
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+          bottomLeft: Radius.circular(175),
+          bottomRight: Radius.circular(175),
         ),
       ),
       child: SafeArea(
