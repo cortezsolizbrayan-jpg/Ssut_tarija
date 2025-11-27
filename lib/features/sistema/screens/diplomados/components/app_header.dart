@@ -219,38 +219,63 @@ class AppHeader extends StatelessWidget {
                 ),
               ),
             ),
-            // Selector de tipo de programa
+            // Selector de tipo de programa (Línea de tiempo)
             Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 20),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _ProgramTypeSelector(
-                        label: 'Diplomado',
-                        isSelected: true,
-                        onTap: () {},
-                      ),
-                      const SizedBox(width: 16),
-                      _ProgramTypeSelector(
-                        label: 'Maestría',
-                        isSelected: false,
-                        onTap: () {},
-                      ),
-                      const SizedBox(width: 16),
-                      _ProgramTypeSelector(
-                        label: 'Doctorado',
-                        isSelected: false,
-                        onTap: () {},
-                      ),
-                      const SizedBox(width: 16),
-                      _ProgramTypeSelector(
-                        label: 'Posdoctorado',
-                        isSelected: false,
-                        onTap: () {},
-                      ),
-                    ],
+                  // Línea de tiempo con círculos conectados
+                  SizedBox(
+                    height: 80,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Línea horizontal conectando los círculos
+                        Positioned(
+                          left: 40,
+                          right: 40,
+                          top: 25,
+                          child: Container(
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                        ),
+                        // Círculos con iconos
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _ProgramTypeSelector(
+                              label: 'Diplomado',
+                              type: ProgramType.diplomado,
+                              isSelected: true,
+                              onTap: () {},
+                            ),
+                            _ProgramTypeSelector(
+                              label: 'Maestría',
+                              type: ProgramType.maestria,
+                              isSelected: false,
+                              onTap: () {},
+                            ),
+                            _ProgramTypeSelector(
+                              label: 'Doctorado',
+                              type: ProgramType.doctorado,
+                              isSelected: false,
+                              onTap: () {},
+                            ),
+                            _ProgramTypeSelector(
+                              label: 'Posdoctorado',
+                              type: ProgramType.posdoctorado,
+                              isSelected: false,
+                              onTap: () {},
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -262,16 +287,51 @@ class AppHeader extends StatelessWidget {
   }
 }
 
+enum ProgramType { diplomado, maestria, doctorado, posdoctorado }
+
 class _ProgramTypeSelector extends StatelessWidget {
   final String label;
+  final ProgramType type;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _ProgramTypeSelector({
     required this.label,
+    required this.type,
     required this.isSelected,
     required this.onTap,
   });
+
+  Color _getCircleColor() {
+    if (isSelected) {
+      return Colors.green;
+    }
+    switch (type) {
+      case ProgramType.maestria:
+        return const Color(0xFF87CEEB); // Azul claro
+      case ProgramType.doctorado:
+      case ProgramType.posdoctorado:
+        return Colors.grey.shade400; // Gris claro
+      default:
+        return Colors.grey.shade400;
+    }
+  }
+
+  Widget _getIcon() {
+    if (isSelected && type == ProgramType.diplomado) {
+      return const Icon(Icons.check, color: Colors.white, size: 24);
+    }
+    switch (type) {
+      case ProgramType.maestria:
+        return const Icon(Icons.school, color: Colors.white, size: 20);
+      case ProgramType.doctorado:
+        return const Icon(Icons.menu_book, color: Colors.white, size: 20);
+      case ProgramType.posdoctorado:
+        return const Icon(Icons.more_horiz, color: Colors.white, size: 24);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -284,17 +344,15 @@ class _ProgramTypeSelector extends StatelessWidget {
             height: 50,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? Colors.green : Colors.white.withOpacity(0.3),
+              color: _getCircleColor(),
               border: Border.all(
                 color: isSelected
                     ? Colors.green
-                    : Colors.white.withOpacity(0.5),
+                    : Colors.white.withOpacity(0.3),
                 width: 2,
               ),
             ),
-            child: isSelected
-                ? const Icon(Icons.check, color: Colors.white, size: 24)
-                : null,
+            child: Center(child: _getIcon()),
           ),
           const SizedBox(height: 8),
           Text(
