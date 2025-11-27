@@ -31,7 +31,6 @@ flutter:
     - assets/icons/
     - assets/RiveAssets/
     - assets/images/
-    - .env
 
 
   fonts:

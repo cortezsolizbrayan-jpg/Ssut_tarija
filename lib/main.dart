@@ -2,15 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/environment.dart';
 import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
 
-<<<<<<< HEAD
 void main() {
   Environment.initEnvironment();
-=======
-import 'features/login/pages/login_page.dart';
-
-void main() async {
-  await Environment.initEnvironment();
->>>>>>> 57af039d62d7b7ebb146aae37dc1b3c8b2adebd2
   runApp(const MyApp());
 }
 
@@ -39,12 +32,7 @@ class MyApp extends StatelessWidget {
           errorBorder: defaultInputBorder,
         ),
       ),
-<<<<<<< HEAD
       home: const DiplomadosScreen(),
-=======
-      home: const OnbodingScreen(),
-      // home: const LoginPage(),
->>>>>>> 57af039d62d7b7ebb146aae37dc1b3c8b2adebd2
     );
   }
 }
