@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/environment.dart';
-import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
+import 'package:refactor_template/features/sistema/screens/inicio/inicio_screen.dart';
 
 void main() {
   Environment.initEnvironment();
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
           errorBorder: defaultInputBorder,
         ),
       ),
-      home: const DiplomadosScreen(),
+      home: const InicioScreen(),
     );
   }
 }
