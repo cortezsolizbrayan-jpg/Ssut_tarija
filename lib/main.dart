@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/environment.dart';
+import 'package:refactor_template/config/router/app_router.dart';
+import 'package:refactor_template/features/login/presentation/pages/login_page.dart';
 import 'package:refactor_template/features/sistema/screens/inicio/inicio_screen.dart';
 
 void main() {
@@ -13,7 +15,9 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
+      routerConfig: goRouter,
+      debugShowCheckedModeBanner: false,
       title: 'The Flutter Way',
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFEEF1F8),
@@ -32,7 +36,6 @@ class MyApp extends StatelessWidget {
           errorBorder: defaultInputBorder,
         ),
       ),
-      home: const InicioScreen(),
     );
   }
 }
