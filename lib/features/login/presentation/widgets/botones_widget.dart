@@ -102,3 +102,36 @@ class _SocialIcon extends StatelessWidget {
     );
   }
 }
+
+class BiometriaWidget extends StatelessWidget {
+  const BiometriaWidget({super.key, required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.fingerprint,
+              color: const Color(0xFF1A4C9C),
+              size: width * 0.08,
+            ),
+            SizedBox(width: width * 0.02),
+            Text(
+              'Ingresar con biometría',
+              style: TextStyle(
+                color: const Color(0xFF1A4C9C),
+                fontWeight: FontWeight.w600,
+                fontSize: width * 0.04,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}

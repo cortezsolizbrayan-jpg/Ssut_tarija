@@ -48,7 +48,7 @@ class LoginPage extends StatelessWidget {
                         FadeInUp(
                           duration: const Duration(milliseconds: 600),
                           delay: const Duration(milliseconds: 1300),
-                          child: _TouchIdPrompt(width: width),
+                          child: BiometriaWidget(width: width),
                         ),
                         SizedBox(height: width * 0.06),
                         FadeInUp(
@@ -152,124 +152,6 @@ class _TopHero extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _LoginField extends StatelessWidget {
-  const _LoginField({
-    required this.label,
-    required this.width,
-    this.icon,
-    this.obscureText = false,
-    this.suffix,
-  });
-
-  final String label;
-  final IconData? icon;
-  final double width;
-  final bool obscureText;
-  final Widget? suffix;
-
-  @override
-  Widget build(BuildContext context) {
-    const borderColor = Color(0xFFE6E9EF);
-
-    return TextField(
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        hintText: label,
-        hintStyle: TextStyle(
-          color: const Color(0xFF9AA2B1),
-          fontSize: width * 0.04,
-        ),
-        prefixIcon: icon == null
-            ? null
-            : Icon(icon, size: width * 0.06, color: const Color(0xFF9AA2B1)),
-        suffixIcon: suffix,
-        filled: true,
-        fillColor: const Color(0xFFF8FAFD),
-        contentPadding: EdgeInsets.symmetric(vertical: width * 0.045),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: borderColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: borderColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFF1A4C9C)),
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.width});
-
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {},
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFC727),
-          foregroundColor: const Color(0xFF0D1730),
-          elevation: 8,
-          padding: EdgeInsets.symmetric(vertical: width * 0.04),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(36),
-          ),
-          shadowColor: const Color(0x33FFC727),
-        ),
-        child: Text(
-          'INICIAR SESIÓN',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: width * 0.04,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TouchIdPrompt extends StatelessWidget {
-  const _TouchIdPrompt({required this.width});
-
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.fingerprint,
-              color: const Color(0xFF1A4C9C),
-              size: width * 0.08,
-            ),
-            SizedBox(width: width * 0.02),
-            Text(
-              'Ingresar con biometría',
-              style: TextStyle(
-                color: const Color(0xFF1A4C9C),
-                fontWeight: FontWeight.w600,
-                fontSize: width * 0.04,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
