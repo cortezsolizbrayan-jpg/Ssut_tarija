@@ -1,2 +1,3 @@
 export 'inicial_page.dart';
-export 'login_page.dart';
+export 'pagina_login.dart';
+export 'splash_screen.dart';

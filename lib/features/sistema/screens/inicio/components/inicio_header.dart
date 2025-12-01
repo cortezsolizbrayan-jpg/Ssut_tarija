@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
 
 class InicioHeader extends StatelessWidget {
   const InicioHeader({super.key});
@@ -179,26 +180,52 @@ class InicioHeader extends StatelessWidget {
                 ],
               ),
             ),
-            // Título y subtítulo
+            // Título, subtítulo y botón "Ver mis programas"
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Empieza hoy',
+                    'Hola!, Guadalupe',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Estudia hoy, triunfa mañana...',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 32,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Inicia tu ruta de posgrado.',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: 180,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFC900),
+                        foregroundColor: const Color(0xFF1A3A5C),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DiplomadosScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Ver mis programas',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ],

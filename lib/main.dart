@@ -5,7 +5,9 @@ import 'package:refactor_template/config/router/app_router.dart';
 
 void main() {
   Environment.initEnvironment();
-  debugPaintPointersEnabled = true;
+  // Desactivamos la visualización de zonas táctiles para evitar
+  // interferencias al hacer clic, especialmente en web.
+  debugPaintPointersEnabled = false;
   runApp(const MyApp());
 }
 

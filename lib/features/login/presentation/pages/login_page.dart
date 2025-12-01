@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:flutter/material.dart';
 import 'package:refactor_template/features/login/presentation/widgets/widgets.dart';
 
-class LoginPage extends StatelessWidget {
-  static const name = 'login-page';
-  const LoginPage({super.key});
+/// Pantalla de inicio de sesión principal de la aplicación.
+class PaginaLogin extends StatelessWidget {
+  static const name = 'pagina-login';
+  const PaginaLogin({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,46 +15,42 @@ class LoginPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: lightBackground,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxHeight = constraints.maxHeight;
-
-          return SingleChildScrollView(
-            padding: EdgeInsets.zero,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: maxHeight),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.zero,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      _TopHero(width: width),
-                      Positioned(
-                        bottom: -width * 0.75,
-                        left: width * 0.04,
-                        right: width * 0.04,
-                        child: SlideInUp(
-                          duration: const Duration(milliseconds: 1000),
-                          delay: const Duration(milliseconds: 300),
-                          child: TarjetaAutenticacionWidget(width: width),
-                        ),
-                      ),
-                    ],
+                  // Header azul
+                  _TopHero(width: width),
+                  // Tarjeta de autenticación responsiva
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: width * 0.06,
+                      vertical: width * 0.04,
+                    ),
+                    child: SlideInUp(
+                      duration: const Duration(milliseconds: 800),
+                      delay: const Duration(milliseconds: 200),
+                      child: TarjetaAutenticacionWidget(width: width),
+                    ),
                   ),
-                  SizedBox(height: width * 0.88),
+                  // Sección de biometría y redes sociales
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: width * 0.08),
                     child: Column(
                       children: [
                         FadeInUp(
                           duration: const Duration(milliseconds: 600),
-                          delay: const Duration(milliseconds: 1300),
+                          delay: const Duration(milliseconds: 600),
                           child: BiometriaWidget(width: width),
                         ),
                         SizedBox(height: width * 0.06),
                         FadeInUp(
                           duration: const Duration(milliseconds: 600),
-                          delay: const Duration(milliseconds: 1500),
+                          delay: const Duration(milliseconds: 800),
                           child: BotonesSociales(width: width),
                         ),
                         SizedBox(height: width * 0.10),
@@ -62,9 +59,9 @@ class LoginPage extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -86,8 +83,9 @@ class _TopHero extends StatelessWidget {
         bottom: width * 0.18,
       ),
       decoration: const BoxDecoration(
+        // Header azul corporativo
         gradient: LinearGradient(
-          colors: [Color(0xFF113A82), Color(0xFF0B2A5C)],
+          colors: [Color(0xFF005BAC), Color(0xFF005BAC)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -141,7 +139,7 @@ class _TopHero extends StatelessWidget {
             duration: const Duration(milliseconds: 800),
             delay: const Duration(milliseconds: 400),
             child: Text(
-              'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor',
+              'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, la educacion es el futuro',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withAlpha(136),

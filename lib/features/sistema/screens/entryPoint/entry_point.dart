@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/constants.dart';
-import 'package:refactor_template/features/sistema/screens/home/home_screen.dart';
 import 'package:refactor_template/core/utils/rive_utils.dart';
+import 'package:refactor_template/features/sistema/screens/inicio/inicio_screen.dart';
 import 'package:rive/rive.dart';
 
 import '../../../../config/menu/menu.dart';
@@ -11,14 +11,17 @@ import 'components/btm_nav_item.dart';
 import 'components/menu_btn.dart';
 import 'components/side_bar.dart';
 
-class EntryPoint extends StatefulWidget {
-  const EntryPoint({super.key});
+/// Pantalla principal del sistema (luego de iniciar sesión).
+///
+/// Contiene el menú lateral, la barra inferior y el contenido central.
+class PantallaPrincipal extends StatefulWidget {
+  const PantallaPrincipal({super.key});
 
   @override
-  State<EntryPoint> createState() => _EntryPointState();
+  State<PantallaPrincipal> createState() => _PantallaPrincipalState();
 }
 
-class _EntryPointState extends State<EntryPoint>
+class _PantallaPrincipalState extends State<PantallaPrincipal>
     with SingleTickerProviderStateMixin {
   bool isSideBarOpen = false;
 
@@ -99,7 +102,7 @@ class _EntryPointState extends State<EntryPoint>
                 scale: scalAnimation.value,
                 child: const ClipRRect(
                   borderRadius: BorderRadius.all(Radius.circular(24)),
-                  child: HomePage(),
+                  child: InicioScreen(),
                 ),
               ),
             ),

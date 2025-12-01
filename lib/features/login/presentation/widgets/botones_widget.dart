@@ -14,14 +14,14 @@ class BotonPrimario extends StatelessWidget {
           print('Holaa');
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFC727),
+          backgroundColor: const Color(0xFFFFC900),
           foregroundColor: const Color(0xFF0D1730),
           elevation: 8,
           padding: EdgeInsets.symmetric(vertical: width * 0.04),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(36),
           ),
-          shadowColor: const Color(0x33FFC727),
+          shadowColor: const Color(0x33FFC900),
         ),
         child: Text(
           'INICIAR SESIÓN',

@@ -4,8 +4,9 @@ import '../../../../config/menu/course.dart';
 import 'components/course_card.dart';
 import 'components/secondary_course_card.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+/// Pantalla de cursos/inicio dentro del sistema (después de iniciar sesión).
+class PantallaCursos extends StatelessWidget {
+  const PantallaCursos({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,7 +1,4 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:refactor_template/features/login/infrastructure/datasources/login_datasource_impl.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 import 'package:rive/rive.dart';
 
@@ -14,70 +11,73 @@ class SignInForm extends StatefulWidget {
 
 class _SignInFormState extends State<SignInForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool isShowLoading = false;
   bool isShowConfetti = false;
-  late SMITrigger error;
-  late SMITrigger success;
-  late SMITrigger reset;
+  SMITrigger? error;
+  SMITrigger? success;
+  SMITrigger? reset;
 
-  late SMITrigger confetti;
+  SMITrigger? confetti;
 
   void _onCheckRiveInit(Artboard artboard) {
-    StateMachineController? controller = StateMachineController.fromArtboard(
+    final controller = StateMachineController.fromArtboard(
       artboard,
       'State Machine 1',
     );
 
-    artboard.addController(controller!);
-    error = controller.findInput<bool>('Error') as SMITrigger;
-    success = controller.findInput<bool>('Check') as SMITrigger;
-    reset = controller.findInput<bool>('Reset') as SMITrigger;
+    if (controller != null) {
+      artboard.addController(controller);
+      error = controller.findInput<bool>('Error') as SMITrigger?;
+      success = controller.findInput<bool>('Check') as SMITrigger?;
+      reset = controller.findInput<bool>('Reset') as SMITrigger?;
+    }
   }
 
   void _onConfettiRiveInit(Artboard artboard) {
-    StateMachineController? controller = StateMachineController.fromArtboard(
+    final controller = StateMachineController.fromArtboard(
       artboard,
       "State Machine 1",
     );
-    artboard.addController(controller!);
-
-    confetti = controller.findInput<bool>("Trigger explosion") as SMITrigger;
+    if (controller != null) {
+      artboard.addController(controller);
+      confetti = controller.findInput<bool>("Trigger explosion") as SMITrigger?;
+    }
   }
 
   void singIn(BuildContext context) {
-    // confetti.fire();
+    // Ya validamos el formulario antes de llamar a este método,
+    // aquí solo mostramos la animación de éxito y navegamos.
     setState(() {
       isShowConfetti = true;
       isShowLoading = true;
     });
+
     Future.delayed(const Duration(seconds: 1), () {
-      if (_formKey.currentState!.validate()) {
-        success.fire();
-        Future.delayed(const Duration(seconds: 2), () {
-          setState(() {
-            isShowLoading = false;
-          });
-          confetti.fire();
-          // Navigate & hide confetti
-          Future.delayed(const Duration(seconds: 1), () {
-            // Navigator.pop(context);
-            if (!context.mounted) return;
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const EntryPoint()),
-            );
-          });
+      success?.fire();
+      Future.delayed(const Duration(seconds: 2), () {
+        setState(() {
+          isShowLoading = false;
         });
-      } else {
-        error.fire();
-        Future.delayed(const Duration(seconds: 2), () {
-          setState(() {
-            isShowLoading = false;
-          });
-          reset.fire();
+        confetti?.fire();
+        // Navega a la pantalla principal con menú 3D y oculta el confetti
+        Future.delayed(const Duration(seconds: 1), () {
+          if (!context.mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PantallaPrincipal()),
+          );
         });
-      }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -89,10 +89,11 @@ class _SignInFormState extends State<SignInForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Email", style: TextStyle(color: Colors.black54)),
+              const Text("Usuario", style: TextStyle(color: Colors.black54)),
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                 child: TextFormField(
+                  controller: _emailController,
                   validator: (value) {
                     if (value!.isEmpty) {
                       return "";
@@ -101,19 +102,15 @@ class _SignInFormState extends State<SignInForm> {
                   },
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: SvgPicture.asset("assets/icons/email.svg"),
-                    ),
-                  ),
+                  decoration: InputDecoration(hintText: 'Ingresa tu usuario'),
                 ),
               ),
-              const Text("Password", style: TextStyle(color: Colors.black54)),
+              const Text("Contraseña", style: TextStyle(color: Colors.black54)),
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                 child: TextFormField(
                   obscureText: true,
+                  controller: _passwordController,
                   validator: (value) {
                     if (value!.isEmpty) {
                       return "";
@@ -121,10 +118,7 @@ class _SignInFormState extends State<SignInForm> {
                     return null;
                   },
                   decoration: InputDecoration(
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: SvgPicture.asset("assets/icons/password.svg"),
-                    ),
+                    hintText: 'Ingresa tu contraseña',
                   ),
                 ),
               ),
@@ -132,16 +126,40 @@ class _SignInFormState extends State<SignInForm> {
                 padding: const EdgeInsets.only(top: 8, bottom: 24),
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    final login = LoginDatasourceImpl();
-                    final respuesta = await login.login(
-                      "RICHARD7029932",
-                      "123123",
-                    );
-                    print('Hola, ${respuesta.data.nombreUsuario}');
+                    // Si el formulario no es válido, mostramos la animación de error
+                    if (!_formKey.currentState!.validate()) {
+                      error?.fire();
+                      return;
+                    }
+
+                    // TODO: Descomentar cuando el backend o la conexión  esté listo
+                    // try {
+                    //   final login = LoginDatasourceImpl();
+                    //   await login.login(
+                    //     _emailController.text.trim(),
+                    //     _passwordController.text.trim(),
+                    //   );
+                    //
+                    //   // Si el login en el backend fue correcto, lanzamos la animación de éxito
+                    //   singIn(context);
+                    // } catch (e) {
+                    //   // Error al hacer login (credenciales incorrectas, sin conexión, etc.)
+                    //   if (!mounted) return;
+                    //   ScaffoldMessenger.of(context).showSnackBar(
+                    //     const SnackBar(
+                    //       content: Text(
+                    //         'No se pudo iniciar sesión. Verifica tus datos.',
+                    //       ),
+                    //     ),
+                    //   );
+                    //   error?.fire();
+                    // }
+
+                    // Por ahora, navegamos directamente sin validar credenciales
                     singIn(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF77D8E),
+                    backgroundColor: const Color(0xFFFFC900),
                     minimumSize: const Size(double.infinity, 56),
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.only(
@@ -152,11 +170,14 @@ class _SignInFormState extends State<SignInForm> {
                       ),
                     ),
                   ),
-                  icon: const Icon(
-                    CupertinoIcons.arrow_right,
-                    color: Color(0xFFFE0037),
+                  icon: const SizedBox.shrink(),
+                  label: const Text(
+                    "ACCEDER",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  label: const Text("Sign In"),
                 ),
               ),
             ],
