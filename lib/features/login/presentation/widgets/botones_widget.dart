@@ -10,7 +10,9 @@ class BotonPrimario extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: () {
+          print('Holaa');
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFFC727),
           foregroundColor: const Color(0xFF0D1730),

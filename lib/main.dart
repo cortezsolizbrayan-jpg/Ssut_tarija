@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:refactor_template/config/constants/environment.dart';
 import 'package:refactor_template/config/router/app_router.dart';
-import 'package:refactor_template/features/login/presentation/pages/login_page.dart';
-import 'package:refactor_template/features/sistema/screens/inicio/inicio_screen.dart';
 
 void main() {
   Environment.initEnvironment();
+  debugPaintPointersEnabled = true;
   runApp(const MyApp());
 }
 
