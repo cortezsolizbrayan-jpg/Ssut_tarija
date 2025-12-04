@@ -70,7 +70,7 @@ class _InicioScreenState extends State<InicioScreen> {
                     const SizedBox(height: 24),
                     // Grid de tarjetas de programas filtradas
                     GridView.count(
-                      crossAxisCount: 2,
+                      crossAxisCount: 3,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisSpacing: 16,
@@ -238,21 +238,22 @@ class _AchievementsSectionState extends State<_AchievementsSection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 150,
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      height: 152,
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.grey.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
@@ -265,51 +266,61 @@ class _AchievementsSectionState extends State<_AchievementsSection> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               itemCount: _achievements.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: 20),
               itemBuilder: (context, index) {
                 final item = _achievements[index];
                 final color = item['color'] as Color;
 
                 return GestureDetector(
                   onTap: () => _onTapMedal(index),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedRotation(
-                        turns: _turns[index],
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOutBack,
-                        child: Container(
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: color.withOpacity(0.15),
-                          ),
-                          child: Icon(
-                            item['icon'] as IconData,
-                            color: color,
-                            size: 34,
+                  child: SizedBox(
+                    width: 70,
+                    height: 95,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        AnimatedRotation(
+                          turns: _turns[index],
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOutBack,
+                          child: Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: color.withOpacity(0.15),
+                            ),
+                            child: Icon(
+                              item['icon'] as IconData,
+                              color: color,
+                              size: 34,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        item['label'] as String,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                        const SizedBox(height: 3),
+                        Text(
+                          item['label'] as String,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                            height: 1.0,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
