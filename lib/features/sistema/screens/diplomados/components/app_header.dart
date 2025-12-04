@@ -6,70 +6,90 @@ class AppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF1A3A5C), // Azul oscuro
-            Color(0xFF2C5F8D), // Azul medio
+            Color(0xFF00448A), // Azul muy oscuro
+            Color(0xFF0F7BD7), // Azul brillante
+            Color(0xFF0B5FB4), // Azul medio-oscuro
           ],
+          stops: [0.0, 0.5, 1.0],
         ),
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(175),
           bottomRight: Radius.circular(175),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1A3A5C).withOpacity(0.4),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            // Primera fila: Menu, Logo Posgrado, Banco Union, Notificaciones y Avatar
+            // Primera fila: Logo Posgrado, Banco Union, Notificaciones, Configuración y Avatar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
-                  // Hamburger menu
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.menu,
-                        color: Colors.black,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        // TODO: Abrir menú lateral
-                      },
+                  // Logo Posgrado (centrado)
+                  Expanded(
+                    child: Image.asset(
+                      'assets/images/logposgrado.png',
+                      height: 40,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Logo Posgrado con birrete
-                  Expanded(
+                  const SizedBox(width: 8),
+                  // Banco Union
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
                     child: Row(
-                      children: [
-                        Stack(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.credit_card,
+                          size: 16,
+                          color: Color(0xFF1A3A5C),
+                        ),
+                        SizedBox(width: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text(
-                              'Posgrado',
+                            Text(
+                              'BANCO UNION',
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A3A5C),
                               ),
                             ),
-                            Positioned(
-                              left: 40,
-                              top: -8,
-                              child: Icon(
-                                Icons.school,
-                                color: Colors.amber,
-                                size: 16,
+                            Text(
+                              'Número de cuenta único',
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: Color(0xFF64748B),
                               ),
                             ),
                           ],
@@ -77,52 +97,35 @@ class AppHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Banco Union
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'BANCO UNION',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A3A5C),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Número de cuenta único',
-                        style: TextStyle(fontSize: 8, color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  // Notificaciones con badge
+                  const SizedBox(width: 10),
+                  // Notificaciones
                   Stack(
                     children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 24,
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E293B), Color(0xFF64748B)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.35),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        onPressed: () {
-                          // TODO: Abrir notificaciones
-                        },
+                        child: const Icon(
+                          Icons.notifications,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                       Positioned(
-                        right: 8,
-                        top: 8,
+                        right: 0,
+                        top: 0,
                         child: Container(
                           width: 18,
                           height: 18,
@@ -144,23 +147,39 @@ class AppHeader extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(width: 8),
-                  // Avatar del usuario
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white,
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundImage: const AssetImage(
-                        'assets/icons/profile_img.png',
-                      ),
-                      onBackgroundImageError: (_, __) {},
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.grey[300],
+                  const SizedBox(width: 10),
+                  // Configuración
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.15),
+                    ),
+                    child: const Icon(
+                      Icons.settings,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Avatar
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                        child: const Icon(Icons.person, color: Colors.grey),
+                      ],
+                    ),
+                    child: const CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.white,
+                      backgroundImage: AssetImage(
+                        'assets/icons/profile_img.png',
                       ),
                     ),
                   ),
@@ -200,11 +219,19 @@ class AppHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: 'Buscar programas...',
+                    hintText: 'Buscador...',
                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    suffixIcon: const Icon(Icons.search, color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -219,6 +246,7 @@ class AppHeader extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
             // Selector de tipo de programa (Línea de tiempo)
             Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 20),
@@ -304,32 +332,46 @@ class _ProgramTypeSelector extends StatelessWidget {
 
   Color _getCircleColor() {
     if (isSelected) {
-      return Colors.green;
+      return const Color(
+        0xFFFFC900,
+      ); // Amarillo dorado cuando está seleccionado
     }
     switch (type) {
       case ProgramType.maestria:
-        return const Color(0xFF87CEEB); // Azul claro
+        return const Color(0xFF87CEEB).withOpacity(0.8); // Azul claro
       case ProgramType.doctorado:
+        return Colors.grey.shade400.withOpacity(0.8); // Gris claro
       case ProgramType.posdoctorado:
-        return Colors.grey.shade400; // Gris claro
+        return Colors.grey.shade400.withOpacity(0.8); // Gris claro
       default:
-        return Colors.grey.shade400;
+        return Colors.grey.shade400.withOpacity(0.8);
     }
   }
 
   Widget _getIcon() {
-    if (isSelected && type == ProgramType.diplomado) {
-      return const Icon(Icons.check, color: Colors.white, size: 24);
+    if (isSelected) {
+      // Cuando está seleccionado, mostrar un escudo con check
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withOpacity(0.2),
+        ),
+        child: const Icon(Icons.check_circle, color: Colors.white, size: 28),
+      );
     }
     switch (type) {
+      case ProgramType.diplomado:
+        return const Icon(Icons.description, color: Colors.white, size: 24);
       case ProgramType.maestria:
-        return const Icon(Icons.school, color: Colors.white, size: 20);
+        return const Icon(Icons.school, color: Colors.white, size: 24);
       case ProgramType.doctorado:
-        return const Icon(Icons.menu_book, color: Colors.white, size: 20);
+        return const Icon(Icons.menu_book, color: Colors.white, size: 24);
       case ProgramType.posdoctorado:
-        return const Icon(Icons.more_horiz, color: Colors.white, size: 24);
-      default:
-        return const SizedBox.shrink();
+        return const Icon(
+          Icons.workspace_premium,
+          color: Colors.white,
+          size: 24,
+        );
     }
   }
 
@@ -340,17 +382,26 @@ class _ProgramTypeSelector extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 50,
-            height: 50,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _getCircleColor(),
               border: Border.all(
                 color: isSelected
-                    ? Colors.green
-                    : Colors.white.withOpacity(0.3),
-                width: 2,
+                    ? const Color(0xFFFFC900)
+                    : Colors.white.withOpacity(0.4),
+                width: isSelected ? 3 : 2,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: isSelected
+                      ? const Color(0xFFFFC900).withOpacity(0.5)
+                      : Colors.black.withOpacity(0.2),
+                  blurRadius: isSelected ? 12 : 6,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Center(child: _getIcon()),
           ),

@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Pantalla de splash inicial.
-///
-/// Muestra el ícono del sombrero moviéndose de arriba a abajo.
-/// Cuando está abajo se forma un círculo celeste y, al subir,
-/// el círculo se va desvaneciendo lentamente.
-/// Al finalizar la animación, navega a la pantalla de login.
+/// Pantalla de splash simple con icono animado.
 class SplashScreen extends StatefulWidget {
   static const name = 'splash-page';
 
@@ -19,9 +14,8 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _positionAnim; // 0 = arriba, 1 = abajo
-  late final Animation<double> _circleScale; // tamaño círculo
-  late final Animation<double> _circleOpacity;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _opacityAnimation;
 
   @override
   void initState() {
@@ -29,32 +23,29 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2000),
     );
 
-    // Movimiento vertical del icono (sube y baja)
-    _positionAnim = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.7, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
-    // Círculo aparece cuando el icono está abajo
-    _circleScale = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.3, 0.9, curve: Curves.easeOutBack),
-    );
-
-    _circleOpacity = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
-    );
+    _opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
     _controller.forward();
 
-    // Cuando termina la animación, ir a la pantalla de login
+    // Navegar después de la animación
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
-        context.go('/login');
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            context.go('/login');
+          }
+        });
       }
     });
   }
@@ -67,46 +58,76 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final maxMove = size.height * 0.18; // cuánto se desplaza el icono
-
     return Scaffold(
-      backgroundColor: const Color(0xFF2858A1),
+      backgroundColor: const Color(0xFF1A3A5C),
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
-          builder: (_, __) {
-            // De -maxMove (arriba) a +maxMove (abajo)
-            final dy = -maxMove + _positionAnim.value * (2 * maxMove);
-
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                // Círculo celeste que aparece cuando el icono está abajo
-                Opacity(
-                  opacity: _circleOpacity.value,
-                  child: Transform.scale(
-                    scale: 0.4 + _circleScale.value * 0.8,
-                    child: Container(
-                      width: 90,
-                      height: 90,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _opacityAnimation.value,
+              child: Transform.scale(
+                scale: _scaleAnimation.value,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Círculo azul claro de fondo
+                    Container(
+                      width: 140,
+                      height: 140,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF00B2FF),
+                        color: Color(0xFF87CEEB), // Azul claro
                         shape: BoxShape.circle,
                       ),
                     ),
-                  ),
+                    // Birrete blanco
+                    const Icon(Icons.school, size: 80, color: Colors.white),
+                    // Borla amarilla en la esquina superior derecha del birrete
+                    Positioned(
+                      top: 15,
+                      right: 25,
+                      child: Stack(
+                        alignment: Alignment.topCenter,
+                        children: [
+                          // Cuerda de la borla
+                          Container(
+                            width: 2,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade700,
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          // Borla (forma de gota)
+                          Positioned(
+                            top: 6,
+                            child: Container(
+                              width: 10,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                borderRadius: const BorderRadius.only(
+                                  bottomLeft: Radius.circular(5),
+                                  bottomRight: Radius.circular(5),
+                                  topLeft: Radius.circular(2),
+                                  topRight: Radius.circular(2),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.amber.withOpacity(0.5),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                // Icono del sombrero que se mueve arriba/abajo
-                Transform.translate(
-                  offset: Offset(0, dy),
-                  child: Image.asset(
-                    'assets/images/graduation_icon.png',
-                    width: 56,
-                    height: 56,
-                  ),
-                ),
-              ],
+              ),
             );
           },
         ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rive/rive.dart';
 
 class SignInForm extends StatefulWidget {
@@ -61,13 +61,10 @@ class _SignInFormState extends State<SignInForm> {
           isShowLoading = false;
         });
         confetti?.fire();
-        // Navega a la pantalla principal con menú 3D y oculta el confetti
+        // Navega a la pantalla de perfil después del login exitoso
         Future.delayed(const Duration(seconds: 1), () {
           if (!context.mounted) return;
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const PantallaPrincipal()),
-          );
+          context.go('/perfil');
         });
       });
     });

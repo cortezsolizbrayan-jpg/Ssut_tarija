@@ -50,3 +50,8 @@ flutter:
       fonts:
         - asset: assets/Fonts/Poppins-Bold.ttf
           weight: 700
+    # Fuente manuscrita para el lema \"Democratizando la educación...\"
+    # Asegúrate de colocar el archivo en assets/Fonts/Parisienne-Regular.ttf
+    - family: Parisienne
+      fonts:
+        - asset: assets/Fonts/Parisienne-Regular.ttf

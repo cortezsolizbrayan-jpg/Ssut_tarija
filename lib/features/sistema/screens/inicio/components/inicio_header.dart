@@ -32,8 +32,8 @@ class InicioHeader extends StatelessWidget {
                 children: [
                   // Hamburger menu
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
@@ -42,7 +42,7 @@ class InicioHeader extends StatelessWidget {
                       icon: const Icon(
                         Icons.menu,
                         color: Colors.black,
-                        size: 20,
+                        size: 28,
                       ),
                       onPressed: () {
                         // TODO: Abrir menú lateral

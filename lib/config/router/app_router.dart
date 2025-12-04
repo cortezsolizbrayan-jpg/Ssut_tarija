@@ -1,5 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/features/login/presentation/pages/pages.dart';
+import 'package:refactor_template/features/sistema/screens/diplomados/detalle_programa_screen.dart';
+import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
+import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 
 /// Configuración central de rutas de la aplicación.
 ///
@@ -26,6 +29,30 @@ final goRouter = GoRouter(
       path: '/login',
       name: PaginaLogin.name,
       builder: (context, state) => const PaginaLogin(),
+    ),
+    // Pantalla de perfil con menú 3D y medallas
+    GoRoute(
+      path: '/perfil',
+      name: 'perfil',
+      builder: (context, state) => const PantallaPrincipal(),
+    ),
+    // Pantalla de Diplomados (Mis Programas)
+    GoRoute(
+      path: '/diplomados',
+      name: 'diplomados',
+      builder: (context, state) => const DiplomadosScreen(),
+    ),
+    // Pantalla de Detalle del Programa
+    GoRoute(
+      path: '/detalle-programa',
+      name: 'detalle-programa',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, String>?;
+        return DetalleProgramaScreen(
+          titulo: extra?['titulo'] ?? 'Programa',
+          tipo: extra?['tipo'] ?? 'DIPLOMADO',
+        );
+      },
     ),
   ],
 );

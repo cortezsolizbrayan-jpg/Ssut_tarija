@@ -1,209 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class DiplomadoCard extends StatelessWidget {
   const DiplomadoCard({
     super.key,
+    required this.tipo,
     required this.titulo,
-    required this.saldoPendiente,
+    this.saldoPendiente,
     required this.progresoPago,
+    this.estaCompletado = false,
   });
 
+  final String tipo;
   final String titulo;
-  final double saldoPendiente;
+  final double? saldoPendiente;
   final double progresoPago; // Valor entre 0 y 100
+  final bool estaCompletado;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F4F8), // Fondo azul claro
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Badge DIPLOMADO
+          // Badge de tipo
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A3A5C), // Azul oscuro
-              borderRadius: BorderRadius.circular(20),
+              color: const Color(0xFF1A3A5C),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 30,
-                  height: 2,
-                  color: const Color(0xFF4A9FD8), // Línea azul claro
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'DIPLOMADO',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
+            child: Text(
+              tipo,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-
+          const SizedBox(height: 16),
           // Título
           Text(
             titulo,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-              letterSpacing: 0.5,
+              color: Colors.black87,
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
-
-          // Contenido principal: tres secciones
+          const SizedBox(height: 16),
+          // Estado o saldo pendiente
+          if (estaCompletado)
+            Row(
+              children: [
+                const Text(
+                  'Completado: ',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                ...List.generate(5, (index) {
+                  return const Icon(Icons.star, color: Colors.green, size: 18);
+                }),
+              ],
+            )
+          else if (saldoPendiente != null)
+            Text(
+              'Saldo Pendiente: ${saldoPendiente!.toInt()} Bs.',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          const SizedBox(height: 16),
+          // Progreso del pago con mascota
           Row(
             children: [
-              // Sección izquierda: Saldo Pendiente
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Saldo Pendiente:',
+                      'Progreso del Pago',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF2C3E50),
+                        color: Colors.grey,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      '${saldoPendiente.toInt()} Bs.',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progresoPago / 100,
+                        minHeight: 8,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          estaCompletado
+                              ? Colors.green
+                              : const Color(0xFF2196F3),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // Sección central: Emoji con dinero
-              Expanded(
+              const SizedBox(width: 16),
+              // Mascota
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF87CEEB).withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
                 child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Emoji triste
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFB8E0F0),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Text('😟', style: TextStyle(fontSize: 50)),
-                        ),
-                      ),
-                      // Billetes
-                      Positioned(
-                        bottom: 5,
-                        right: 5,
-                        child: Transform.rotate(
-                          angle: -0.3,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4CAF50),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              '\$',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    estaCompletado ? '🎓' : '🎓',
+                    style: const TextStyle(fontSize: 32),
                   ),
-                ),
-              ),
-
-              // Sección derecha: Progreso del Pago
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Progreso del Pago',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF2C3E50),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Círculo de fondo
-                          SizedBox(
-                            width: 80,
-                            height: 80,
-                            child: CircularProgressIndicator(
-                              value: progresoPago / 100,
-                              strokeWidth: 8,
-                              backgroundColor: const Color(0xFFD0D0D0),
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFF2196F3),
-                              ),
-                            ),
-                          ),
-                          // Porcentaje
-                          Text(
-                            '${progresoPago.toInt()}%',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-
+          const SizedBox(height: 16),
           // Botón Ver Programa
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                // TODO: Navegar a la vista del programa
+                context.push(
+                  '/detalle-programa',
+                  extra: {'titulo': titulo, 'tipo': tipo},
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2196F3),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -212,7 +161,7 @@ class DiplomadoCard extends StatelessWidget {
                 'Ver Programa',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
