@@ -115,23 +115,22 @@ class _TopHero extends StatelessWidget {
           FadeInDown(
             duration: const Duration(milliseconds: 800),
             delay: const Duration(milliseconds: 200),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Bienvenido',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: width * 0.09,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Icon(
-                  Icons.emoji_people_outlined,
-                  color: Colors.white,
-                  size: width * 0.09,
-                ),
-              ],
+            child: Text(
+              'Bienvenido(a) a Posgrado UPEA',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: width * 0.052,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          SizedBox(height: width * 0.02),
+          Text(
+            'Tu trayectoria profesional siempre accesible.',
+            style: TextStyle(
+              color: Color(0xFFFFCC3E),
+              fontSize: width * 0.03,
+              fontWeight: FontWeight.bold,
             ),
           ),
           SizedBox(height: width * 0.02),
@@ -139,11 +138,11 @@ class _TopHero extends StatelessWidget {
             duration: const Duration(milliseconds: 800),
             delay: const Duration(milliseconds: 400),
             child: Text(
-              'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, la educacion es el futuro',
+              'Accede a tu registro académico, programas aprobados y documentos pendientes.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withAlpha(136),
-                fontSize: width * 0.04,
+                color: Colors.white,
+                fontSize: width * 0.033,
                 height: 1.4,
               ),
             ),

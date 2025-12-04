@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class BotonPrimario extends StatelessWidget {
   const BotonPrimario({super.key, required this.width});
@@ -49,8 +50,8 @@ class BotonesSociales extends StatelessWidget {
         _SocialIcon(
           color: Colors.white,
           child: Icon(
-            Icons.g_mobiledata,
-            size: width * 0.08,
+            FontAwesomeIcons.google,
+            size: width * 0.06,
             color: const Color(0xFF4285F4),
           ),
         ),
@@ -59,7 +60,7 @@ class BotonesSociales extends StatelessWidget {
           color: Colors.white,
           child: Icon(
             Icons.facebook,
-            size: width * 0.065,
+            size: width * 0.08,
             color: const Color(0xFF3B5998),
           ),
         ),
@@ -67,7 +68,7 @@ class BotonesSociales extends StatelessWidget {
         _SocialIcon(
           color: Colors.white,
           child: Icon(
-            Icons.alternate_email,
+            FontAwesomeIcons.twitter,
             size: width * 0.06,
             color: const Color(0xFF1DA1F2),
           ),
