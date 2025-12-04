@@ -360,7 +360,7 @@ class _PaginaLoginState extends State<PaginaLogin> {
                                                   0x33FFC900,
                                                 ),
                                                 padding: EdgeInsets.symmetric(
-                                                  vertical: width * 0.022,
+                                                  vertical: width * 0.035,
                                                 ),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
@@ -372,7 +372,7 @@ class _PaginaLoginState extends State<PaginaLogin> {
                                               child: Text(
                                                 'ACCEDER',
                                                 style: TextStyle(
-                                                  fontWeight: FontWeight.w700,
+                                                  fontWeight: FontWeight.w800,
                                                   fontSize: width * 0.032,
                                                   letterSpacing: 1.0,
                                                 ),
