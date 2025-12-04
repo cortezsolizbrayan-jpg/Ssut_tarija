@@ -67,7 +67,7 @@ class TarjetaAutenticacionWidget extends StatelessWidget {
               child: TextButton(
                 onPressed: () {},
                 child: Text(
-                  'Olvidaste Contraseña?',
+                  'Recupera tu contraseña de acceso',
                   style: TextStyle(
                     color: const Color(0xFFFF8A00),
                     fontSize: width * 0.037,
