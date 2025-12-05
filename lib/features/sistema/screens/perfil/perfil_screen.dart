@@ -98,35 +98,6 @@ class _PerfilScreenState extends State<PerfilScreen>
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             children: [
-              // Barra de estado simulada (hora y estado de red)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    '9:41 am',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.signal_cellular_alt,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      SizedBox(width: 6),
-                      Icon(Icons.wifi, color: Colors.white, size: 18),
-                      SizedBox(width: 6),
-                      Icon(Icons.battery_full, color: Colors.white, size: 18),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Primera fila: Logo, Banco Union, Notificaciones, Avatar
               Row(
                 children: [
                   // Logo
