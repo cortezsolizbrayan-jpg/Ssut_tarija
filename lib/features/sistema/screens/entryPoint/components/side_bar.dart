@@ -29,16 +29,20 @@ class _SideBarState extends State<SideBar> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const InfoCard(name: "Abu Anwar", bio: "YouTuber"),
-              Padding(
-                padding: const EdgeInsets.only(left: 24, top: 32, bottom: 16),
-                child: Text(
-                  "Browse".toUpperCase(),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium!.copyWith(color: Colors.white70),
-                ),
+              const InfoCard(
+                name: "Guadalupe Flores Mamani",
+                bio: "CI:9225528 LP",
               ),
+              const SizedBox(height: 16),
+              // Padding(
+              //   padding: const EdgeInsets.only(left: 24, top: 32, bottom: 16),
+              //   child: Text(
+              //     "Browse".toUpperCase(),
+              //     style: Theme.of(
+              //       context,
+              //     ).textTheme.titleMedium!.copyWith(color: Colors.white70),
+              //   ),
+              // ),
               ...sidebarMenus.map(
                 (menu) => SideMenu(
                   menu: menu,

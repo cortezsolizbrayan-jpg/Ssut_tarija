@@ -56,6 +56,8 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
   }
 
   void _onLoginPressed() {
+    // context.go(PantallaPrincipal.name);
+    // return;
     // Validación sencilla del formulario
     ref
         .read(asyncLoginProvider(usuario, contra).future)

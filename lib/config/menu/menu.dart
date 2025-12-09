@@ -9,7 +9,7 @@ class Menu {
 
 List<Menu> sidebarMenus = [
   Menu(
-    title: "Home",
+    title: "Mis Datos Personales",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "HOME",
@@ -17,7 +17,7 @@ List<Menu> sidebarMenus = [
     ),
   ),
   Menu(
-    title: "Search",
+    title: "Mis Programas",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "SEARCH",
@@ -25,7 +25,7 @@ List<Menu> sidebarMenus = [
     ),
   ),
   Menu(
-    title: "Favorites",
+    title: "Curriculum",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "LIKE/STAR",
@@ -33,13 +33,21 @@ List<Menu> sidebarMenus = [
     ),
   ),
   Menu(
-    title: "Help",
+    title: "Cambiar Contraseña",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "CHAT",
       stateMachineName: "CHAT_Interactivity",
     ),
   ),
+  // Menu(
+  //   title: "Cerrar Sesión",
+  //   rive: RiveModel(
+  //     src: "assets/RiveAssets/icons.riv",
+  //     artboard: "CHAT",
+  //     stateMachineName: "CHAT_Interactivity",
+  //   ),
+  // ),
 ];
 List<Menu> sidebarMenus2 = [
   Menu(
