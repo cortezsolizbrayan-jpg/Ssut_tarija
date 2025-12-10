@@ -9,7 +9,15 @@ class Menu {
 
 List<Menu> sidebarMenus = [
   Menu(
-    title: "Home",
+    title: "Mis Datos Personales",
+    rive: RiveModel(
+      src: "assets/RiveAssets/icons.riv",
+      artboard: "CHAT",
+      stateMachineName: "CHAT_Interactivity",
+    ),
+  ),
+  Menu(
+    title: "Inicio",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "HOME",
@@ -17,7 +25,7 @@ List<Menu> sidebarMenus = [
     ),
   ),
   Menu(
-    title: "Search",
+    title: "Búsqueda",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "SEARCH",
@@ -25,25 +33,17 @@ List<Menu> sidebarMenus = [
     ),
   ),
   Menu(
-    title: "Favorites",
+    title: "Favoritos",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "LIKE/STAR",
       stateMachineName: "STAR_Interactivity",
     ),
   ),
-  Menu(
-    title: "Help",
-    rive: RiveModel(
-      src: "assets/RiveAssets/icons.riv",
-      artboard: "CHAT",
-      stateMachineName: "CHAT_Interactivity",
-    ),
-  ),
 ];
 List<Menu> sidebarMenus2 = [
   Menu(
-    title: "History",
+    title: "Historia",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "TIMER",
@@ -51,7 +51,7 @@ List<Menu> sidebarMenus2 = [
     ),
   ),
   Menu(
-    title: "Notifications",
+    title: "Notificationes",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "BELL",
