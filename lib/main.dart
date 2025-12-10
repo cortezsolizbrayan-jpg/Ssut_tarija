@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:refactor_template/config/constants/environment.dart';
 import 'package:refactor_template/config/router/app_router.dart';
 
-void main() {
+void main() async {
   Environment.initEnvironment();
   // Desactivamos la visualización de zonas táctiles para evitar
   // interferencias al hacer clic, especialmente en web.
   debugPaintPointersEnabled = false;
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

@@ -8,7 +8,13 @@ class LoginRepositoryImpl implements LoginRepository {
   LoginRepositoryImpl(this.datasource);
 
   @override
-  Future<Login> login(String nombreUsuario, String claveUsuario) {
-    return datasource.login(nombreUsuario, claveUsuario);
+  Future<Login> login({
+    required String nombreUsuario,
+    required String claveUsuario,
+  }) {
+    return datasource.login(
+      nombreUsuario: nombreUsuario,
+      claveUsuario: claveUsuario,
+    );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -47,20 +49,48 @@ class _PerfilScreenState extends State<PerfilScreen>
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
+      body: SizedBox(
+        width: screenWidth,
+        height: screenHeight,
+        child: Stack(
           children: [
-            // Header azul con curva
-            _buildHeader(context),
-            // Sección de medallas con mascota
-            _buildAchievementsCircle(),
-            // Footer azul con CEUB
-            _buildFooter(context),
-            // Logo JQ19
-            _buildBottomLogo(),
-            const SizedBox(height: 20),
+            // Header azul con curva - posición fija
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: screenHeight * 0.40, // 30% de la pantalla
+              child: _buildHeader(context),
+            ),
+            // Sección de medallas con mascota - posición fija
+            Positioned(
+              top: screenHeight * 0.38, // Empieza antes del final del header
+              left: 0,
+              right: 0,
+              height: screenHeight * 0.45, // 45% de la pantalla
+              child: _buildAchievementsCircle(),
+            ),
+            // Footer azul con CEUB - posición fija
+            Positioned(
+              top: screenHeight * 0.80,
+              left: 0,
+              right: 0,
+              height: screenHeight * 0.12, // 12% de la pantalla (reducido)
+              child: _buildFooter(context),
+            ),
+            // Logo JQ19 - posición fija
+            Positioned(
+              top: screenHeight * 0.93,
+              left: 0,
+              right: 0,
+              bottom: 0, // Usa el espacio restante
+              child: _buildBottomLogo(),
+            ),
           ],
         ),
       ),
@@ -68,411 +98,357 @@ class _PerfilScreenState extends State<PerfilScreen>
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF00448A), // azul más profundo arriba
-            Color(0xFF0F7BD7), // azul medio
-            Color(0xFF0B5FB4), // azul intenso abajo
-          ],
-          stops: [0.0, 0.5, 1.0],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(200),
-          bottomRight: Radius.circular(200),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1A3A5C).withOpacity(0.4),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            children: [
-              // Barra de estado simulada (hora y estado de red)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    '9:41 am',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.signal_cellular_alt,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      SizedBox(width: 6),
-                      Icon(Icons.wifi, color: Colors.white, size: 18),
-                      SizedBox(width: 6),
-                      Icon(Icons.battery_full, color: Colors.white, size: 18),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Primera fila: Logo, Banco Union, Notificaciones, Avatar
-              Row(
-                children: [
-                  // Logo
-                  Expanded(
-                    child: Image.asset(
-                      'assets/images/logoposgrado.png',
-                      height: 40,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Banco Union
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        return SizedBox(
+          width: width,
+          height: height,
+          child: CustomPaint(
+            painter: _PintorEncabezado(),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 2,
+                  vertical: math.min(16, height * 0.05),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        // Logo
+                        Expanded(
+                          child: Image.asset(
+                            'assets/images/logoposgrado.png',
+                            height: math.min(40, height * 0.12),
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(
-                          Icons.credit_card,
-                          size: 16,
-                          color: Color(0xFF1A3A5C),
-                        ),
-                        SizedBox(width: 6),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        // Banco Union
+                        Icon(Icons.credit_card, size: 40, color: Colors.white),
+                        const SizedBox(width: 12),
+                        // Notificaciones
+                        Stack(
                           children: [
-                            Text(
-                              'BANCO UNION',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A3A5C),
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF1E293B),
+                                    Color(0xFF64748B),
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.35),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                            ),
-                            Text(
-                              'Número de cuenta único',
-                              style: TextStyle(
-                                fontSize: 8,
-                                color: Color(0xFF64748B),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Notificaciones
-                  Stack(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF1E293B), Color(0xFF64748B)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.35),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.notifications,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '2',
-                              style: TextStyle(
+                              child: const Icon(
+                                Icons.notifications,
                                 color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                size: 22,
                               ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                width: 18,
+                                height: 18,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    '2',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 10),
+                        // Configuración
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.15),
+                          ),
+                          child: const Icon(
+                            Icons.settings,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Avatar
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Colors.white,
+                            backgroundImage: AssetImage(
+                              'assets/icons/profile_img.png',
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  // Configuración
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.15),
-                    ),
-                    child: const Icon(
-                      Icons.settings,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Avatar
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
                       ],
                     ),
-                    child: const CircleAvatar(
-                      radius: 22,
-                      backgroundColor: Colors.white,
-                      backgroundImage: AssetImage(
-                        'assets/icons/profile_img.png',
+                    SizedBox(height: math.max(8, height * 0.2)),
+                    // Nombre del usuario
+                    Text(
+                      'Guadalupe Flores Mamani',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: math.min(22, height * 0.07),
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: math.max(8, height * 0.08)),
+                    // Botón "Ver Mis Programas"
+                    ElevatedButton(
+                      onPressed: () {
+                        context.push('/diplomados');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        elevation: 10,
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF004080),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: math.max(16, width * 0.03),
+                          vertical: math.max(10, height * 0.01),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        shadowColor: Colors.black.withOpacity(0.25),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF004080),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.menu_book,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Ver Mis Programas',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Nombre del usuario
-              const Text(
-                'Guadalupe Flores Mamani',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                    const SizedBox(height: 30),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              // Botón "Ver Mis Programas"
-              SizedBox(
-                width: 260,
-                child: ElevatedButton(
-                  onPressed: () {
-                    context.push('/diplomados');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    elevation: 10,
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF004080),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    shadowColor: Colors.black.withOpacity(0.25),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF004080),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.menu_book,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Ver Mis Programas',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildAchievementsCircle() {
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F4F8).withOpacity(0.5),
-            borderRadius: BorderRadius.circular(200),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calcula el tamaño del círculo basado en ancho y altura disponible
+        final screenWidth = constraints.maxWidth;
+        final availableHeight = constraints.maxHeight;
+        final circleSize = math.min(
+          screenWidth * 0.88, // 88% del ancho de la pantalla
+          availableHeight * 0.85, // 85% de la altura disponible
+        );
+
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Banner "Descuentos Especiales"
-              Positioned(top: 0, child: _buildDiscountBanner()),
-              // Círculo contenedor de medallas
-              SizedBox(
-                width: 340,
-                height: 340,
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    setState(() {
-                      // Ajusta el factor para controlar la sensibilidad del giro
-                      _wheelAngle += details.delta.dx * 0.01;
-                    });
-                  },
+              Transform.translate(
+                offset: Offset(
+                  0,
+                  -circleSize * 0.08,
+                ), // Posición fija del banner
+                child: Container(
+                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  padding: EdgeInsets.all(circleSize * 0.05),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F4F8).withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(220),
+                  ),
                   child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
                     children: [
-                      // Grupo de medallas que gira como ruleta
-                      Transform.rotate(
-                        angle: _wheelAngle,
-                        child: Stack(
-                          children: [
-                            // Medalla dorada (Maestría) - izquierda arriba
-                            Positioned(
-                              left: 10,
-                              top: 40,
-                              child: _buildMedal(
-                                0,
-                                'assets/images/grupodorado.png',
-                              ),
-                            ),
-                            // Medalla plateada - derecha arriba
-                            Positioned(
-                              right: 10,
-                              top: 40,
-                              child: _buildMedal(
-                                1,
-                                'assets/images/grupodiplomado.png',
-                              ),
-                            ),
-                            // Medalla plateada - izquierda medio
-                            Positioned(
-                              left: 0,
-                              top: 160,
-                              child: _buildMedal(
-                                2,
-                                'assets/images/grupoplomo.png',
-                              ),
-                            ),
-                            // Medalla plateada - derecha medio
-                            Positioned(
-                              right: 0,
-                              top: 160,
-                              child: _buildMedal(
-                                3,
-                                'assets/images/grupoespecialidad.png',
-                              ),
-                            ),
-                            // Medalla plateada - abajo (único posdoctorado)
-                            Positioned(
-                              left: 90,
-                              bottom: 20,
-                              child: _buildMedal(
-                                4,
-                                'assets/images/grupoplomo.png',
-                              ),
-                            ),
-                          ],
-                        ),
+                      // Banner "Descuentos Especiales" sobre el header/rueda
+                      Positioned(
+                        top: -circleSize * 0.2,
+                        child: _buildDiscountBanner(circleSize),
                       ),
-                      // Mascota en el centro (no gira, solo rebota)
-                      Positioned.fill(
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                      // Círculo contenedor de medallas
+                      SizedBox(
+                        width: circleSize,
+                        height: circleSize,
+                        child: GestureDetector(
+                          onPanUpdate: (details) {
+                            setState(() {
+                              _wheelAngle += details.delta.dx * 0.01;
+                            });
+                          },
+                          child: Stack(
                             children: [
-                              // Círculo azul con mascota (con animación de rebote)
-                              AnimatedBuilder(
-                                animation: _mascotController,
-                                builder: (context, child) {
-                                  return Transform.translate(
-                                    offset: Offset(0, _mascotOffset.value),
-                                    child: child,
-                                  );
-                                },
-                                child: Container(
-                                  width: 140,
-                                  height: 140,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF87CEEB),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Stack(
-                                    alignment: Alignment.center,
+                              // Grupo de medallas que gira como ruleta
+                              Transform.rotate(
+                                angle: _wheelAngle,
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      left: circleSize * 0.03,
+                                      top: circleSize * 0.12,
+                                      child: _buildMedal(
+                                        0,
+                                        'assets/images/grupodorado.png',
+                                        circleSize,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: circleSize * 0.03,
+                                      top: circleSize * 0.12,
+                                      child: _buildMedal(
+                                        1,
+                                        'assets/images/grupodiplomado.png',
+                                        circleSize,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: 0,
+                                      top: circleSize * 0.47,
+                                      child: _buildMedal(
+                                        2,
+                                        'assets/images/grupoplomo.png',
+                                        circleSize,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: 0,
+                                      top: circleSize * 0.47,
+                                      child: _buildMedal(
+                                        3,
+                                        'assets/images/grupoespecialidad.png',
+                                        circleSize,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: circleSize * 0.28,
+                                      bottom: circleSize * 0.07,
+                                      child: _buildMedal(
+                                        4,
+                                        'assets/images/grupoplomo.png',
+                                        circleSize,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Mascota en el centro (no gira, solo rebota)
+                              Positioned.fill(
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // Emoji feliz (representa la mascota)
-                                      const Text(
-                                        '🎓',
-                                        style: TextStyle(fontSize: 80),
-                                      ),
-                                      // Manos levantadas
-                                      Positioned(
-                                        left: 0,
-                                        top: 40,
-                                        child: Text(
-                                          '✋',
-                                          style: TextStyle(
-                                            fontSize: 30,
-                                            color: Colors.blue.shade300,
+                                      AnimatedBuilder(
+                                        animation: _mascotController,
+                                        builder: (context, child) {
+                                          return Transform.translate(
+                                            offset: Offset(
+                                              0,
+                                              _mascotOffset.value,
+                                            ),
+                                            child: child,
+                                          );
+                                        },
+                                        child: Container(
+                                          width: circleSize * 0.41,
+                                          height: circleSize * 0.41,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFF87CEEB),
+                                            shape: BoxShape.circle,
                                           ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        right: 0,
-                                        top: 40,
-                                        child: Text(
-                                          '✋',
-                                          style: TextStyle(
-                                            fontSize: 30,
-                                            color: Colors.blue.shade300,
+                                          child: Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              Text(
+                                                '🎓',
+                                                style: TextStyle(
+                                                  fontSize: circleSize * 0.23,
+                                                ),
+                                              ),
+                                              Positioned(
+                                                left: 0,
+                                                top: circleSize * 0.12,
+                                                child: Text(
+                                                  '✋',
+                                                  style: TextStyle(
+                                                    fontSize: circleSize * 0.09,
+                                                    color: Colors.blue.shade300,
+                                                  ),
+                                                ),
+                                              ),
+                                              Positioned(
+                                                right: 0,
+                                                top: circleSize * 0.12,
+                                                child: Text(
+                                                  '✋',
+                                                  style: TextStyle(
+                                                    fontSize: circleSize * 0.09,
+                                                    color: Colors.blue.shade300,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -490,28 +466,13 @@ class _PerfilScreenState extends State<PerfilScreen>
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.touch_app, size: 16, color: Colors.blueGrey),
-            SizedBox(width: 6),
-            Text(
-              'Arrastra las medallas para girar',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.blueGrey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildDiscountBanner() {
+  Widget _buildDiscountBanner(double circleSize) {
+    final bannerHeight = circleSize * 0.26; // Tamaño proporcional
     return Transform.rotate(
       angle: -0.1,
       child: Container(
@@ -530,7 +491,7 @@ class _PerfilScreenState extends State<PerfilScreen>
           child: Image.asset(
             // Imagen de \"Descuentos Especiales\" provista en assets
             'assets/images/descuentos .png',
-            height: 90,
+            height: bannerHeight,
             fit: BoxFit.contain,
           ),
         ),
@@ -538,7 +499,8 @@ class _PerfilScreenState extends State<PerfilScreen>
     );
   }
 
-  Widget _buildMedal(int index, String assetPath) {
+  Widget _buildMedal(int index, String assetPath, double circleSize) {
+    final medalSize = circleSize * 0.26; // Tamaño proporcional al círculo
     return GestureDetector(
       onTap: () => _rotateMedal(index),
       child: Transform.rotate(
@@ -549,15 +511,15 @@ class _PerfilScreenState extends State<PerfilScreen>
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeOutBack,
           child: SizedBox(
-            width: 90,
-            height: 90,
+            width: medalSize,
+            height: medalSize,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 // Imagen de medalla (grupos dorado, diplomado, especialidad, plomo)
                 Container(
-                  width: 82,
-                  height: 82,
+                  width: medalSize * 0.91,
+                  height: medalSize * 0.91,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
@@ -581,164 +543,270 @@ class _PerfilScreenState extends State<PerfilScreen>
   }
 
   Widget _buildFooter(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: BoxDecoration(
-        // Degradado azul similar al banner de referencia (CEUB)
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Color(0xFF4DB5FF), // azul claro izquierda
-            Color(0xFF0861C4), // azul intenso derecha
-          ],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0861C4).withOpacity(0.35),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final anchoPantalla = constraints.maxWidth;
+        final alturaDisponible = constraints.maxHeight;
+        final tamanoFuente = math.min(
+          anchoPantalla * 0.032,
+          math.min(12.0, alturaDisponible * 0.08),
+        );
+        final tamanoLogo = math.min(
+          anchoPantalla * 0.15,
+          math.min(55.0, alturaDisponible * 0.7),
+        );
+
+        return Container(
+          width: double.infinity,
+          height: alturaDisponible,
+          padding: EdgeInsets.only(
+            left: 12,
+            right: math.max(12, tamanoLogo + 8),
+            top: math.max(4, alturaDisponible * 0.08),
+            bottom: math.max(4, alturaDisponible * 0.08),
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xFF4DB5FF), Color(0xFF0861C4)],
+            ),
+            borderRadius: BorderRadius.zero,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0861C4).withOpacity(0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              // Contenido principal: texto y botón
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Busca Nuestros Programas Certificados y',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                    // Texto
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18.0, 6.0, 0, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Busca Nuestros Programas Certificados y',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: tamanoFuente,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Registrados por la CEUB',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: tamanoFuente,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      'Registrados por la CEUB',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                    // Botón centrado debajo del texto
+                    Padding(
+                      padding: const EdgeInsets.only(left: 18.0),
+                      child: SizedBox(
+                        height: math.max(8, alturaDisponible * 0.12),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 18.0),
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF004080),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: math.max(12, anchoPantalla * 0.035),
+                            vertical: math.max(6, alturaDisponible * 0.08),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: math.max(20, anchoPantalla * 0.05),
+                              height: math.max(20, anchoPantalla * 0.05),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF004080),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(
+                                Icons.fact_check,
+                                color: Colors.white,
+                                size: math.max(12, anchoPantalla * 0.03),
+                              ),
+                            ),
+                            SizedBox(width: math.max(6, anchoPantalla * 0.015)),
+                            Text(
+                              'Verificar programas',
+                              style: TextStyle(
+                                fontSize: math.max(11, anchoPantalla * 0.032),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              // Logo CEUB
-              // Logo CEUB
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.amber, width: 3),
+              // Logo CEUB en la esquina superior derecha
+              Padding(
+                padding: EdgeInsets.only(
+                  top: math.max(4, alturaDisponible * 0.1),
+                  right: math.max(8, anchoPantalla * 0.02),
                 ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/ceub.png',
-                    fit: BoxFit.cover,
+                child: Container(
+                  width: tamanoLogo * 1,
+                  height: tamanoLogo * 1,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.amber, width: 2),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/ceub.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Botón estilo tarjeta blanca como en el diseño de referencia
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF004080),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Icono dentro de pastilla azul
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF004080),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.fact_check,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Verificar programas',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildBottomLogo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final availableHeight = constraints.maxHeight;
+        final logoSize = math.min(
+          screenWidth * 0.18,
+          math.min(85.0, availableHeight * 0.65),
+        );
+        final fontSize = math.min(
+          screenWidth * 0.09,
+          math.min(17.0, availableHeight * 1),
+        );
+
+        return Container(
+          width: double.infinity,
+          height: availableHeight,
+          padding: EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: math.max(1, availableHeight * 0.02),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: logoSize,
+                height: logoSize,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(8),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset('assets/images/19.png', fit: BoxFit.contain),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              '"Democratizando la educación superior, por encargo social"',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Parisienne',
-                color: Colors.black87,
-                fontSize: 18,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.asset(
+                    'assets/images/19.png',
+                    fit: BoxFit.contain,
+                    height: logoSize,
+                  ),
+                ),
               ),
-            ),
+              SizedBox(width: math.max(4, screenWidth * 0.012)),
+              Expanded(
+                child: Text(
+                  '"¡Democratizando la educación superior, por encargo social !"',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Parisienne',
+                    color: Colors.black87,
+                    fontSize: fontSize,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+}
+
+class _PintorEncabezado extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final paint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF00448A), Color(0xFF0F7BD7), Color(0xFF0B5FB4)],
+        stops: [0.0, 0.5, 1.0],
+      ).createShader(rect);
+
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height * 0.83)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * 1.05,
+        0,
+        size.height * 0.83,
+      )
+      ..close();
+
+    canvas.drawShadow(
+      path.shift(const Offset(0, 2)),
+      Colors.black.withOpacity(0.28),
+      12,
+      false,
+    );
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

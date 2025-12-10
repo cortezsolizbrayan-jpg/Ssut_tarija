@@ -42,6 +42,12 @@ final goRouter = GoRouter(
       name: 'diplomados',
       builder: (context, state) => const DiplomadosScreen(),
     ),
+
+    GoRoute(
+      path: '/sistema/pantalla_principal',
+      name: PantallaPrincipal.name,
+      builder: (context, state) => const PantallaPrincipal(),
+    ),
     // Pantalla de Detalle del Programa
     GoRoute(
       path: '/detalle-programa',

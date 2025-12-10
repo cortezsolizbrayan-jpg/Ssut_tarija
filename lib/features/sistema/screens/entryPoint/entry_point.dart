@@ -12,6 +12,7 @@ import 'components/side_bar.dart';
 ///
 /// Contiene el menú lateral, la barra inferior y el contenido central.
 class PantallaPrincipal extends StatefulWidget {
+  static const name = '/sistema/pantalla_principal';
   const PantallaPrincipal({super.key});
 
   @override

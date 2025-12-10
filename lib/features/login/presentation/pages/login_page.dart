@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:go_router/go_router.dart';
+import 'package:refactor_template/features/login/presentation/providers/login_provider.dart';
 import 'package:refactor_template/features/login/presentation/widgets/widgets.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 import 'package:rive/rive.dart' hide Image;
 
+import '../../widgets/widgets.dart';
+
 /// Pantalla de inicio de sesión en una sola clase, con animación Rive
 /// y navegación a [PantallaPrincipal] cuando el login es correcto.
-class PaginaLogin extends StatefulWidget {
+class PaginaLogin extends ConsumerStatefulWidget {
   static const name = 'pagina-login';
   const PaginaLogin({super.key});
 
   @override
-  State<PaginaLogin> createState() => _PaginaLoginState();
+  ConsumerState<PaginaLogin> createState() => _PaginaLoginState();
 }
 
-class _PaginaLoginState extends State<PaginaLogin> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _userController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
+class _PaginaLoginState extends ConsumerState<PaginaLogin> {
+  late String usuario;
+  late String contra;
   bool isShowLoading = false;
   bool isShowConfetti = false;
 
@@ -53,50 +56,59 @@ class _PaginaLoginState extends State<PaginaLogin> {
   }
 
   void _onLoginPressed() {
+    // context.go(PantallaPrincipal.name);
+    // return;
     // Validación sencilla del formulario
-    if (!_formKey.currentState!.validate()) {
-      _errorTrigger?.fire();
-      return;
-    }
-
-    setState(() {
-      isShowLoading = true;
-      // El confeti solo debe mostrarse cuando el login sea exitoso
-      isShowConfetti = false;
-    });
-
-    // Secuencia de animaciones y luego navegación
-    Future.delayed(const Duration(seconds: 1), () {
-      _successTrigger?.fire();
-      Future.delayed(const Duration(seconds: 2), () {
-        if (!mounted) return;
-        setState(() {
-          isShowLoading = false;
-          // Momento en el que el usuario ha pasado la validación (login exitoso)
-          // y se muestra el confeti
-          isShowConfetti = true;
-        });
-        _confettiTrigger?.fire();
-
-        Future.delayed(const Duration(seconds: 1), () {
-          if (!mounted) return;
-          // Ocultamos el confeti al navegar
+    ref
+        .read(asyncLoginProvider(usuario, contra).future)
+        .then((response) {
+          print("""
+            Login response: 
+            ${response.status}
+            ${response.data.token}
+            ${response.data.expiresIn}
+            ${response.data.nombreUsuario}
+            ${response.data.grupos.map((g) => g).toList()}
+            ${response.message}
+            """);
           setState(() {
+            isShowLoading = true;
+            // El confeti solo debe mostrarse cuando el login sea exitoso
             isShowConfetti = false;
           });
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const PantallaPrincipal()),
-          );
+
+          // Secuencia de animaciones y luego navegación
+          Future.delayed(const Duration(seconds: 1), () {
+            _successTrigger?.fire();
+            Future.delayed(const Duration(seconds: 2), () {
+              if (!mounted) return;
+              setState(() {
+                isShowLoading = false;
+                // Momento en el que el usuario ha pasado la validación (login exitoso)
+                // y se muestra el confeti
+                isShowConfetti = true;
+              });
+              _confettiTrigger?.fire();
+
+              Future.delayed(const Duration(seconds: 1), () {
+                if (!mounted) return;
+                // Ocultamos el confeti al navegar
+                setState(() {
+                  isShowConfetti = false;
+                });
+                context.go(PantallaPrincipal.name);
+              });
+            });
+          });
+        })
+        .catchError((error) {
+          _errorTrigger?.fire();
+          print(error);
         });
-      });
-    });
   }
 
   @override
   void dispose() {
-    _userController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
@@ -228,116 +240,115 @@ class _PaginaLoginState extends State<PaginaLogin> {
                                               ),
                                             ],
                                           ),
-                                          child: Form(
-                                            key: _formKey,
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    const Icon(
-                                                      FontAwesomeIcons.lock,
-                                                      color: primaryBlue,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    FontAwesomeIcons.lock,
+                                                    color: primaryBlue,
+                                                  ),
+                                                  SizedBox(width: width * 0.02),
+                                                  Text(
+                                                    'INICIAR SESIÓN',
+                                                    style: TextStyle(
+                                                      // color: primaryBlue,
+                                                      fontSize: width * 0.042,
+                                                      fontWeight:
+                                                          FontWeight.w700,
                                                     ),
-                                                    SizedBox(
-                                                      width: width * 0.02,
-                                                    ),
-                                                    Text(
-                                                      'INICIAR SESIÓN',
-                                                      style: TextStyle(
-                                                        // color: primaryBlue,
-                                                        fontSize: width * 0.042,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                SizedBox(
-                                                  height: isSmallHeight
-                                                      ? width * 0.04
-                                                      : width * 0.06,
-                                                ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(
+                                                height: isSmallHeight
+                                                    ? width * 0.04
+                                                    : width * 0.06,
+                                              ),
+                                              SizedBox(height: width * 0.02),
 
-                                                // Usuario
-                                                const Text(
-                                                  'Usuario',
-                                                  style: TextStyle(
-                                                    color: Colors.black54,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                SizedBox(height: width * 0.02),
-                                                TextFormField(
-                                                  controller: _userController,
-                                                  validator: (value) =>
-                                                      (value == null ||
-                                                          value.isEmpty)
-                                                      ? ''
-                                                      : null,
-                                                  decoration: _inputDecoration(
-                                                    width,
-                                                    hintText: 'Usuario',
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                  height: isSmallHeight
-                                                      ? width * 0.03
-                                                      : width * 0.04,
-                                                ),
+                                              // TextFormField(
+                                              //   controller: _userController,
+                                              //   validator: (value) =>
+                                              //       (value == null ||
+                                              //           value.isEmpty)
+                                              //       ? ''
+                                              //       : null,
+                                              //   decoration: _inputDecoration(
+                                              //     width,
+                                              //     hintText: 'Usuario',
+                                              //   ),
+                                              // ),
+                                              CustomTextFormField(
+                                                label: 'Usuario',
+                                                onChanged: (valor) {
+                                                  usuario = valor;
+                                                },
+                                                // errorMessage:
+                                                //     'Usuario Incorrecto',
+                                              ),
+                                              SizedBox(
+                                                height: isSmallHeight
+                                                    ? width * 0.03
+                                                    : width * 0.04,
+                                              ),
 
-                                                // Contraseña
-                                                const Text(
-                                                  'Contraseña',
-                                                  style: TextStyle(
-                                                    color: Colors.black54,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
+                                              // Contraseña
+                                              SizedBox(height: width * 0.02),
+                                              CustomTextFormField(
+                                                label: 'Contraseña',
+                                                onChanged: (valor) {
+                                                  contra = valor;
+                                                },
+                                                obscureText: true,
+                                                icon: Icon(
+                                                  Icons.visibility_outlined,
+                                                  color: Colors.black45,
                                                 ),
-                                                SizedBox(height: width * 0.02),
-                                                TextFormField(
-                                                  controller:
-                                                      _passwordController,
-                                                  obscureText: true,
-                                                  validator: (value) =>
-                                                      (value == null ||
-                                                          value.isEmpty)
-                                                      ? ''
-                                                      : null,
-                                                  decoration: _inputDecoration(
-                                                    width,
-                                                    hintText: 'Contraseña',
-                                                    suffixIcon: const Icon(
-                                                      Icons.visibility_outlined,
-                                                      color: Colors.black45,
+                                                // errorMessage:
+                                                //     'Contraseña Incorrecto',
+                                              ),
+                                              // TextFormField(
+                                              //   controller: _passwordController,
+                                              //   obscureText: true,
+                                              //   validator: (value) =>
+                                              //       (value == null ||
+                                              //           value.isEmpty)
+                                              //       ? ''
+                                              //       : null,
+                                              //   decoration: _inputDecoration(
+                                              //     width,
+                                              //     hintText: 'Contraseña',
+                                              //     suffixIcon: const Icon(
+                                              //       Icons.visibility_outlined,
+                                              //       color: Colors.black45,
+                                              //     ),
+                                              //   ),
+                                              // ),
+                                              SizedBox(height: width * 0.02),
+
+                                              // Recuperar contraseña
+                                              Center(
+                                                child: TextButton(
+                                                  onPressed: () {
+                                                    // TODO: Implementar recuperación de contraseña
+                                                  },
+                                                  child: const Text(
+                                                    'Recupera tu contraseña de acceso',
+                                                    style: TextStyle(
+                                                      color: Color(0xFFFF8A00),
+                                                      fontWeight:
+                                                          FontWeight.w600,
                                                     ),
                                                   ),
                                                 ),
-                                                SizedBox(height: width * 0.02),
-
-                                                // Recuperar contraseña
-                                                Center(
-                                                  child: TextButton(
-                                                    onPressed: () {
-                                                      // TODO: Implementar recuperación de contraseña
-                                                    },
-                                                    child: const Text(
-                                                      'Recupera tu contraseña de acceso',
-                                                      style: TextStyle(
-                                                        color: Color(
-                                                          0xFFFF8A00,
-                                                        ),
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              ),
+                                              SizedBox(height: width * 0.07),
+                                            ],
                                           ),
                                         ),
 
@@ -505,35 +516,6 @@ class _PaginaLoginState extends State<PaginaLogin> {
             );
           },
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(
-    double width, {
-    required String hintText,
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      hintText: hintText,
-      filled: true,
-      fillColor: Color(0xFFF8F9FB),
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: width * 0.04,
-        vertical: width * 0.035,
-      ),
-      suffixIcon: suffixIcon,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE0E4ED)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE0E4ED)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFF005BAC), width: 1.2),
       ),
     );
   }
