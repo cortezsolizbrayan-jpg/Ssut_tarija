@@ -1,9 +1,12 @@
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:refactor_template/config/constants/constants.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/menu_btn.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
+import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
 import 'package:rive/rive.dart' hide LinearGradient, Image;
 
 /// Pantalla que muestra el detalle de un programa académico con información
@@ -29,6 +32,9 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
 
   // Sección seleccionada: 'Colegiatura', 'Matrículas', 'Monografía / Tesis'
   String _selectedSection = 'Matrículas';
+
+  // Item del menú inferior seleccionado
+  String _selectedNavItem = 'Mi Seguimiento de Pagos';
 
   late AnimationController _animationController;
   late Animation<double> scalAnimation;
@@ -139,7 +145,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001)
               ..rotateY(
-                1 * animation.value - 30 * (animation.value) * pi / 180,
+                1 * animation.value - 30 * (animation.value) * math.pi / 180,
               ),
             child: Transform.translate(
               offset: Offset(animation.value * 265, 0),
@@ -152,40 +158,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
               ),
             ),
           ),
-          // Botón del menú 3D
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
-            left: isSideBarOpen ? 220 : 0,
-            top: 16,
-            child: MenuBtn(
-              press: () {
-                isMenuOpenInput.value = !isMenuOpenInput.value;
-
-                if (_animationController.value == 0) {
-                  _animationController.forward();
-                } else {
-                  _animationController.reverse();
-                }
-
-                setState(() {
-                  isSideBarOpen = !isSideBarOpen;
-                });
-              },
-              riveOnInit: (artboard) {
-                final controller = StateMachineController.fromArtboard(
-                  artboard,
-                  "State Machine",
-                );
-
-                artboard.addController(controller!);
-
-                isMenuOpenInput =
-                    controller.findInput<bool>("isOpen") as SMIBool;
-                isMenuOpenInput.value = true;
-              },
-            ),
-          ),
+          // El menú ahora está en la fila principal del header
         ],
       ),
     );
@@ -228,6 +201,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
   }
 
   /// Construye el header azul completo con menú, notificaciones y información del programa.
+  /// Mantiene el estilo del círculo azul degradado consistente con otras pantallas.
   Widget _buildHeader(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -246,8 +220,14 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF1A3A5C).withOpacity(0.4),
-            blurRadius: 18,
+            blurRadius: 20,
             offset: const Offset(0, 10),
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: const Color(0xFF2C5F8D).withOpacity(0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -260,25 +240,52 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  // El menú hamburguesa ahora se maneja con MenuBtn en el Stack
-                  const SizedBox(width: 50),
+                  // Menú hamburguesa - En la misma fila
+                  MenuBtn(
+                    press: () {
+                      isMenuOpenInput.value = !isMenuOpenInput.value;
+
+                      if (_animationController.value == 0) {
+                        _animationController.forward();
+                      } else {
+                        _animationController.reverse();
+                      }
+
+                      setState(() {
+                        isSideBarOpen = !isSideBarOpen;
+                      });
+                    },
+                    riveOnInit: (artboard) {
+                      final controller = StateMachineController.fromArtboard(
+                        artboard,
+                        "State Machine",
+                      );
+
+                      artboard.addController(controller!);
+
+                      isMenuOpenInput =
+                          controller.findInput<bool>("isOpen") as SMIBool;
+                      isMenuOpenInput.value = true;
+                    },
+                  ),
                   const SizedBox(width: 12),
                   // Logo Posgrado
                   Expanded(
                     child: Image.asset(
                       'assets/images/logposgrado.png',
-                      height: 40,
+                      height: 36,
                       fit: BoxFit.contain,
                     ),
                   ),
-                  // Banco Union
+                  // Banco Union - Reducido
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 6,
+                          vertical: 3,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -287,7 +294,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                         child: const Text(
                           'BANCO UNION',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A3A5C),
                           ),
@@ -296,79 +303,51 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                       const SizedBox(height: 2),
                       const Text(
                         'Número de cuenta único',
-                        style: TextStyle(fontSize: 8, color: Colors.white70),
+                        style: TextStyle(fontSize: 7, color: Colors.white70),
                       ),
                     ],
                   ),
                   const SizedBox(width: 12),
-                  // Notificaciones con badge
-                  Stack(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        onPressed: () {
-                          // TODO: Abrir notificaciones
-                        },
-                      ),
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // Notificaciones con badge - MEJORADO
+                  const NotificationIconWidget(size: 44, iconSize: 24),
                   const SizedBox(width: 8),
-                  // Icono de configuración
-                  IconButton(
-                    icon: const Icon(
-                      Icons.settings,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      // TODO: Abrir configuración
+                  // Icono de configuración - Reducido
+                  GestureDetector(
+                    onTap: () {
+                      context.push('/configuracion');
                     },
-                  ),
-                  const SizedBox(width: 8),
-                  // Avatar del usuario
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white,
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundImage: const AssetImage(
-                        'assets/icons/profile_img.png',
-                      ),
-                      onBackgroundImageError: (_, __) {},
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.grey[300],
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1E293B), Color(0xFF64748B)],
                         ),
-                        child: const Icon(Icons.person, color: Colors.grey),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.settings,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Avatar del usuario - Reducido
+                  ProfileAvatarWidget(
+                    radius: 18,
+                    showShadow: false,
+                    onTap: () {
+                      context.push('/mis-datos-personales');
+                    },
                   ),
                 ],
               ),
@@ -408,6 +387,8 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -444,31 +425,72 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tipo de programa
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A3A5C),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              widget.tipo,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          // Tipo de programa con animación
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.elasticOut,
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: value,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A3A5C),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1A3A5C).withOpacity(0.3 * value),
+                        blurRadius: 8 * value,
+                        spreadRadius: 1 * value,
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    widget.tipo,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
-          // Título del programa
-          Text(
-            widget.titulo,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+          // Título del programa con animación mejorada
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOut,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(30 * (1 - value), 0),
+                  child: Text(
+                    widget.titulo,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.1 * (1 - value)),
+                          blurRadius: 4 * (1 - value),
+                        ),
+                      ],
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
         ],
@@ -487,37 +509,76 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
           children: [
             Expanded(
               flex: 1,
-              child: _AnimatedProgressCard(
-                titulo: 'Colegiatura',
-                pagadas: 2,
-                total: 5,
-                porcentaje: 65,
-                isHighlighted: _selectedSection == 'Colegiatura',
-                onTap: () => _changeSection('Colegiatura'),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Opacity(
+                      opacity: value,
+                      child: _AnimatedProgressCard(
+                        titulo: 'Colegiatura',
+                        pagadas: 2,
+                        total: 5,
+                        porcentaje: 65,
+                        isHighlighted: _selectedSection == 'Colegiatura',
+                        onTap: () => _changeSection('Colegiatura'),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               flex: 1,
-              child: _AnimatedProgressCard(
-                titulo: 'Matrículas',
-                pagadas: 2,
-                total: 3,
-                porcentaje: 60,
-                isHighlighted: _selectedSection == 'Matrículas',
-                onTap: () => _changeSection('Matrículas'),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Opacity(
+                      opacity: value,
+                      child: _AnimatedProgressCard(
+                        titulo: 'Matrículas',
+                        pagadas: 2,
+                        total: 3,
+                        porcentaje: 60,
+                        isHighlighted: _selectedSection == 'Matrículas',
+                        onTap: () => _changeSection('Matrículas'),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               flex: 1,
-              child: _AnimatedProgressCard(
-                titulo: 'Monografía / Tesis',
-                pagadas: 0,
-                total: 1,
-                porcentaje: 0,
-                isHighlighted: _selectedSection == 'Monografía / Tesis',
-                onTap: () => _changeSection('Monografía / Tesis'),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Opacity(
+                      opacity: value,
+                      child: _AnimatedProgressCard(
+                        titulo: 'Monografía / Tesis',
+                        pagadas: 0,
+                        total: 1,
+                        porcentaje: 0,
+                        isHighlighted: _selectedSection == 'Monografía / Tesis',
+                        onTap: () => _changeSection('Monografía / Tesis'),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -537,32 +598,114 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _selectedSection,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implementar navegación al historial de facturas
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOut,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(-20 * (1 - value), 0),
+                      child: Text(
+                        _selectedSection,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          shadows: [
+                            Shadow(
+                              color: const Color(
+                                0xFF1A3A5C,
+                              ).withOpacity(0.2 * value),
+                              blurRadius: 8 * value,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
                 },
-                icon: const Icon(Icons.description, size: 18),
-                label: const Text('Ver Historial de Facturas'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF9800), // Naranja
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  elevation: 2,
-                ),
+              ),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOut,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(20 * (1 - value), 0),
+                      child: Transform.scale(
+                        scale: 0.9 + (0.1 * value),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final screenWidth = MediaQuery.of(
+                                context,
+                              ).size.width;
+                              final fontSize = math
+                                  .max(
+                                    11.0,
+                                    math.min(14.0, screenWidth * 0.033),
+                                  )
+                                  .toDouble();
+                              final iconSize = math
+                                  .max(16.0, math.min(18.0, screenWidth * 0.04))
+                                  .toDouble();
+                              final paddingH = math
+                                  .max(
+                                    10.0,
+                                    math.min(16.0, screenWidth * 0.038),
+                                  )
+                                  .toDouble();
+                              final paddingV = math
+                                  .max(8.0, math.min(10.0, screenWidth * 0.023))
+                                  .toDouble();
+
+                              return ElevatedButton.icon(
+                                onPressed: () {
+                                  // TODO: Implementar navegación al historial de facturas
+                                },
+                                icon: Icon(Icons.description, size: iconSize),
+                                label: Flexible(
+                                  child: Text(
+                                    'Ver Historial de Facturas',
+                                    style: TextStyle(
+                                      fontSize: fontSize,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(
+                                    0xFFFF9800,
+                                  ), // Naranja
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: paddingH,
+                                    vertical: paddingV,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  elevation: 2 + (2 * value),
+                                  minimumSize: Size(
+                                    0,
+                                    math.max(36, screenWidth * 0.085),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -762,12 +905,19 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
     }
   }
 
-  /// Construye la barra de navegación inferior.
+  /// Construye la barra de navegación inferior minimalista con Rive.
   Widget _buildBottomNavBar() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A3A5C),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF1A3A5C), // Azul oscuro
+            Color(0xFF2C5F8D), // Azul medio
+          ],
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
@@ -781,41 +931,88 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _NavBarItem(
-              icon: Icons.list,
+            _RiveNavBarItem(
+              riveArtboard: 'SEARCH',
               label: 'Mis Notas',
-              isSelected: false,
-              onTap: () {
-                // TODO: Implementar navegación a Mis Notas
-              },
+              isSelected: _selectedNavItem == 'Mis Notas',
+              onTap: () => _navigateToNavItem('Mis Notas'),
             ),
-            _NavBarItem(
-              icon: Icons.person,
+            _RiveNavBarItem(
+              riveArtboard: 'USER',
               label: 'Mis Matrículas',
-              isSelected: false,
-              onTap: () {
-                // TODO: Implementar navegación a Mis Matrículas
-              },
+              isSelected: _selectedNavItem == 'Mis Matrículas',
+              onTap: () => _navigateToNavItem('Mis Matrículas'),
             ),
-            _NavBarItem(
-              icon: Icons.account_balance_wallet,
+            _RiveNavBarItem(
+              riveArtboard: 'TIMER',
               label: 'Mi Seguimiento de Pagos',
-              isSelected: true,
-              onTap: () {
-                // Ya estamos en esta pantalla
-              },
+              isSelected: _selectedNavItem == 'Mi Seguimiento de Pagos',
+              onTap: () => _navigateToNavItem('Mi Seguimiento de Pagos'),
             ),
-            _NavBarItem(
-              icon: Icons.description,
-              label: 'Mis Documentos del Programa',
-              isSelected: false,
-              onTap: () {
-                // TODO: Implementar navegación a Mis Documentos
-              },
+            _RiveNavBarItem(
+              riveArtboard: 'BELL',
+              label: 'Mis Documentos',
+              isSelected: _selectedNavItem == 'Mis Documentos del Programa',
+              onTap: () => _navigateToNavItem('Mis Documentos del Programa'),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Maneja la navegación a diferentes items del menú inferior.
+  void _navigateToNavItem(String item) {
+    if (_selectedNavItem == item) return;
+
+    setState(() {
+      _selectedNavItem = item;
+    });
+
+    // Navegar según el item seleccionado
+    switch (item) {
+      case 'Mis Notas':
+        _showMisNotasScreen();
+        break;
+      case 'Mis Matrículas':
+        _showMisMatriculasScreen();
+        break;
+      case 'Mi Seguimiento de Pagos':
+        // Ya estamos en esta pantalla, solo actualizar el estado
+        break;
+      case 'Mis Documentos del Programa':
+        _showMisDocumentosScreen();
+        break;
+    }
+  }
+
+  /// Muestra la pantalla de Mis Notas.
+  void _showMisNotasScreen() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MisNotasSheet(tituloPrograma: widget.titulo),
+    );
+  }
+
+  /// Muestra la pantalla de Mis Matrículas.
+  void _showMisMatriculasScreen() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MisMatriculasSheet(tituloPrograma: widget.titulo),
+    );
+  }
+
+  /// Muestra la pantalla de Mis Documentos.
+  void _showMisDocumentosScreen() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MisDocumentosSheet(tituloPrograma: widget.titulo),
     );
   }
 }
@@ -910,7 +1107,7 @@ class _AnimatedProgressCardState extends State<_AnimatedProgressCard>
 }
 
 /// Tarjeta que muestra el progreso de pagos (Colegiatura, Matrículas, Tesis).
-class _ProgressCard extends StatelessWidget {
+class _ProgressCard extends StatefulWidget {
   final String titulo;
   final int pagadas;
   final int total;
@@ -926,60 +1123,139 @@ class _ProgressCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFF2196F3) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: isHighlighted
-                ? const Color(0xFF2196F3).withOpacity(0.3)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: isHighlighted ? 8 : 6,
-            offset: const Offset(0, 2),
-            spreadRadius: isHighlighted ? 1 : 0,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            titulo,
-            style: TextStyle(
-              color: isHighlighted ? Colors.white : Colors.black87,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.2,
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '$pagadas de $total ${total > 1 ? (titulo.contains('Matrícula') ? 'Cuotas' : 'Pagadas') : (titulo.contains('Matrícula') ? 'Cuota' : 'Pagada')}',
-            style: TextStyle(
-              color: isHighlighted
-                  ? Colors.white.withOpacity(0.9)
-                  : Colors.grey.shade600,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: porcentaje / 100),
-            duration: const Duration(milliseconds: 1500),
+  State<_ProgressCard> createState() => _ProgressCardState();
+}
+
+class _ProgressCardState extends State<_ProgressCard>
+    with TickerProviderStateMixin {
+  late AnimationController _progressController;
+  late Animation<double> _progressAnimation;
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Animación del progreso circular (de 0 al valor final)
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    _progressAnimation = Tween<double>(begin: 0.0, end: widget.porcentaje / 100)
+        .animate(
+          CurvedAnimation(
+            parent: _progressController,
             curve: Curves.easeOutCubic,
-            builder: (context, value, child) {
-              return SizedBox(
+          ),
+        );
+
+    // Animación de brillo pulsante para tarjetas destacadas
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _glowAnimation = Tween<double>(begin: 0.3, end: 0.5).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+
+    // Iniciar animación del progreso
+    _progressController.forward();
+  }
+
+  @override
+  void didUpdateWidget(_ProgressCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.porcentaje != oldWidget.porcentaje) {
+      _progressAnimation =
+          Tween<double>(
+            begin: oldWidget.porcentaje / 100,
+            end: widget.porcentaje / 100,
+          ).animate(
+            CurvedAnimation(
+              parent: _progressController,
+              curve: Curves.easeOutCubic,
+            ),
+          );
+      _progressController.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_progressAnimation, _glowAnimation]),
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: widget.isHighlighted
+                ? const Color(0xFF1A3A5C)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              if (widget.isHighlighted)
+                BoxShadow(
+                  color: const Color(
+                    0xFF2C5F8D,
+                  ).withOpacity(_glowAnimation.value),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+              BoxShadow(
+                color: widget.isHighlighted
+                    ? const Color(0xFF1A3A5C).withOpacity(0.4)
+                    : Colors.black.withOpacity(0.05),
+                blurRadius: widget.isHighlighted ? 12 : 6,
+                offset: const Offset(0, 2),
+                spreadRadius: widget.isHighlighted ? 2 : 0,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                style: TextStyle(
+                  color: widget.isHighlighted ? Colors.white : Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.2,
+                  height: 1.2,
+                ),
+                child: Text(
+                  widget.titulo,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 6),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                style: TextStyle(
+                  color: widget.isHighlighted
+                      ? Colors.white.withOpacity(0.9)
+                      : Colors.grey.shade600,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  height: 1.2,
+                ),
+                child: Text(
+                  '${widget.pagadas} de ${widget.total} ${widget.total > 1 ? (widget.titulo.contains('Matrícula') ? 'Cuotas' : 'Pagadas') : (widget.titulo.contains('Matrícula') ? 'Cuota' : 'Pagada')}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
                 width: 50,
                 height: 50,
                 child: Stack(
@@ -989,34 +1265,39 @@ class _ProgressCard extends StatelessWidget {
                       width: 50,
                       height: 50,
                       child: CircularProgressIndicator(
-                        value: value,
+                        value: _progressAnimation.value,
                         strokeWidth: 5,
-                        backgroundColor: isHighlighted
+                        backgroundColor: widget.isHighlighted
                             ? Colors.white.withOpacity(0.3)
                             : Colors.grey.shade200,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          isHighlighted
+                          widget.isHighlighted
                               ? Colors.white
-                              : const Color(0xFF2196F3),
+                              : const Color(0xFF1A3A5C),
                         ),
                       ),
                     ),
-                    Text(
-                      '${(value * 100).toInt()}%',
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
                       style: TextStyle(
-                        color: isHighlighted ? Colors.white : Colors.black87,
+                        color: widget.isHighlighted
+                            ? Colors.white
+                            : Colors.black87,
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
+                      child: Text(
+                        '${(_progressAnimation.value * 100).toInt()}%',
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1078,8 +1359,8 @@ class _PaymentCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: const Color(
-                    0xFF87CEEB,
-                  ).withOpacity(0.5), // Borde azul claro
+                    0xFF1A3A5C,
+                  ).withOpacity(0.3), // Borde azul del header
                   width: 1.5,
                 ),
                 boxShadow: [
@@ -1113,6 +1394,8 @@ class _PaymentCard extends StatelessWidget {
                             fontSize: 12,
                             color: Colors.grey.shade700,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -1154,11 +1437,13 @@ class _PaymentCard extends StatelessWidget {
                         if (responsable != null) ...[
                           const SizedBox(height: 8),
                           Text(
-                            'Responsable del Registro de pago: $responsable',
+                            'Responsable: $responsable',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade700,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ],
@@ -1221,7 +1506,13 @@ class _PaymentCard extends StatelessWidget {
                           const SizedBox(height: 8),
                           _AnimatedButton(
                             onPressed: () {
-                              // TODO: Implementar flujo de pago
+                              context.push(
+                                '/deposito-matricula',
+                                extra: {
+                                  'numeroMatricula': numero.toString(),
+                                  'monto': montoDeuda,
+                                },
+                              );
                             },
                             icon: const Icon(Icons.payments, size: 16),
                             label: const Text('Pagar'),
@@ -1231,11 +1522,17 @@ class _PaymentCard extends StatelessWidget {
                         ] else ...[
                           _AnimatedButton(
                             onPressed: () {
-                              // TODO: Implementar flujo de pago
+                              context.push(
+                                '/deposito-matricula',
+                                extra: {
+                                  'numeroMatricula': numero.toString(),
+                                  'monto': montoDeuda,
+                                },
+                              );
                             },
                             icon: const Icon(Icons.payments, size: 16),
                             label: const Text('Pagar'),
-                            backgroundColor: const Color(0xFF2196F3),
+                            backgroundColor: const Color(0xFF1A3A5C),
                             foregroundColor: Colors.white,
                           ),
                         ],
@@ -1247,8 +1544,8 @@ class _PaymentCard extends StatelessWidget {
                           icon: const Icon(Icons.description, size: 16),
                           label: const Text('Factura'),
                           backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF2196F3),
-                          borderColor: const Color(0xFF2196F3),
+                          foregroundColor: const Color(0xFF1A3A5C),
+                          borderColor: const Color(0xFF1A3A5C),
                         ),
                       ],
                     ),
@@ -1323,24 +1620,27 @@ class _AnimatedButtonState extends State<_AnimatedButton>
         builder: (context, child) {
           return Transform.scale(
             scale: _scaleAnimation.value,
-            child: ElevatedButton.icon(
-              onPressed: widget.onPressed,
-              icon: widget.icon,
-              label: widget.label,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.backgroundColor,
-                foregroundColor: widget.foregroundColor,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: ElevatedButton.icon(
+                onPressed: widget.onPressed,
+                icon: widget.icon,
+                label: widget.label,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.backgroundColor,
+                  foregroundColor: widget.foregroundColor,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: widget.borderColor != null
+                        ? BorderSide(color: widget.borderColor!)
+                        : BorderSide.none,
+                  ),
+                  elevation: _scaleAnimation.value < 1.0 ? 4 : 2,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: widget.borderColor != null
-                      ? BorderSide(color: widget.borderColor!)
-                      : BorderSide.none,
-                ),
-                elevation: 2,
               ),
             ),
           );
@@ -1350,51 +1650,678 @@ class _AnimatedButtonState extends State<_AnimatedButton>
   }
 }
 
-/// Item de la barra de navegación inferior.
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
+/// Item de la barra de navegación inferior minimalista con Rive.
+class _RiveNavBarItem extends StatefulWidget {
+  final String riveArtboard;
   final String label;
   final bool isSelected;
   final VoidCallback? onTap;
 
-  const _NavBarItem({
-    required this.icon,
+  const _RiveNavBarItem({
+    required this.riveArtboard,
     required this.label,
     required this.isSelected,
     this.onTap,
   });
 
   @override
+  State<_RiveNavBarItem> createState() => _RiveNavBarItemState();
+}
+
+class _RiveNavBarItemState extends State<_RiveNavBarItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  SMIBool? _isActiveInput;
+  StateMachineController? _stateMachineController;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.9,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+  }
+
+  @override
+  void didUpdateWidget(_RiveNavBarItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isSelected != widget.isSelected) {
+      _isActiveInput?.value = widget.isSelected;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _stateMachineController?.dispose();
+    super.dispose();
+  }
+
+  void _onRiveInit(Artboard artboard) {
+    _stateMachineController = StateMachineController.fromArtboard(
+      artboard,
+      '${widget.riveArtboard}_Interactivity',
+    );
+
+    if (_stateMachineController != null) {
+      artboard.addController(_stateMachineController!);
+      _isActiveInput =
+          _stateMachineController!.findInput<bool>('active') as SMIBool?;
+      _isActiveInput?.value = widget.isSelected;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap?.call();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Barra superior minimalista
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: widget.isSelected ? 30 : 0,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Icono Rive minimalista
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Opacity(
+                    opacity: widget.isSelected ? 1.0 : 0.6,
+                    child: RiveAnimation.asset(
+                      'assets/RiveAssets/icons.riv',
+                      artboard: widget.riveArtboard,
+                      onInit: _onRiveInit,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Label minimalista
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 150),
+                  style: TextStyle(
+                    color: widget.isSelected ? Colors.white : Colors.white70,
+                    fontSize: 8,
+                    fontWeight: widget.isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Sheet modal para mostrar Mis Notas.
+class _MisNotasSheet extends StatelessWidget {
+  final String tituloPrograma;
+
+  const _MisNotasSheet({required this.tituloPrograma});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Mis Notas',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Text(
+                      'Programa: $tituloPrograma',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildNotaCard(
+                      'Matemáticas Avanzadas',
+                      'Primer Semestre',
+                      '85',
+                      'Aprobado',
+                      Colors.green,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildNotaCard(
+                      'Programación Orientada a Objetos',
+                      'Primer Semestre',
+                      '92',
+                      'Aprobado',
+                      Colors.green,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildNotaCard(
+                      'Base de Datos',
+                      'Segundo Semestre',
+                      '78',
+                      'Aprobado',
+                      Colors.orange,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildNotaCard(
+                      'Arquitectura de Software',
+                      'Segundo Semestre',
+                      '88',
+                      'Aprobado',
+                      Colors.green,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNotaCard(
+    String materia,
+    String semestre,
+    String nota,
+    String estado,
+    Color colorEstado,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: colorEstado.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                nota,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colorEstado,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  materia,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  semestre,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: colorEstado.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              estado,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: colorEstado,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sheet modal para mostrar Mis Matrículas.
+class _MisMatriculasSheet extends StatelessWidget {
+  final String tituloPrograma;
+
+  const _MisMatriculasSheet({required this.tituloPrograma});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Mis Matrículas',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Text(
+                      'Programa: $tituloPrograma',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildMatriculaCard(
+                      '2025-1',
+                      'Primer Semestre 2025',
+                      '15/01/2025',
+                      'Activa',
+                      Colors.green,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMatriculaCard(
+                      '2024-2',
+                      'Segundo Semestre 2024',
+                      '15/08/2024',
+                      'Completada',
+                      Colors.blue,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMatriculaCard(
+                      '2024-1',
+                      'Primer Semestre 2024',
+                      '15/01/2024',
+                      'Completada',
+                      Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMatriculaCard(
+    String codigo,
+    String periodo,
+    String fecha,
+    String estado,
+    Color colorEstado,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                codigo,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: colorEstado.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  estado,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: colorEstado,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 8),
+              Text(
+                periodo,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.event, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 8),
+              Text(
+                'Fecha: $fecha',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sheet modal para mostrar Mis Documentos.
+class _MisDocumentosSheet extends StatelessWidget {
+  final String tituloPrograma;
+
+  const _MisDocumentosSheet({required this.tituloPrograma});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Mis Documentos del Programa',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Text(
+                      'Programa: $tituloPrograma',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildDocumentoCard(
+                      'Carta de Aceptación',
+                      'PDF',
+                      '15/01/2025',
+                      Icons.description,
+                      Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDocumentoCard(
+                      'Plan de Estudios',
+                      'PDF',
+                      '20/01/2025',
+                      Icons.description,
+                      Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDocumentoCard(
+                      'Certificado de Notas',
+                      'PDF',
+                      '15/06/2025',
+                      Icons.school,
+                      Colors.blue,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDocumentoCard(
+                      'Constancia de Matrícula',
+                      'PDF',
+                      '15/01/2025',
+                      Icons.assignment,
+                      Colors.green,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDocumentoCard(
+    String nombre,
+    String tipo,
+    String fecha,
+    IconData icon,
+    Color colorIcon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
           Container(
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected
-                  ? const Color(0xFF87CEEB).withOpacity(0.3)
-                  : Colors.transparent,
+              color: colorIcon.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.white70,
-              size: 24,
+            child: Icon(icon, color: colorIcon, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nombre,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      tipo,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('•', style: TextStyle(color: Colors.grey[400])),
+                    const SizedBox(width: 8),
+                    Text(
+                      fecha,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white70,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-            textAlign: TextAlign.center,
+          IconButton(
+            icon: const Icon(Icons.download, color: Color(0xFF1A3A5C)),
+            onPressed: () {
+              // TODO: Implementar descarga de documento
+            },
           ),
         ],
       ),

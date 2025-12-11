@@ -1,36 +1,49 @@
 import 'package:dio/dio.dart';
+import 'package:refactor_template/features/login/domain/errors/login_exceptions.dart';
 
 class DioErrorHandler {
-  static Exception handle(DioException e) {
-    // Si hay respuesta del servidor
-    if (e.response != null) {
-      final status = e.response!.statusCode;
-      final data = e.response!.data;
+  static Exception handle(DioException error) {
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return LoginException(
+          'Tiempo de espera agotado. Verifica tu conexión a internet.',
+        );
 
-      final serverMessage = data is Map && data['message'] != null
-          ? data['message']
-          : "Error desconocido del servidor";
+      case DioExceptionType.badResponse:
+        final statusCode = error.response?.statusCode;
+        if (statusCode == 401) {
+          return LoginException('Usuario o contraseña incorrectos.');
+        } else if (statusCode == 404) {
+          return LoginException(
+            'Servicio no encontrado. Contacta al administrador.',
+          );
+        } else if (statusCode == 500) {
+          return LoginException('Error del servidor. Intenta más tarde.');
+        } else {
+          return LoginException(
+            'Error del servidor (${statusCode ?? 'desconocido'}). Intenta más tarde.',
+          );
+        }
 
-      switch (status) {
-        case 400:
-          return Exception(serverMessage);
+      case DioExceptionType.cancel:
+        return LoginException('Solicitud cancelada.');
 
-        case 401:
-          return Exception(serverMessage);
+      case DioExceptionType.connectionError:
+        return LoginException(
+          'Error de conexión. Verifica tu conexión a internet.',
+        );
 
-        case 403:
-          return Exception(serverMessage);
+      case DioExceptionType.badCertificate:
+        return LoginException(
+          'Error de certificado. Contacta al administrador.',
+        );
 
-        case 404:
-          return Exception("Recurso no encontrado");
-
-        case 500:
-          return Exception("Error interno del servidor");
-
-        default:
-          return Exception("Error $status: $serverMessage");
-      }
+      case DioExceptionType.unknown:
+        return LoginException(
+          'Error desconocido: ${error.message ?? 'Sin mensaje'}',
+        );
     }
-    return Exception("No hay conexión con el servidor");
   }
 }

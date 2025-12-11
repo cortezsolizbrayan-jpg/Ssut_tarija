@@ -104,13 +104,24 @@ class _DiplomadosScreenState extends State<DiplomadosScreen>
               ),
             ),
           ),
-          // Botón del menú 3D
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
-            left: isSideBarOpen ? 220 : 0,
-            top: 16,
-            child: MenuBtn(
+          // El menú ahora está en la fila principal del header
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: Column(
+        children: [
+          // Header azul oscuro
+          AppHeader(
+            searchController: _searchController,
+            onSearchChanged: (value) {
+              setState(() {});
+            },
+            menuButton: MenuBtn(
               press: () {
                 isMenuOpenInput.value = !isMenuOpenInput.value;
 
@@ -138,18 +149,6 @@ class _DiplomadosScreenState extends State<DiplomadosScreen>
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContent() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          // Header azul oscuro
-          const AppHeader(),
           // Filtros horizontales (debajo del header)
           _buildFilters(),
           // Lista de programas
@@ -286,12 +285,23 @@ class _DiplomadosScreenState extends State<DiplomadosScreen>
       },
     ];
 
-    if (_selectedFilter == 'Todos') {
-      return allPrograms;
+    // Filtrar por tipo seleccionado
+    var filtered = allPrograms;
+    if (_selectedFilter != 'Todos') {
+      filtered = allPrograms
+          .where((p) => p['tipo'] == _selectedFilter.toUpperCase())
+          .toList();
     }
 
-    return allPrograms
-        .where((p) => p['tipo'] == _selectedFilter.toUpperCase())
-        .toList();
+    // Filtrar por búsqueda
+    if (_searchController.text.isNotEmpty) {
+      final searchLower = _searchController.text.toLowerCase();
+      filtered = filtered.where((program) {
+        final titulo = (program['titulo'] ?? '').toString().toLowerCase();
+        return titulo.contains(searchLower);
+      }).toList();
+    }
+
+    return filtered;
   }
 }

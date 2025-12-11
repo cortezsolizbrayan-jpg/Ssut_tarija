@@ -406,9 +406,9 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFF87CEEB).withOpacity(0.4),
-                        const Color(0xFF2196F3).withOpacity(0.3),
-                        const Color(0xFF1A3A5C).withOpacity(0.2),
+                        const Color(0xFF1A3A5C).withOpacity(0.3),
+                        const Color(0xFF2C5F8D).withOpacity(0.2),
+                        const Color(0xFF1A3A5C).withOpacity(0.1),
                       ],
                     ),
                   ),
@@ -442,7 +442,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
                                 child: Icon(
                                   Icons.map,
                                   size: 60,
-                                  color: const Color(0xFF2196F3),
+                                  color: const Color(0xFF1A3A5C),
                                 ),
                               ),
                             ),
@@ -497,7 +497,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF2196F3),
+                                    color: const Color(0xFF1A3A5C),
                                   ),
                                 ),
                               ),
@@ -520,7 +520,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
                                 icon: const Icon(Icons.open_in_new),
                                 label: const Text('Abrir en Google Maps'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2196F3),
+                                  backgroundColor: const Color(0xFF1A3A5C),
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 20,
@@ -625,7 +625,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2196F3),
+                              color: const Color(0xFF1A3A5C),
                             ),
                           ),
                         ),
@@ -1322,7 +1322,7 @@ class _DetailRow extends StatelessWidget {
                 value,
                 style: TextStyle(
                   fontSize: 14,
-                  color: isClickable ? const Color(0xFF2196F3) : Colors.black87,
+                  color: isClickable ? const Color(0xFF1A3A5C) : Colors.black87,
                   fontWeight: FontWeight.w500,
                   decoration: isClickable ? TextDecoration.underline : null,
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../config/menu/menu.dart';
 import '../../../../../core/utils/rive_utils.dart';
@@ -14,6 +15,35 @@ class SideBar extends StatefulWidget {
 
 class _SideBarState extends State<SideBar> {
   Menu selectedSideMenu = sidebarMenus.first;
+
+  void _navigateToRoute(String menuTitle) {
+    switch (menuTitle) {
+      case 'Inicio':
+        context.go('/perfil');
+        break;
+      case 'Mis Programas':
+        context.go('/diplomados');
+        break;
+      case 'Curriculum':
+        context.go('/mi-curriculum');
+        break;
+      case 'Mis Datos Personales':
+        context.go('/mis-datos-personales');
+        break;
+      case 'Cambiar Contraseña':
+        // TODO: Navegar a pantalla de cambiar contraseña
+        break;
+      case 'Historia':
+        // TODO: Navegar a pantalla de historia
+        break;
+      case 'Notificationes':
+        context.go('/notificaciones');
+        break;
+      default:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -52,6 +82,7 @@ class _SideBarState extends State<SideBar> {
                     setState(() {
                       selectedSideMenu = menu;
                     });
+                    _navigateToRoute(menu.title);
                   },
                   riveOnInit: (artboard) {
                     menu.rive.status = RiveUtils.getRiveInput(
@@ -79,6 +110,7 @@ class _SideBarState extends State<SideBar> {
                     setState(() {
                       selectedSideMenu = menu;
                     });
+                    _navigateToRoute(menu.title);
                   },
                   riveOnInit: (artboard) {
                     menu.rive.status = RiveUtils.getRiveInput(

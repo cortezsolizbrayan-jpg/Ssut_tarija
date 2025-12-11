@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,33 +19,79 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _scaleAnimation;
   late final Animation<double> _opacityAnimation;
 
+  bool _hasNavigated = false;
+
   @override
   void initState() {
     super.initState();
 
+    // Animación mínima y rápida
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 800), // Muy rápido
     );
 
     _scaleAnimation = Tween<double>(
-      begin: 0.0,
+      begin: 0.9,
       end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _opacityAnimation = Tween<double>(
-      begin: 0.0,
+      begin: 0.5,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
-    _controller.forward();
+    // Navegar inmediatamente - no esperar animación
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_hasNavigated) {
+        // Iniciar animación en background (no bloquea)
+        _controller.forward();
+        // Navegar después de un delay mínimo (200ms) - reducido aún más
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted && !_hasNavigated) {
+            _navigateToLogin();
+          }
+        });
+      }
+    });
 
-    // Navegar después de la animación
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        Future.delayed(const Duration(milliseconds: 500), () {
+    // Timeout de seguridad muy corto: 800ms máximo
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted && !_hasNavigated) {
+        _navigateToLogin();
+      }
+    });
+  }
+
+  void _navigateToLogin() {
+    if (!mounted || _hasNavigated) return;
+    _hasNavigated = true;
+
+    // Navegar de forma asíncrona sin bloquear
+    Future.microtask(() {
+      if (!mounted) return;
+
+      try {
+        // Usar unisolate para no bloquear el hilo principal
+        context.go('/login');
+      } catch (e) {
+        // Si hay error, intentar con un delay mínimo
+        Future.delayed(const Duration(milliseconds: 50), () {
           if (mounted) {
-            context.go('/login');
+            try {
+              context.go('/login');
+            } catch (_) {
+              // Último recurso
+              if (mounted) {
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  if (mounted) {
+                    try {
+                      context.go('/login');
+                    } catch (_) {}
+                  }
+                });
+              }
+            }
           }
         });
       }
@@ -58,72 +106,25 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Widget ultra simplificado para máximo rendimiento
     return Scaffold(
       backgroundColor: const Color(0xFF1A3A5C),
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
-          builder: (context, child) {
+          builder: (context, _) {
             return Opacity(
               opacity: _opacityAnimation.value,
               child: Transform.scale(
                 scale: _scaleAnimation.value,
-                child: Stack(
-                  alignment: Alignment.center,
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Círculo azul claro de fondo
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF87CEEB), // Azul claro
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    // Birrete blanco
-                    const Icon(Icons.school, size: 80, color: Colors.white),
-                    // Borla amarilla en la esquina superior derecha del birrete
-                    Positioned(
-                      top: 15,
-                      right: 25,
-                      child: Stack(
-                        alignment: Alignment.topCenter,
-                        children: [
-                          // Cuerda de la borla
-                          Container(
-                            width: 2,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: Colors.amber.shade700,
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                          // Borla (forma de gota)
-                          Positioned(
-                            top: 6,
-                            child: Container(
-                              width: 10,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                color: Colors.amber,
-                                borderRadius: const BorderRadius.only(
-                                  bottomLeft: Radius.circular(5),
-                                  bottomRight: Radius.circular(5),
-                                  topLeft: Radius.circular(2),
-                                  topRight: Radius.circular(2),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.amber.withOpacity(0.5),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    Icon(Icons.school, size: 100, color: Colors.white),
+                    SizedBox(height: 20),
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 2,
                     ),
                   ],
                 ),

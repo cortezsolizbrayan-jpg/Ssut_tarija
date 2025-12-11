@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -11,20 +13,35 @@ class PerfilScreen extends StatefulWidget {
 }
 
 class _PerfilScreenState extends State<PerfilScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   // Controla las rotaciones de cada medalla
   final List<double> _medalTurns = List<double>.filled(5, 0.0);
+  final List<AnimationController> _medalControllers = [];
+  final List<Animation<double>> _medal3DRotations = [];
+  final List<Animation<double>> _medal3DScales = [];
 
   // Animación suave de rebote para la mascota central
   late final AnimationController _mascotController;
   late final Animation<double> _mascotOffset;
 
-  // Ángulo actual de giro del grupo de medallas (ruleta)
-  double _wheelAngle = 0;
+  // Ángulo actual de giro del grupo de medallas (ruleta) - Sin límites
+  double _wheelAngle = 0.0;
+
+  // Velocidad de rotación para animación continua
+  double _rotationVelocity = 0.0;
+  late AnimationController _rotationController;
+
+  // Validación de toque dentro del círculo
+  bool _isTouchInsideCircle = false;
 
   void _rotateMedal(int index) {
     setState(() {
       _medalTurns[index] += 1; // una vuelta completa
+    });
+
+    // Animación 3D de la medalla individual
+    _medalControllers[index].forward(from: 0.0).then((_) {
+      _medalControllers[index].reverse();
     });
   }
 
@@ -39,11 +56,55 @@ class _PerfilScreenState extends State<PerfilScreen>
     _mascotOffset = Tween<double>(begin: -6, end: 6).animate(
       CurvedAnimation(parent: _mascotController, curve: Curves.easeInOut),
     );
+
+    // Controlador para rotación continua suave
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 16), // ~60fps
+    )..repeat();
+
+    // Inicializar controladores y animaciones 3D para cada medalla
+    for (int i = 0; i < 5; i++) {
+      final controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 800),
+      );
+      _medalControllers.add(controller);
+
+      _medal3DRotations.add(
+        Tween<double>(begin: 0, end: math.pi * 2).animate(
+          CurvedAnimation(parent: controller, curve: Curves.easeOutBack),
+        ),
+      );
+
+      _medal3DScales.add(
+        Tween<double>(begin: 1.0, end: 1.2).animate(
+          CurvedAnimation(parent: controller, curve: Curves.elasticOut),
+        ),
+      );
+    }
+
+    // Animación continua de rotación suave - Rotación infinita sin límites
+    _rotationController.addListener(() {
+      if (_rotationVelocity.abs() > 0.0001) {
+        setState(() {
+          // Rotación infinita - sin resetear, sin límites, sin normalización
+          _wheelAngle += _rotationVelocity;
+
+          // Fricción suave para detener gradualmente
+          _rotationVelocity *= 0.97;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _mascotController.dispose();
+    _rotationController.dispose();
+    for (var controller in _medalControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -127,96 +188,56 @@ class _PerfilScreenState extends State<PerfilScreen>
                             fit: BoxFit.contain,
                           ),
                         ),
-                        // Banco Union
-                        Icon(Icons.credit_card, size: 40, color: Colors.white),
-                        const SizedBox(width: 12),
-                        // Notificaciones
-                        Stack(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF1E293B),
-                                    Color(0xFF64748B),
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.35),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.notifications,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                width: 18,
-                                height: 18,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    '2',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                        // Banco Union - Reducido
+                        Icon(
+                          Icons.credit_card,
+                          size: math.min(32, width * 0.08),
+                          color: Colors.white,
                         ),
-                        const SizedBox(width: 10),
-                        // Configuración
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.15),
-                          ),
-                          child: const Icon(
-                            Icons.settings,
-                            color: Colors.white,
-                            size: 22,
+                        SizedBox(width: math.max(6, width * 0.015)),
+                        // Notificaciones - Reducido
+                        NotificationIconWidget(
+                          size: math.min(40, width * 0.1),
+                          iconSize: math.min(22, width * 0.055),
+                        ),
+                        SizedBox(width: math.max(6, width * 0.015)),
+                        // Configuración - Reducido
+                        GestureDetector(
+                          onTap: () {
+                            context.push('/configuracion');
+                          },
+                          child: Container(
+                            width: math.min(40, width * 0.1),
+                            height: math.min(40, width * 0.1),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF1E293B), Color(0xFF64748B)],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.4),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.settings,
+                              color: Colors.white,
+                              size: math.min(22, width * 0.055),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        // Avatar
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.white,
-                            backgroundImage: AssetImage(
-                              'assets/icons/profile_img.png',
-                            ),
-                          ),
+                        SizedBox(width: math.max(6, width * 0.015)),
+                        // Avatar - Reducido
+                        ProfileAvatarWidget(
+                          radius: math.min(18, width * 0.045).toDouble(),
+                          showShadow: true,
+                          onTap: () {
+                            context.push('/mis-datos-personales');
+                          },
                         ),
                       ],
                     ),
@@ -234,50 +255,60 @@ class _PerfilScreenState extends State<PerfilScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: math.max(8, height * 0.08)),
-                    // Botón "Ver Mis Programas"
-                    ElevatedButton(
-                      onPressed: () {
-                        context.push('/diplomados');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        elevation: 10,
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF004080),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: math.max(16, width * 0.03),
-                          vertical: math.max(10, height * 0.01),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        shadowColor: Colors.black.withOpacity(0.25),
+                    // Botón "Ver Mis Programas" - Ajustado para evitar overflow
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: math.max(8, width * 0.02),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF004080),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.menu_book,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          context.push('/diplomados');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          elevation: 10,
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF004080),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: math.max(12, width * 0.025),
+                            vertical: math.max(8, height * 0.01),
                           ),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Ver Mis Programas',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        ],
+                          shadowColor: Colors.black.withOpacity(0.25),
+                          minimumSize: Size(0, math.max(40, height * 0.05)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: math.min(30, width * 0.08),
+                              height: math.min(30, width * 0.08),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF004080),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.menu_book,
+                                color: Colors.white,
+                                size: math.min(18, width * 0.045),
+                              ),
+                            ),
+                            SizedBox(width: math.max(8, width * 0.02)),
+                            Flexible(
+                              child: Text(
+                                'Ver Mis Programas',
+                                style: TextStyle(
+                                  fontSize: math.min(12, width * 0.03),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -332,132 +363,210 @@ class _PerfilScreenState extends State<PerfilScreen>
                       SizedBox(
                         width: circleSize,
                         height: circleSize,
-                        child: GestureDetector(
-                          onPanUpdate: (details) {
-                            setState(() {
-                              _wheelAngle += details.delta.dx * 0.01;
-                            });
-                          },
-                          child: Stack(
-                            children: [
-                              // Grupo de medallas que gira como ruleta
-                              Transform.rotate(
-                                angle: _wheelAngle,
-                                child: Stack(
-                                  children: [
-                                    Positioned(
-                                      left: circleSize * 0.03,
-                                      top: circleSize * 0.12,
-                                      child: _buildMedal(
-                                        0,
-                                        'assets/images/grupodorado.png',
-                                        circleSize,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      right: circleSize * 0.03,
-                                      top: circleSize * 0.12,
-                                      child: _buildMedal(
-                                        1,
-                                        'assets/images/grupodiplomado.png',
-                                        circleSize,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      left: 0,
-                                      top: circleSize * 0.47,
-                                      child: _buildMedal(
-                                        2,
-                                        'assets/images/grupoplomo.png',
-                                        circleSize,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      right: 0,
-                                      top: circleSize * 0.47,
-                                      child: _buildMedal(
-                                        3,
-                                        'assets/images/grupoespecialidad.png',
-                                        circleSize,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      left: circleSize * 0.28,
-                                      bottom: circleSize * 0.07,
-                                      child: _buildMedal(
-                                        4,
-                                        'assets/images/grupoplomo.png',
-                                        circleSize,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Mascota en el centro (no gira, solo rebota)
-                              Positioned.fill(
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      AnimatedBuilder(
-                                        animation: _mascotController,
-                                        builder: (context, child) {
-                                          return Transform.translate(
-                                            offset: Offset(
-                                              0,
-                                              _mascotOffset.value,
-                                            ),
-                                            child: child,
-                                          );
-                                        },
-                                        child: Container(
-                                          width: circleSize * 0.41,
-                                          height: circleSize * 0.41,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFF87CEEB),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              Text(
-                                                '🎓',
-                                                style: TextStyle(
-                                                  fontSize: circleSize * 0.23,
-                                                ),
-                                              ),
-                                              Positioned(
-                                                left: 0,
-                                                top: circleSize * 0.12,
-                                                child: Text(
-                                                  '✋',
-                                                  style: TextStyle(
-                                                    fontSize: circleSize * 0.09,
-                                                    color: Colors.blue.shade300,
-                                                  ),
-                                                ),
-                                              ),
-                                              Positioned(
-                                                right: 0,
-                                                top: circleSize * 0.12,
-                                                child: Text(
-                                                  '✋',
-                                                  style: TextStyle(
-                                                    fontSize: circleSize * 0.09,
-                                                    color: Colors.blue.shade300,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Calcular el centro y radio del círculo
+                            final centerX = constraints.maxWidth / 2;
+                            final centerY = constraints.maxHeight / 2;
+                            final radius = circleSize / 2;
+
+                            return GestureDetector(
+                              onPanStart: (details) {
+                                // Validar si el toque inicial está dentro del círculo
+                                final touchPosition = details.localPosition;
+                                final distanceFromCenter =
+                                    (touchPosition - Offset(centerX, centerY))
+                                        .distance;
+                                _isTouchInsideCircle =
+                                    distanceFromCenter <= radius;
+                              },
+                              onPanUpdate: (details) {
+                                // Solo girar si el toque está dentro del círculo
+                                if (!_isTouchInsideCircle) return;
+
+                                // Validar continuamente que el toque siga dentro del círculo
+                                final touchPosition = details.localPosition;
+                                final distanceFromCenter =
+                                    (touchPosition - Offset(centerX, centerY))
+                                        .distance;
+
+                                if (distanceFromCenter > radius) {
+                                  _isTouchInsideCircle = false;
+                                  return;
+                                }
+
+                                setState(() {
+                                  // Dirección corregida: dedo a la derecha = giro a la derecha
+                                  // Rotación infinita sin límites
+                                  // dx positivo (derecha) = rotación positiva (derecha)
+                                  final delta =
+                                      details.delta.dx *
+                                      0.02; // Sensibilidad ajustada
+
+                                  // Aplicar rotación inmediata - sin límites
+                                  _wheelAngle += delta;
+
+                                  // Actualizar velocidad para inercia continua
+                                  _rotationVelocity =
+                                      delta * 3.0; // Mayor inercia
+
+                                  // Rotación infinita - sin restricciones
+                                });
+                              },
+                              onPanEnd: (details) {
+                                // Mantener la rotación con inercia continua solo si estaba dentro del círculo
+                                if (_isTouchInsideCircle) {
+                                  // La velocidad se reducirá gradualmente por la fricción
+                                  // No se resetea, continúa girando hasta detenerse
+                                } else {
+                                  // Si salió del círculo, detener la rotación
+                                  setState(() {
+                                    _rotationVelocity = 0.0;
+                                  });
+                                }
+                                _isTouchInsideCircle = false;
+                              },
+                              onPanCancel: () {
+                                // Similar a onPanEnd - mantener inercia solo si estaba dentro
+                                if (_isTouchInsideCircle) {
+                                  // Mantener inercia
+                                } else {
+                                  setState(() {
+                                    _rotationVelocity = 0.0;
+                                  });
+                                }
+                                _isTouchInsideCircle = false;
+                              },
+                              child: Stack(
+                                children: [
+                                  // Grupo de medallas que gira como ruleta con efecto 3D - Rotación infinita
+                                  Transform.rotate(
+                                    angle:
+                                        _wheelAngle, // Rotación infinita sin límites
+                                    child: Stack(
+                                      children: [
+                                        Positioned(
+                                          left: circleSize * 0.03,
+                                          top: circleSize * 0.12,
+                                          child: _buildMedal(
+                                            0,
+                                            'assets/images/grupodorado.png',
+                                            circleSize,
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                        Positioned(
+                                          right: circleSize * 0.03,
+                                          top: circleSize * 0.12,
+                                          child: _buildMedal(
+                                            1,
+                                            'assets/images/grupodiplomado.png',
+                                            circleSize,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          left: 0,
+                                          top: circleSize * 0.47,
+                                          child: _buildMedal(
+                                            2,
+                                            'assets/images/grupoplomo.png',
+                                            circleSize,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          right: 0,
+                                          top: circleSize * 0.47,
+                                          child: _buildMedal(
+                                            3,
+                                            'assets/images/grupoespecialidad.png',
+                                            circleSize,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          left: circleSize * 0.28,
+                                          bottom: circleSize * 0.07,
+                                          child: _buildMedal(
+                                            4,
+                                            'assets/images/grupoplomo.png',
+                                            circleSize,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                  // Mascota en el centro (no gira, solo rebota)
+                                  Positioned.fill(
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          AnimatedBuilder(
+                                            animation: _mascotController,
+                                            builder: (context, child) {
+                                              return Transform.translate(
+                                                offset: Offset(
+                                                  0,
+                                                  _mascotOffset.value,
+                                                ),
+                                                child: child,
+                                              );
+                                            },
+                                            child: Container(
+                                              width: circleSize * 0.41,
+                                              height: circleSize * 0.41,
+                                              decoration: const BoxDecoration(
+                                                color: const Color(0xFF1A3A5C),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Stack(
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  Text(
+                                                    '🎓',
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          circleSize * 0.23,
+                                                    ),
+                                                  ),
+                                                  Positioned(
+                                                    left: 0,
+                                                    top: circleSize * 0.12,
+                                                    child: Text(
+                                                      '✋',
+                                                      style: TextStyle(
+                                                        fontSize:
+                                                            circleSize * 0.09,
+                                                        color: const Color(
+                                                          0xFF1A3A5C,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Positioned(
+                                                    right: 0,
+                                                    top: circleSize * 0.12,
+                                                    child: Text(
+                                                      '✋',
+                                                      style: TextStyle(
+                                                        fontSize:
+                                                            circleSize * 0.09,
+                                                        color: const Color(
+                                                          0xFF1A3A5C,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -506,37 +615,66 @@ class _PerfilScreenState extends State<PerfilScreen>
       child: Transform.rotate(
         // Compensa el giro de la ruleta para que la medalla siempre se vea derecha
         angle: -_wheelAngle,
-        child: AnimatedRotation(
-          turns: _medalTurns[index],
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOutBack,
-          child: SizedBox(
-            width: medalSize,
-            height: medalSize,
-            child: Stack(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([
+            _medalControllers[index],
+            _rotationController,
+          ]),
+          builder: (context, child) {
+            // Rotación 3D usando Matrix4
+            final rotation3D = _medal3DRotations[index].value;
+            final scale = _medal3DScales[index].value;
+
+            // Efecto de rotación 3D en el eje Y (perspectiva)
+            final perspective = Matrix4.identity()
+              ..setEntry(3, 2, 0.001) // Perspectiva
+              ..rotateY(rotation3D * 0.3) // Rotación 3D en Y
+              ..rotateX(rotation3D * 0.1) // Rotación 3D en X
+              ..scale(scale);
+
+            return Transform(
+              transform: perspective,
               alignment: Alignment.center,
-              children: [
-                // Imagen de medalla (grupos dorado, diplomado, especialidad, plomo)
-                Container(
-                  width: medalSize * 0.91,
-                  height: medalSize * 0.91,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+              child: AnimatedRotation(
+                turns: _medalTurns[index],
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOutBack,
+                child: SizedBox(
+                  width: medalSize,
+                  height: medalSize,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Imagen de medalla con efecto 3D mejorado
+                      Container(
+                        width: medalSize * 0.91,
+                        height: medalSize * 0.91,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: Offset(0, 4 * scale),
+                              spreadRadius: 2 * scale,
+                            ),
+                            BoxShadow(
+                              color: Colors.amber.withOpacity(0.3 * scale),
+                              blurRadius: 20,
+                              offset: Offset(0, 0),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(assetPath, fit: BoxFit.cover),
+                        ),
                       ),
                     ],
                   ),
-                  child: ClipOval(
-                    child: Image.asset(assetPath, fit: BoxFit.cover),
-                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -556,14 +694,33 @@ class _PerfilScreenState extends State<PerfilScreen>
           math.min(55.0, alturaDisponible * 0.7),
         );
 
+        // Calcular tamaños responsivos
+        final paddingHorizontal = math
+            .max(8.0, anchoPantalla * 0.03)
+            .toDouble();
+        final paddingVertical = math
+            .max(4.0, alturaDisponible * 0.06)
+            .toDouble();
+        final iconSize = math
+            .max(16.0, math.min(20.0, anchoPantalla * 0.05))
+            .toDouble();
+        final fontSize = math
+            .max(10.0, math.min(12.0, anchoPantalla * 0.028))
+            .toDouble();
+        final buttonHeight = math
+            .max(36.0, math.min(44.0, alturaDisponible * 0.12))
+            .toDouble();
+        final buttonPaddingH = math.max(8.0, anchoPantalla * 0.025).toDouble();
+        final buttonPaddingV = math
+            .max(4.0, alturaDisponible * 0.06)
+            .toDouble();
+
         return Container(
           width: double.infinity,
           height: alturaDisponible,
-          padding: EdgeInsets.only(
-            left: 12,
-            right: math.max(12, tamanoLogo + 8),
-            top: math.max(4, alturaDisponible * 0.08),
-            bottom: math.max(4, alturaDisponible * 0.08),
+          padding: EdgeInsets.symmetric(
+            horizontal: paddingHorizontal,
+            vertical: paddingVertical,
           ),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -592,7 +749,10 @@ class _PerfilScreenState extends State<PerfilScreen>
                   children: [
                     // Texto
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(18.0, 6.0, 0, 0),
+                      padding: EdgeInsets.only(
+                        left: math.max(8.0, anchoPantalla * 0.02).toDouble(),
+                        top: math.max(2.0, alturaDisponible * 0.05).toDouble(),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -607,7 +767,11 @@ class _PerfilScreenState extends State<PerfilScreen>
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(
+                            height: math
+                                .max(1.0, alturaDisponible * 0.02)
+                                .toDouble(),
+                          ),
                           Text(
                             'Registrados por la CEUB',
                             style: TextStyle(
@@ -621,55 +785,69 @@ class _PerfilScreenState extends State<PerfilScreen>
                         ],
                       ),
                     ),
-                    // Botón centrado debajo del texto
-                    Padding(
-                      padding: const EdgeInsets.only(left: 18.0),
-                      child: SizedBox(
-                        height: math.max(8, alturaDisponible * 0.12),
-                      ),
+                    // Espaciado antes del botón
+                    SizedBox(
+                      height: math.max(6.0, alturaDisponible * 0.08).toDouble(),
                     ),
+                    // Botón responsive
                     Padding(
-                      padding: const EdgeInsets.only(left: 18.0),
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF004080),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: math.max(12, anchoPantalla * 0.035),
-                            vertical: math.max(6, alturaDisponible * 0.08),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: math.max(20, anchoPantalla * 0.05),
-                              height: math.max(20, anchoPantalla * 0.05),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF004080),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Icon(
-                                Icons.fact_check,
-                                color: Colors.white,
-                                size: math.max(12, anchoPantalla * 0.03),
-                              ),
+                      padding: EdgeInsets.only(
+                        left: math.max(8.0, anchoPantalla * 0.02).toDouble(),
+                        right: math.max(4.0, anchoPantalla * 0.01).toDouble(),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF004080),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: buttonPaddingH,
+                              vertical: buttonPaddingV,
                             ),
-                            SizedBox(width: math.max(6, anchoPantalla * 0.015)),
-                            Text(
-                              'Verificar programas',
-                              style: TextStyle(
-                                fontSize: math.max(11, anchoPantalla * 0.032),
-                                fontWeight: FontWeight.w600,
-                              ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ],
+                            minimumSize: Size(0, buttonHeight),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: iconSize,
+                                height: iconSize,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF004080),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: Icon(
+                                  Icons.fact_check,
+                                  color: Colors.white,
+                                  size: iconSize * 0.6,
+                                ),
+                              ),
+                              SizedBox(
+                                width: math
+                                    .max(4.0, anchoPantalla * 0.015)
+                                    .toDouble(),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  'Verificar programas',
+                                  style: TextStyle(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -679,16 +857,19 @@ class _PerfilScreenState extends State<PerfilScreen>
               // Logo CEUB en la esquina superior derecha
               Padding(
                 padding: EdgeInsets.only(
-                  top: math.max(4, alturaDisponible * 0.1),
-                  right: math.max(8, anchoPantalla * 0.02),
+                  top: math.max(2.0, alturaDisponible * 0.08).toDouble(),
+                  right: math.max(4.0, anchoPantalla * 0.01).toDouble(),
                 ),
                 child: Container(
-                  width: tamanoLogo * 1,
-                  height: tamanoLogo * 1,
+                  width: tamanoLogo,
+                  height: tamanoLogo,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.amber, width: 2),
+                    border: Border.all(
+                      color: Colors.amber,
+                      width: math.max(1.5, anchoPantalla * 0.004).toDouble(),
+                    ),
                   ),
                   child: ClipOval(
                     child: Image.asset(

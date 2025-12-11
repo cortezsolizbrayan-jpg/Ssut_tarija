@@ -1,7 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
 
-class AppHeader extends StatelessWidget {
-  const AppHeader({super.key});
+class AppHeader extends StatefulWidget {
+  final TextEditingController? searchController;
+  final ValueChanged<String>? onSearchChanged;
+  final Widget? menuButton;
+
+  const AppHeader({
+    super.key,
+    this.searchController,
+    this.onSearchChanged,
+    this.menuButton,
+  });
+
+  @override
+  State<AppHeader> createState() => _AppHeaderState();
+}
+
+class _AppHeaderState extends State<AppHeader> {
+  @override
+  void initState() {
+    super.initState();
+    widget.searchController?.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.searchController?.removeListener(_onSearchChanged);
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,34 +66,39 @@ class AppHeader extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            // Primera fila: Logo Posgrado, Banco Union, Notificaciones, Configuración y Avatar
+            // Primera fila: Menu, Logo Posgrado, Banco Union, Notificaciones, Configuración y Avatar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
+                  // Menú hamburguesa (si se proporciona)
+                  if (widget.menuButton != null) ...[
+                    widget.menuButton!,
+                    const SizedBox(width: 12),
+                  ],
                   // Logo Posgrado (centrado)
                   Expanded(
                     child: Image.asset(
                       'assets/images/logposgrado.png',
-                      height: 40,
+                      height: 36,
                       fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // Banco Union
+                  const SizedBox(width: 6),
+                  // Banco Union - Reducido
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: 8,
+                      vertical: 5,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
@@ -69,10 +107,10 @@ class AppHeader extends StatelessWidget {
                       children: const [
                         Icon(
                           Icons.credit_card,
-                          size: 16,
+                          size: 14,
                           color: Color(0xFF1A3A5C),
                         ),
-                        SizedBox(width: 6),
+                        SizedBox(width: 4),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -80,7 +118,7 @@ class AppHeader extends StatelessWidget {
                             Text(
                               'BANCO UNION',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1A3A5C),
                               ),
@@ -88,7 +126,7 @@ class AppHeader extends StatelessWidget {
                             Text(
                               'Número de cuenta único',
                               style: TextStyle(
-                                fontSize: 8,
+                                fontSize: 7,
                                 color: Color(0xFF64748B),
                               ),
                             ),
@@ -97,91 +135,47 @@ class AppHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  // Notificaciones
-                  Stack(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF1E293B), Color(0xFF64748B)],
+                  const SizedBox(width: 6),
+                  // Notificaciones - Más reducido
+                  const NotificationIconWidget(size: 40, iconSize: 22),
+                  const SizedBox(width: 6),
+                  // Configuración - Más reducido
+                  GestureDetector(
+                    onTap: () {
+                      context.push('/configuracion');
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1E293B), Color(0xFF64748B)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                            spreadRadius: 1,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.35),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.notifications,
-                          color: Colors.white,
-                          size: 22,
-                        ),
+                        ],
                       ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
+                      child: const Icon(
+                        Icons.settings,
+                        color: Colors.white,
+                        size: 22,
                       ),
-                    ],
-                  ),
-                  const SizedBox(width: 10),
-                  // Configuración
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.15),
-                    ),
-                    child: const Icon(
-                      Icons.settings,
-                      color: Colors.white,
-                      size: 22,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  // Avatar
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const CircleAvatar(
-                      radius: 22,
-                      backgroundColor: Colors.white,
-                      backgroundImage: AssetImage(
-                        'assets/icons/profile_img.png',
-                      ),
-                    ),
+                  const SizedBox(width: 6),
+                  // Avatar - Más reducido
+                  ProfileAvatarWidget(
+                    radius: 16,
+                    showShadow: true,
+                    onTap: () {
+                      context.push('/mis-datos-personales');
+                    },
                   ),
                 ],
               ),
@@ -211,27 +205,46 @@ class AppHeader extends StatelessWidget {
                 ],
               ),
             ),
-            // Barra de búsqueda
+            // Barra de búsqueda - Reducida
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Container(
-                height: 50,
+                height: 44,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: TextField(
+                  controller: widget.searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscador...',
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: const Icon(Icons.search, color: Colors.grey),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Colors.grey,
+                      size: 20,
+                    ),
+                    suffixIcon:
+                        widget.searchController != null &&
+                            widget.searchController!.text.isNotEmpty
+                        ? GestureDetector(
+                            onTap: () {
+                              widget.searchController!.clear();
+                              widget.onSearchChanged?.call('');
+                            },
+                            child: const Icon(
+                              Icons.clear,
+                              color: Colors.grey,
+                              size: 18,
+                            ),
+                          )
+                        : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -239,10 +252,12 @@ class AppHeader extends StatelessWidget {
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: 12,
+                      vertical: 10,
                     ),
+                    isDense: true,
                   ),
+                  onChanged: widget.onSearchChanged,
                 ),
               ),
             ),
@@ -276,29 +291,37 @@ class AppHeader extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _ProgramTypeSelector(
-                              label: 'Diplomado',
-                              type: ProgramType.diplomado,
-                              isSelected: true,
-                              onTap: () {},
+                            Expanded(
+                              child: _ProgramTypeSelector(
+                                label: 'Diplomado',
+                                type: ProgramType.diplomado,
+                                isSelected: true,
+                                onTap: () {},
+                              ),
                             ),
-                            _ProgramTypeSelector(
-                              label: 'Maestría',
-                              type: ProgramType.maestria,
-                              isSelected: false,
-                              onTap: () {},
+                            Expanded(
+                              child: _ProgramTypeSelector(
+                                label: 'Maestría',
+                                type: ProgramType.maestria,
+                                isSelected: false,
+                                onTap: () {},
+                              ),
                             ),
-                            _ProgramTypeSelector(
-                              label: 'Doctorado',
-                              type: ProgramType.doctorado,
-                              isSelected: false,
-                              onTap: () {},
+                            Expanded(
+                              child: _ProgramTypeSelector(
+                                label: 'Doctorado',
+                                type: ProgramType.doctorado,
+                                isSelected: false,
+                                onTap: () {},
+                              ),
                             ),
-                            _ProgramTypeSelector(
-                              label: 'Posdoctorado',
-                              type: ProgramType.posdoctorado,
-                              isSelected: false,
-                              onTap: () {},
+                            Expanded(
+                              child: _ProgramTypeSelector(
+                                label: 'Posdoctorado',
+                                type: ProgramType.posdoctorado,
+                                isSelected: false,
+                                onTap: () {},
+                              ),
                             ),
                           ],
                         ),
@@ -338,7 +361,7 @@ class _ProgramTypeSelector extends StatelessWidget {
     }
     switch (type) {
       case ProgramType.maestria:
-        return const Color(0xFF87CEEB).withOpacity(0.8); // Azul claro
+        return const Color(0xFF1A3A5C).withOpacity(0.8); // Azul del header
       case ProgramType.doctorado:
         return Colors.grey.shade400.withOpacity(0.8); // Gris claro
       case ProgramType.posdoctorado:
@@ -377,9 +400,15 @@ class _ProgramTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final availableWidth = width - 40; // Padding horizontal
+    final itemWidth = availableWidth / 4; // 4 items
+    final fontSize = (itemWidth * 0.12).clamp(9.0, 12.0);
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 56,
@@ -405,13 +434,18 @@ class _ProgramTypeSelector extends StatelessWidget {
             ),
             child: Center(child: _getIcon()),
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          const SizedBox(height: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: fontSize,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

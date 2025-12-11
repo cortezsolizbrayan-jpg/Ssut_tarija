@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/features/login/presentation/providers/login_provider.dart';
 import 'package:refactor_template/features/login/presentation/widgets/widgets.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 import 'package:rive/rive.dart' hide Image;
@@ -25,7 +24,6 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
   bool isShowLoading = false;
   bool isShowConfetti = false;
 
-  SMITrigger? _errorTrigger;
   SMITrigger? _successTrigger;
   SMITrigger? _confettiTrigger;
 
@@ -37,7 +35,6 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
     );
     if (controller != null) {
       artboard.addController(controller);
-      _errorTrigger = controller.findInput<bool>('Error') as SMITrigger?;
       _successTrigger = controller.findInput<bool>('Check') as SMITrigger?;
     }
   }
@@ -56,8 +53,41 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
   }
 
   void _onLoginPressed() {
-    // context.go(PantallaPrincipal.name);
-    // return;
+    // ============================================
+    // TEMPORAL: Autenticación deshabilitada para desarrollo
+    // ============================================
+    // Navegación directa sin autenticación
+    setState(() {
+      isShowLoading = true;
+      isShowConfetti = false;
+    });
+
+    // Secuencia de animaciones y luego navegación
+    Future.delayed(const Duration(seconds: 1), () {
+      _successTrigger?.fire();
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        setState(() {
+          isShowLoading = false;
+          isShowConfetti = true;
+        });
+        _confettiTrigger?.fire();
+
+        Future.delayed(const Duration(seconds: 1), () {
+          if (!mounted) return;
+          setState(() {
+            isShowConfetti = false;
+          });
+          context.go(PantallaPrincipal.name);
+        });
+      });
+    });
+    //AQUI SE EEXPLICA LA AUTENTICACION
+
+    // ============================================
+    // CÓDIGO ORIGINAL DE AUTENTICACIÓN (COMENTADO)
+    // ============================================
+    /*
     // Validación sencilla del formulario
     ref
         .read(asyncLoginProvider(usuario, contra).future)
@@ -105,6 +135,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
           _errorTrigger?.fire();
           print(error);
         });
+    */
   }
 
   @override
@@ -432,36 +463,52 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                         ),
 
                         // Botones sociales
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _socialButton(
-                              width,
-                              icon: Icon(
-                                FontAwesomeIcons.google,
-                                size: width * 0.06,
-                                color: const Color(0xFF4285F4),
-                              ),
-                            ),
-                            SizedBox(width: width * 0.05),
-                            _socialButton(
-                              width,
-                              icon: Icon(
-                                Icons.facebook,
-                                size: width * 0.08,
-                                color: const Color(0xFF3B5998),
-                              ),
-                            ),
-                            SizedBox(width: width * 0.05),
-                            _socialButton(
-                              width,
-                              icon: Icon(
-                                FontAwesomeIcons.twitter,
-                                size: width * 0.06,
-                                color: const Color(0xFF1DA1F2),
-                              ),
-                            ),
-                          ],
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final availableWidth = constraints.maxWidth;
+                            final buttonSize = availableWidth < 200
+                                ? 48.0
+                                : 56.0;
+                            final spacing = availableWidth < 200
+                                ? 8.0
+                                : width * 0.05;
+
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _socialButton(
+                                  width,
+                                  buttonSize: buttonSize,
+                                  icon: Icon(
+                                    FontAwesomeIcons.google,
+                                    size: buttonSize * 0.4,
+                                    color: const Color(0xFF4285F4),
+                                  ),
+                                ),
+                                SizedBox(width: spacing),
+                                _socialButton(
+                                  width,
+                                  buttonSize: buttonSize,
+                                  icon: Icon(
+                                    Icons.facebook,
+                                    size: buttonSize * 0.4,
+                                    color: const Color(0xFF3B5998),
+                                  ),
+                                ),
+                                SizedBox(width: spacing),
+                                _socialButton(
+                                  width,
+                                  buttonSize: buttonSize,
+                                  icon: Icon(
+                                    FontAwesomeIcons.twitter,
+                                    size: buttonSize * 0.4,
+                                    color: const Color(0xFF1DA1F2),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
 
                         SizedBox(
@@ -520,10 +567,15 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
     );
   }
 
-  Widget _socialButton(double width, {required Widget icon}) {
+  Widget _socialButton(
+    double width, {
+    required Widget icon,
+    double? buttonSize,
+  }) {
+    final size = buttonSize ?? 56.0;
     return Container(
-      width: 56,
-      height: 56,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
