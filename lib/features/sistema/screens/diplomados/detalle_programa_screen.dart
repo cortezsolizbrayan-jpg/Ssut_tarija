@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/config/constants/constants.dart';
-import 'package:refactor_template/features/sistema/screens/entryPoint/components/menu_btn.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
 import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
 import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
@@ -28,7 +28,6 @@ class DetalleProgramaScreen extends StatefulWidget {
 class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
     with TickerProviderStateMixin {
   bool isSideBarOpen = false;
-  late SMIBool isMenuOpenInput;
 
   // Sección seleccionada: 'Colegiatura', 'Matrículas', 'Monografía / Tesis'
   String _selectedSection = 'Matrículas';
@@ -51,13 +50,21 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
   @override
   void initState() {
     super.initState();
-    _animationController =
-        AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 200),
-        )..addListener(() {
-          setState(() {});
-        });
+    _initializeAnimations();
+    // Retrasar las animaciones iniciales para mejor hot reload
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _sectionTransitionController.forward();
+        _paymentCardsController.forward();
+      }
+    });
+  }
+
+  void _initializeAnimations() {
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
     scalAnimation = Tween<double>(begin: 1, end: 0.8).animate(
       CurvedAnimation(
         parent: _animationController,
@@ -95,9 +102,20 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+  }
 
-    _sectionTransitionController.forward();
-    _paymentCardsController.forward();
+  @override
+  void reassemble() {
+    super.reassemble();
+    // Preservar el estado durante hot reload
+    if (_sectionTransitionController.status != AnimationStatus.forward &&
+        _sectionTransitionController.status != AnimationStatus.completed) {
+      _sectionTransitionController.value = 1.0;
+    }
+    if (_paymentCardsController.status != AnimationStatus.forward &&
+        _paymentCardsController.status != AnimationStatus.completed) {
+      _paymentCardsController.value = 1.0;
+    }
   }
 
   @override
@@ -140,23 +158,29 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
             child: const SideBar(),
           ),
           // Contenido principal con efecto 3D
-          Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(
-                1 * animation.value - 30 * (animation.value) * math.pi / 180,
-              ),
-            child: Transform.translate(
-              offset: Offset(animation.value * 265, 0),
-              child: Transform.scale(
-                scale: scalAnimation.value,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(24)),
-                  child: _buildContent(),
+          AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.001)
+                  ..rotateY(
+                    1 * animation.value -
+                        30 * (animation.value) * math.pi / 180,
+                  ),
+                child: Transform.translate(
+                  offset: Offset(animation.value * 265, 0),
+                  child: Transform.scale(
+                    scale: scalAnimation.value,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(24)),
+                      child: _buildContent(),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
           // El menú ahora está en la fila principal del header
         ],
@@ -164,6 +188,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
     );
   }
 
+  //se define el contenido de la pantalla
   Widget _buildContent() {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -171,21 +196,17 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
         bottom: false,
         child: Column(
           children: [
-            // Header azul
-            _buildHeader(context),
-            // Información del programa y tarjetas de progreso
+            // Header azul (degradé + iconos) que se desplaza junto con el contenido
+            _buildHeader(),
+            // Información del programa, tarjetas y pagos que se mueven junto al header
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Información del programa
                     _buildProgramInfo(),
-                    // Tarjetas de progreso (Colegiatura, Matrículas, Tesis)
                     _buildProgressCards(),
-                    // Sección Colegiatura
                     _buildColegiaturaSection(),
-                    // Lista de pagos
                     _buildPaymentsList(),
                     const SizedBox(height: 20),
                   ],
@@ -200,51 +221,55 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
     );
   }
 
-  /// Construye el header azul completo con menú, notificaciones y información del programa.
-  /// Mantiene el estilo del círculo azul degradado consistente con otras pantallas.
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        // Degradé celeste-azul igual que en AppHeader
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF1A3A5C), // Azul oscuro
-            Color(0xFF2C5F8D), // Azul medio
+            Color(0xFF00448A), // Azul muy oscuro
+            Color(0xFF0F7BD7), // Azul brillante
+            Color(0xFF0B5FB4), // Azul medio-oscuro
           ],
+          stops: [0.0, 0.5, 1.0],
         ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(175),
-          bottomRight: Radius.circular(175),
+        borderRadius: BorderRadius.only(
+          // Curva más pronunciada en la parte inferior del header
+          bottomLeft: Radius.circular(220),
+          bottomRight: Radius.circular(220),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1A3A5C).withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-            spreadRadius: 2,
-          ),
-          BoxShadow(
-            color: const Color(0xFF2C5F8D).withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Primera fila: Menu, Logo Posgrado, Banco Union, Notificaciones, Configuración y Avatar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  // Menú hamburguesa - En la misma fila
-                  MenuBtn(
-                    press: () {
-                      isMenuOpenInput.value = !isMenuOpenInput.value;
-
+      // Padding interno: separa los iconos del borde superior
+      padding: const EdgeInsets.fromLTRB(16, 32, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Primera fila: Menú, Logo Posgrado y otros iconos
+          FadeInDown(
+            duration: const Duration(milliseconds: 500),
+            child: Row(
+              children: [
+                // Menú hamburguesa - Al principio
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.black, size: 26),
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
                       if (_animationController.value == 0) {
                         _animationController.forward();
                       } else {
@@ -255,70 +280,45 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                         isSideBarOpen = !isSideBarOpen;
                       });
                     },
-                    riveOnInit: (artboard) {
-                      final controller = StateMachineController.fromArtboard(
-                        artboard,
-                        "State Machine",
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Logo Posgrado con tamaño realmente responsivo
+                Flexible(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxWidth = constraints.maxWidth;
+                      final logoHeight = math.max(
+                        32.0,
+                        math.min(56.0, maxWidth * 0.35),
                       );
-
-                      artboard.addController(controller!);
-
-                      isMenuOpenInput =
-                          controller.findInput<bool>("isOpen") as SMIBool;
-                      isMenuOpenInput.value = true;
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Image.asset(
+                          'assets/images/logposgrado.png',
+                          height: logoHeight,
+                          fit: BoxFit.contain,
+                        ),
+                      );
                     },
                   ),
-                  const SizedBox(width: 12),
-                  // Logo Posgrado
-                  Expanded(
-                    child: Image.asset(
-                      'assets/images/logposgrado.png',
-                      height: 36,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Banco Union - Reducido
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'BANCO UNION',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A3A5C),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Número de cuenta único',
-                        style: TextStyle(fontSize: 7, color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  // Notificaciones con badge - MEJORADO
-                  const NotificationIconWidget(size: 44, iconSize: 24),
-                  const SizedBox(width: 8),
-                  // Icono de configuración - Reducido
-                  GestureDetector(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(), // Espacio flexible sin texto
+                ),
+                // Iconos adicionales (Notificaciones, Configuración, Avatar)
+                const SizedBox(width: 8),
+                const NotificationIconWidget(size: 40, iconSize: 22),
+                const SizedBox(width: 6),
+                Builder(
+                  builder: (context) => GestureDetector(
                     onTap: () {
                       context.push('/configuracion');
                     },
                     child: Container(
-                      width: 44,
-                      height: 44,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -327,8 +327,8 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.4),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                             spreadRadius: 1,
                           ),
                         ],
@@ -336,84 +336,77 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                       child: const Icon(
                         Icons.settings,
                         color: Colors.white,
-                        size: 24,
+                        size: 22,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // Avatar del usuario - Reducido
-                  ProfileAvatarWidget(
-                    radius: 18,
+                ),
+                const SizedBox(width: 6),
+                Builder(
+                  builder: (context) => ProfileAvatarWidget(
+                    radius: 16,
                     showShadow: false,
                     onTap: () {
                       context.push('/mis-datos-personales');
                     },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            // Segunda fila: Botón de retroceso, Programa y Plan de Pagos
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Programa:',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.titulo,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+          ),
+          const SizedBox(height: 12),
+          // Título con animación
+          FadeInLeft(
+            duration: const Duration(milliseconds: 800),
+            delay: const Duration(milliseconds: 200),
+            //se define el texto del titulo
+            child: Text(
+              'Mis Programas',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.6),
+                    offset: const Offset(1, 1),
+                    blurRadius: 4,
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Plan de Pagos del Programa',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Descuento del Programa con %10',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  Shadow(
+                    color: Colors.black.withOpacity(0.4),
+                    offset: const Offset(0, 0),
+                    blurRadius: 3,
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 6),
+          // Subtítulo con animación
+          FadeInRight(
+            duration: const Duration(milliseconds: 800),
+            delay: const Duration(milliseconds: 300),
+            child: Text(
+              'Todos los programas que está cursando',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.95),
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.5),
+                    offset: const Offset(1, 1),
+                    blurRadius: 3,
+                  ),
+                  Shadow(
+                    color: Colors.black.withOpacity(0.3),
+                    offset: const Offset(0, 0),
+                    blurRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -430,12 +423,13 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
             tween: Tween(begin: 0.0, end: 1.0),
             duration: const Duration(milliseconds: 500),
             curve: Curves.elasticOut,
+            //se define el efecto scale del widget
             builder: (context, value, child) {
               return Transform.scale(
                 scale: value,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
+                    horizontal: 14,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
@@ -468,8 +462,9 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeOut,
             builder: (context, value, child) {
+              final safeOpacity = value.clamp(0.0, 1.0);
               return Opacity(
-                opacity: value,
+                opacity: safeOpacity,
                 child: Transform.translate(
                   offset: Offset(30 * (1 - value), 0),
                   child: Text(
@@ -485,6 +480,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                         ),
                       ],
                     ),
+                    //se define el maximo de lineas del texto
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -500,95 +496,94 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
 
   /// Construye las tarjetas de progreso (Colegiatura, Matrículas, Tesis).
   Widget _buildProgressCards() {
-    return Transform.translate(
-      offset: const Offset(0, -40),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 1,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutBack,
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Opacity(
-                      opacity: value,
-                      child: _AnimatedProgressCard(
-                        titulo: 'Colegiatura',
-                        pagadas: 2,
-                        total: 5,
-                        porcentaje: 65,
-                        isHighlighted: _selectedSection == 'Colegiatura',
-                        onTap: () => _changeSection('Colegiatura'),
-                      ),
+    // Tarjetas de progreso en la misma fila, sin solaparse con el título
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                final safeOpacity = value.clamp(0.0, 1.0);
+                return Transform.scale(
+                  scale: value,
+                  child: Opacity(
+                    opacity: safeOpacity,
+                    child: _AnimatedProgressCard(
+                      titulo: 'Colegiatur',
+                      pagadas: 2,
+                      total: 5,
+                      porcentaje: 65,
+                      isHighlighted: _selectedSection == 'Colegiatura',
+                      onTap: () => _changeSection('Colegiatura'),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 1,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeOutBack,
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Opacity(
-                      opacity: value,
-                      child: _AnimatedProgressCard(
-                        titulo: 'Matrículas',
-                        pagadas: 2,
-                        total: 3,
-                        porcentaje: 60,
-                        isHighlighted: _selectedSection == 'Matrículas',
-                        onTap: () => _changeSection('Matrículas'),
-                      ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                final safeOpacity = value.clamp(0.0, 1.0);
+                return Transform.scale(
+                  scale: value,
+                  child: Opacity(
+                    opacity: safeOpacity,
+                    child: _AnimatedProgressCard(
+                      titulo: 'Matrículas',
+                      pagadas: 2,
+                      total: 3,
+                      porcentaje: 60,
+                      isHighlighted: _selectedSection == 'Matrículas',
+                      onTap: () => _changeSection('Matrículas'),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 1,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOutBack,
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Opacity(
-                      opacity: value,
-                      child: _AnimatedProgressCard(
-                        titulo: 'Monografía / Tesis',
-                        pagadas: 0,
-                        total: 1,
-                        porcentaje: 0,
-                        isHighlighted: _selectedSection == 'Monografía / Tesis',
-                        onTap: () => _changeSection('Monografía / Tesis'),
-                      ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                final safeOpacity = value.clamp(0.0, 1.0);
+                return Transform.scale(
+                  scale: value,
+                  child: Opacity(
+                    opacity: safeOpacity,
+                    child: _AnimatedProgressCard(
+                      titulo: 'Monografía / Tesis',
+                      pagadas: 0,
+                      total: 1,
+                      porcentaje: 0,
+                      isHighlighted: _selectedSection == 'Monografía / Tesis',
+                      onTap: () => _changeSection('Monografía / Tesis'),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   /// Construye la sección de título dinámico según la sección seleccionada.
   Widget _buildColegiaturaSection() {
+    // Animación más corta y liviana para el encabezado de sección
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -596,116 +591,141 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Usamos start + SizedBox en lugar de spaceBetween para evitar overflow
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOut,
-                builder: (context, value, child) {
-                  return Opacity(
-                    opacity: value,
-                    child: Transform.translate(
-                      offset: Offset(-20 * (1 - value), 0),
-                      child: Text(
-                        _selectedSection,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                          shadows: [
-                            Shadow(
-                              color: const Color(
-                                0xFF1A3A5C,
-                              ).withOpacity(0.2 * value),
-                              blurRadius: 8 * value,
-                            ),
-                          ],
+              // Título de la sección (lado izquierdo) con espacio flexible
+              Expanded(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOut,
+                  builder: (context, value, child) {
+                    final safeOpacity = value.clamp(0.0, 1.0);
+                    return Opacity(
+                      opacity: safeOpacity,
+                      child: Transform.translate(
+                        offset: Offset(-20 * (1 - value), 0),
+                        child: Text(
+                          _selectedSection,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                            shadows: [
+                              Shadow(
+                                color: const Color(
+                                  0xFF1A3A5C,
+                                ).withOpacity(0.2 * value),
+                                blurRadius: 8 * value,
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOut,
-                builder: (context, value, child) {
-                  return Opacity(
-                    opacity: value,
-                    child: Transform.translate(
-                      offset: Offset(20 * (1 - value), 0),
-                      child: Transform.scale(
-                        scale: 0.9 + (0.1 * value),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final screenWidth = MediaQuery.of(
-                                context,
-                              ).size.width;
-                              final fontSize = math
-                                  .max(
-                                    11.0,
-                                    math.min(14.0, screenWidth * 0.033),
-                                  )
-                                  .toDouble();
-                              final iconSize = math
-                                  .max(16.0, math.min(18.0, screenWidth * 0.04))
-                                  .toDouble();
-                              final paddingH = math
-                                  .max(
-                                    10.0,
-                                    math.min(16.0, screenWidth * 0.038),
-                                  )
-                                  .toDouble();
-                              final paddingV = math
-                                  .max(8.0, math.min(10.0, screenWidth * 0.023))
-                                  .toDouble();
-
-                              return ElevatedButton.icon(
-                                onPressed: () {
-                                  // TODO: Implementar navegación al historial de facturas
-                                },
-                                icon: Icon(Icons.description, size: iconSize),
-                                label: Flexible(
-                                  child: Text(
-                                    'Ver Historial de Facturas',
-                                    style: TextStyle(
-                                      fontSize: fontSize,
-                                      fontWeight: FontWeight.w600,
+              const SizedBox(width: 12),
+              // Botón "Ver Historial de Facturas" responsivo (lado derecho)
+              Flexible(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOut,
+                  //se define el efecto scale del widget
+                  builder: (context, value, child) {
+                    final safeOpacity = value.clamp(0.0, 1.0);
+                    return Opacity(
+                      opacity: safeOpacity,
+                      child: Transform.translate(
+                        offset: Offset(20 * (1 - value), 0),
+                        child: Transform.scale(
+                          scale: 0.9 + (0.1 * value),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final availableWidth = constraints.maxWidth;
+                                final screenWidth = MediaQuery.of(
+                                  context,
+                                ).size.width;
+                                final fontSize = math
+                                    .max(
+                                      10.0,
+                                      math.min(13.0, screenWidth * 0.03),
+                                    )
+                                    .toDouble();
+                                final iconSize = math
+                                    .max(
+                                      14.0,
+                                      math.min(18.0, screenWidth * 0.04),
+                                    )
+                                    .toDouble();
+                                final paddingH = math
+                                    .max(
+                                      8.0,
+                                      math.min(14.0, availableWidth * 0.12),
+                                    )
+                                    .toDouble();
+                                final paddingV = math
+                                    .max(
+                                      6.0,
+                                      math.min(10.0, screenWidth * 0.023),
+                                    )
+                                    .toDouble();
+                                //se define el boton de pago
+                                return FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      // TODO: Implementar navegación al historial de facturas
+                                    },
+                                    icon: Icon(
+                                      Icons.description,
+                                      size: iconSize,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    label: Text(
+                                      'Ver Historial de Facturas',
+                                      style: TextStyle(
+                                        fontSize: fontSize,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(
+                                        0xFFFF9800,
+                                      ), // Naranja
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: paddingH,
+                                        vertical: paddingV,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      elevation: 2 + (2 * value),
+                                      minimumSize: Size(
+                                        0,
+                                        math.max(36, screenWidth * 0.085),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(
-                                    0xFFFF9800,
-                                  ), // Naranja
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: paddingH,
-                                    vertical: paddingV,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  elevation: 2 + (2 * value),
-                                  minimumSize: Size(
-                                    0,
-                                    math.max(36, screenWidth * 0.085),
-                                  ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -741,6 +761,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
       );
     }
 
+    // Lista de pagos sin animación por ítem para mejor rendimiento
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -748,39 +769,21 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
-            children: payments.asMap().entries.map((entry) {
-              final index = entry.key;
-              final payment = entry.value;
-
-              return TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: Duration(milliseconds: 300 + (index * 50)),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 20 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _PaymentCard(
-                          numero: payment['numero'] as int,
-                          concepto: payment['concepto'] as String,
-                          fechaVencimiento:
-                              payment['fechaVencimiento'] as String,
-                          montoDeuda: payment['montoDeuda'] as double,
-                          fechaPago: payment['fechaPago'] as String?,
-                          fechaPagoAtrasado:
-                              payment['fechaPagoAtrasado'] as String?,
-                          responsable: payment['responsable'] as String?,
-                          estaPagado: payment['estaPagado'] as bool,
-                          estaAtrasado: payment['estaAtrasado'] as bool,
-                          tipoSeccion: _selectedSection,
-                        ),
-                      ),
-                    ),
-                  );
-                },
+            children: payments.map((payment) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _PaymentCard(
+                  numero: payment['numero'] as int,
+                  concepto: payment['concepto'] as String,
+                  fechaVencimiento: payment['fechaVencimiento'] as String,
+                  montoDeuda: payment['montoDeuda'] as double,
+                  fechaPago: payment['fechaPago'] as String?,
+                  fechaPagoAtrasado: payment['fechaPagoAtrasado'] as String?,
+                  responsable: payment['responsable'] as String?,
+                  estaPagado: payment['estaPagado'] as bool,
+                  estaAtrasado: payment['estaAtrasado'] as bool,
+                  tipoSeccion: _selectedSection,
+                ),
               );
             }).toList(),
           ),
@@ -1348,10 +1351,11 @@ class _PaymentCard extends StatelessWidget {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
       builder: (context, value, child) {
+        final safeOpacity = value.clamp(0.0, 1.0);
         return Transform.scale(
           scale: 0.95 + (0.05 * value),
           child: Opacity(
-            opacity: value,
+            opacity: safeOpacity,
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -1360,14 +1364,14 @@ class _PaymentCard extends StatelessWidget {
                 border: Border.all(
                   color: const Color(
                     0xFF1A3A5C,
-                  ).withOpacity(0.3), // Borde azul del header
-                  width: 1.5,
+                  ).withOpacity(0.25), // Borde azul suave
+                  width: 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08 * value),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -1451,29 +1455,37 @@ class _PaymentCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   // Botones de acción
-                  Flexible(
+                  Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         if (estaPagado) ...[
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'Pagado',
-                                style: TextStyle(
+                          // Fila responsiva para evitar overflow en pantallas pequeñas
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(
+                                  Icons.check_circle,
                                   color: Colors.green,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                  size: 20,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 4),
+                                Text(
+                                  'Pagado',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          //se define el espacio entre el texto y el boton
                           const SizedBox(height: 8),
                           _AnimatedButton(
                             onPressed: () {
@@ -1485,25 +1497,29 @@ class _PaymentCard extends StatelessWidget {
                             foregroundColor: Colors.white,
                           ),
                         ] else if (estaAtrasado) ...[
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.error,
-                                color: Colors.red,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'Pago Atrasado',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                          // Fila responsiva para "Pago Atrasado"
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.error, color: Colors.red, size: 20),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Pago Atrasado',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                          //se define el espacio entre el texto y el boton
                           const SizedBox(height: 8),
+                          //se define el boton de pago
                           _AnimatedButton(
                             onPressed: () {
                               context.push(

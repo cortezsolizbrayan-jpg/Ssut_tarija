@@ -10,12 +10,11 @@ import 'package:refactor_template/features/sistema/screens/pagos/deposito_matric
 import 'package:refactor_template/features/sistema/screens/perfil/mis_datos_personales_screen.dart';
 
 /// Configuración central de rutas de la aplicación.
-///
-/// La aplicación inicia ahora en el `SplashScreen` y, al finalizar
-/// su animación, navega a la pantalla de inicio de sesión (`PaginaLogin`).
+/// En desarrollo podemos arrancar directo a una pantalla específica
+/// (por ejemplo, Detalle de Programa) para trabajar más rápido.
 final goRouter = GoRouter(
-  // Cambiar a '/login' directamente si el splash causa problemas
-  initialLocation: '/splash',
+  // Flujo normal: iniciar en el login (que ya tiene su animación propia)
+  initialLocation: '/login',
   debugLogDiagnostics: false, // Desactivar logs de debug para mejor rendimiento
   routes: [
     // Splash animado inicial

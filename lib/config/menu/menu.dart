@@ -7,6 +7,7 @@ class Menu {
   Menu({required this.title, required this.rive});
 }
 
+//se define el menu lateral
 List<Menu> sidebarMenus = [
   Menu(
     title: "Inicio",

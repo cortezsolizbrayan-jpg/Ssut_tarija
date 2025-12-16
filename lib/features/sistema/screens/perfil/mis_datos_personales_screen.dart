@@ -22,7 +22,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
 
   // Controladores de texto
   final TextEditingController _nombreController = TextEditingController(
-    text: 'MARIA RENEE',
+    text: 'MARIA RENE FERNANDEZ',
   );
   final TextEditingController _apPaternoController = TextEditingController(
     text: 'RODRIGUEZ',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/services/biometric_service.dart';
 import 'package:refactor_template/features/login/presentation/widgets/widgets.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 import 'package:rive/rive.dart' hide Image;
@@ -26,6 +27,8 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
 
   SMITrigger? _successTrigger;
   SMITrigger? _confettiTrigger;
+
+  final _biometricService = BiometricService();
 
   // Inicialización del Rive para el check/error
   void _onCheckRiveInit(Artboard artboard) {
@@ -52,7 +55,46 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
     }
   }
 
-  void _onLoginPressed() {
+  /// Guarda las credenciales para biometría después de un login exitoso
+  Future<void> _saveCredentialsForBiometric(
+    String username,
+    String password,
+  ) async {
+    try {
+      // Verificar si el dispositivo soporta biometría
+      final isSupported = await _biometricService.isDeviceSupported();
+      if (isSupported) {
+        final availableTypes = await _biometricService.getAvailableBiometrics();
+        if (availableTypes.isNotEmpty) {
+          // Habilitar biometría y guardar credenciales
+          await _biometricService.setBiometricEnabled(true);
+          await _biometricService.saveCredentials(
+            username: username,
+            password: password,
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Biometría habilitada. Podrás usar ${_biometricService.getBiometricTypeName(availableTypes)} para iniciar sesión.',
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error guardando credenciales para biometría: $e');
+    }
+  }
+
+  void _onLoginPressed({String? username, String? password}) {
+    // Usar credenciales de biometría si se proporcionan, sino usar las del formulario
+    final loginUsername = username ?? usuario;
+    final loginPassword = password ?? contra;
+
     // ============================================
     // TEMPORAL: Autenticación deshabilitada para desarrollo
     // ============================================
@@ -72,6 +114,9 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
           isShowConfetti = true;
         });
         _confettiTrigger?.fire();
+
+        // Guardar credenciales para biometría después de login exitoso
+        _saveCredentialsForBiometric(loginUsername, loginPassword);
 
         Future.delayed(const Duration(seconds: 1), () {
           if (!mounted) return;
@@ -435,26 +480,17 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                           height: isSmallHeight ? width * 0.02 : width * 0.01,
                         ),
 
-                        // Touch ID
+                        // Biometría - Widget mejorado con funcionalidad
                         Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.fingerprint,
-                                color: const Color(0xFF1A4C9C),
-                                size: width * 0.10,
-                              ),
-                              SizedBox(height: width * 0.02),
-                              Text(
-                                'Acceder con Biometria',
-                                style: TextStyle(
-                                  color: const Color(0xFF1A4C9C),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: width * 0.038,
-                                ),
-                              ),
-                            ],
+                          child: BiometriaWidget(
+                            width: width,
+                            onBiometricSuccess: (username, password) {
+                              // Ejecutar login con las credenciales obtenidas de biometría
+                              _onLoginPressed(
+                                username: username,
+                                password: password,
+                              );
+                            },
                           ),
                         ),
 

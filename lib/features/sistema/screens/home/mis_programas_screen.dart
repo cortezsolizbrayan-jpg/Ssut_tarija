@@ -62,19 +62,22 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            // Header azul con título y subtítulo
-            _buildHeader(),
-            // Barra de búsqueda
-            _buildSearchBar(),
-            // Iconos de categorías conectados
-            _buildCategoryIcons(),
-            // Filtros horizontales
-            _buildFilters(),
-            // Lista de programas
-            Expanded(child: _buildProgramsList()),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header azul con título y subtítulo
+              _buildHeader(),
+              // Barra de búsqueda
+              _buildSearchBar(),
+              // Iconos de categorías conectados
+              _buildCategoryIcons(),
+              // Filtros horizontales
+              _buildFilters(),
+              // Lista de programas (adaptada para scroll externo)
+              _buildProgramsList(),
+            ],
+          ),
         ),
       ),
     );
@@ -92,8 +95,8 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
           ],
         ),
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+          bottomLeft: Radius.circular(100),
+          bottomRight: Radius.circular(100),
         ),
       ),
       padding: const EdgeInsets.fromLTRB(16, 20, 20, 24),
@@ -315,6 +318,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                 },
               ),
             ),
+            // si el texto del buscador no esta vacio, se muestra el icono de limpiar
             if (_searchController.text.isNotEmpty)
               GestureDetector(
                 onTap: () {
@@ -337,6 +341,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
     );
   }
 
+  //se muestran los iconos de las categorias
   Widget _buildCategoryIcons() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -353,7 +358,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
         final lineMargin = math
             .max(6.0, math.min(8.0, screenWidth * 0.019))
             .toDouble();
-
+        //se muestran los iconos de las categorias
         return RepaintBoundary(
           child: Container(
             margin: EdgeInsets.only(
@@ -707,6 +712,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
     );
   }
 
+  //se obtiene el texto de la etiqueta de ordenamiento
   String _getSortLabel() {
     switch (_sortBy) {
       case 'nombre':
@@ -720,6 +726,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
     }
   }
 
+  //se muestra el dialogo de ordenamiento
   void _showSortDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -983,6 +990,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                           );
                         },
                       )
+                    //si la vista es lista, se muestran los programas en forma de lista
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -1011,6 +1019,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                                     }
                                   });
                                 },
+                                //se navega a la pantalla de detalle del programa
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -1033,6 +1042,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
           ],
         );
       },
+      //se muestra el widget de carga con candado animado
       loading: () => _LoadingStateWidget(),
       error: (error, stack) => Center(
         child: Column(
@@ -1058,6 +1068,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
   }
 }
 
+//se muestra el widget de la tarjeta del programa
 class _ProgramCard extends StatefulWidget {
   const _ProgramCard({
     required this.programa,
@@ -1066,7 +1077,7 @@ class _ProgramCard extends StatefulWidget {
     this.isFavorite = false,
     this.onFavoriteToggle,
   });
-
+  //Se definen los parametros del widget de la tarjeta del programa
   final dynamic programa;
   final VoidCallback onTap;
   final int index;
@@ -1077,13 +1088,14 @@ class _ProgramCard extends StatefulWidget {
   State<_ProgramCard> createState() => _ProgramCardState();
 }
 
+//Se define el estado del widget de la tarjeta del programa
 class _ProgramCardState extends State<_ProgramCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotationAnimation;
   bool _isPressed = false;
-
+  // se inicializan las animaciones
   @override
   void initState() {
     super.initState();
@@ -1091,43 +1103,53 @@ class _ProgramCardState extends State<_ProgramCard>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
+    //se define la animación de escala del widget
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.95,
+      //se define la curva de la animación
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _rotationAnimation = Tween<double>(
+      //se define el valor inicial y final de la animación
       begin: 0.0,
       end: 0.02,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
+  //se libera la memoria de las animaciones
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  //se muestra el widget de la tarjeta del programa
   @override
   Widget build(BuildContext context) {
     final estaCompletado =
-        widget.programa.estado.contains('INICIARON') ||
+        widget.programa.estado.contains('ESTADO_COMPLETO') ||
         widget.programa.estado.contains('COMPLETADO');
+    //widget.programa.estado.contains('ESTADO');
     final progresoPago = estaCompletado ? 100.0 : 65.0; // Simulado
-
+    //se muestra el widget de la tarjeta del programa
     return GestureDetector(
+      //se presiona el widget
       onTapDown: (_) {
         setState(() => _isPressed = true);
         _controller.forward();
       },
+      //se levanta el widget
       onTapUp: (_) {
         setState(() => _isPressed = false);
         _controller.reverse();
         widget.onTap();
       },
+      //se cancela la animación
       onTapCancel: () {
         setState(() => _isPressed = false);
         _controller.reverse();
       },
+      //se anima el widget
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
@@ -1178,6 +1200,7 @@ class _ProgramCardState extends State<_ProgramCard>
                                   ),
                                 ),
                               ),
+                              //se muestra el descuento del programa
                               const SizedBox(width: 8),
                               if (widget.programa.descuento != null)
                                 Container(
@@ -1203,6 +1226,7 @@ class _ProgramCardState extends State<_ProgramCard>
                         ),
                         // Botón de favorito
                         if (widget.onFavoriteToggle != null)
+                          //se muestra el boton de favorito
                           GestureDetector(
                             onTap: widget.onFavoriteToggle,
                             child: Container(
@@ -1228,6 +1252,7 @@ class _ProgramCardState extends State<_ProgramCard>
                     ),
                     const SizedBox(height: 16),
                     // Título
+                    //se muestra el titulo del programa
                     Text(
                       widget.programa.titulo,
                       style: const TextStyle(
@@ -1278,6 +1303,7 @@ class _ProgramCardState extends State<_ProgramCard>
                         horizontal: 10,
                         vertical: 6,
                       ),
+                      //se define el color del estado del programa
                       decoration: BoxDecoration(
                         color: estaCompletado
                             ? Colors.green.shade50
@@ -1286,6 +1312,7 @@ class _ProgramCardState extends State<_ProgramCard>
                             : Colors.orange.shade50,
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      //se
                       child: Text(
                         widget.programa.estado,
                         style: TextStyle(
@@ -1330,6 +1357,7 @@ class _ProgramCardState extends State<_ProgramCard>
                                 ),
                               ),
                               const SizedBox(height: 4),
+                              //se muestra el progreso del pago
                               Text(
                                 '${progresoPago.toInt()}%',
                                 style: TextStyle(
@@ -1342,10 +1370,11 @@ class _ProgramCardState extends State<_ProgramCard>
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Mascota
+                        //se muestra el icono de la mascota
                         Container(
                           width: 60,
                           height: 60,
+                          //se define el color del contenedor de la mascota
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A3A5C).withOpacity(0.2),
                             shape: BoxShape.circle,
@@ -1360,7 +1389,7 @@ class _ProgramCardState extends State<_ProgramCard>
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Botón Ver Programa
+                    //se muestra el boton de ver programa
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -1399,49 +1428,55 @@ class _LoadingStateWidget extends StatefulWidget {
   State<_LoadingStateWidget> createState() => _LoadingStateWidgetState();
 }
 
+//se define el estado del widget de carga con candado animado
 class _LoadingStateWidgetState extends State<_LoadingStateWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _rotationAnimation;
+  //se define el efecto scale del widget
   late Animation<double> _scaleAnimation;
   late Animation<double> _shimmerAnimation;
-
+  //se inicializan las animaciones
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 2))
+          //se repite la animación
+          ..repeat();
+    //se define la animación de rotación del widget
 
     _rotationAnimation = Tween<double>(
       begin: 0.0,
       end: 2 * math.pi,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.linear));
-
+    //se define el efecto scale del widget
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.2), weight: 1),
       TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 1),
     ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
+    //se define el efecto shimmer del widget
     _shimmerAnimation = Tween<double>(
       begin: -1.0,
       end: 2.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.linear));
   }
 
+  //se libera la memoria de las animaciones
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  //se muestra el widget de carga con candado animado
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          //se muestra el efecto shimmer del widget
           AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
@@ -1449,6 +1484,7 @@ class _LoadingStateWidgetState extends State<_LoadingStateWidget>
                 scale: _scaleAnimation.value,
                 child: Transform.rotate(
                   angle: _rotationAnimation.value * 0.1,
+                  //se muestra el contenedor del widget
                   child: Container(
                     width: 120,
                     height: 120,
@@ -1462,6 +1498,7 @@ class _LoadingStateWidgetState extends State<_LoadingStateWidget>
                           const Color(0xFF2C5F8D),
                         ],
                       ),
+                      //se muestra el shadow del widget
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF1A3A5C).withOpacity(0.4),
@@ -1481,6 +1518,7 @@ class _LoadingStateWidgetState extends State<_LoadingStateWidget>
                               return Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
+                                    //se define el efecto shimmer del widget
                                     begin: Alignment(
                                       _shimmerAnimation.value - 1,
                                       0,
@@ -1506,6 +1544,7 @@ class _LoadingStateWidgetState extends State<_LoadingStateWidget>
               );
             },
           ),
+          //se muestra el texto de cargando programas
           const SizedBox(height: 32),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: 1.0),
@@ -1524,6 +1563,7 @@ class _LoadingStateWidgetState extends State<_LoadingStateWidget>
                         color: Color(0xFF1A3A5C),
                       ),
                     ),
+                    //se muestra el progreso de carga
                     const SizedBox(height: 12),
                     SizedBox(
                       width: 200,
