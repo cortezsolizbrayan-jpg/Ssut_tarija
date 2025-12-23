@@ -1,14 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Servicio para manejar el almacenamiento local de datos personales y foto de perfil
 class LocalStorageService {
   static const String _profileImagePathKey = 'profile_image_path';
+ /// Key para guardar los datos personales
   static const String _personalDataKey = 'personal_data';
+// Key para guardar los datos del curriculum
   static const String _curriculumDataKey = 'curriculum_data';
+ /// Nombre del archivo de la imagen de perfil
   static const String _profileImageFileName = 'profile_image.jpg';
 
   /// Guarda la ruta de la imagen de perfil
@@ -22,7 +26,7 @@ class LocalStorageService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_profileImagePathKey);
   }
-
+/// Guarda la imagen de perfil
   /// Copia la imagen seleccionada a un directorio permanente y guarda la ruta
   static Future<String?> saveProfileImage(File imageFile) async {
     try {
@@ -32,14 +36,17 @@ class LocalStorageService {
       if (!await imageDir.exists()) {
         await imageDir.create(recursive: true);
       }
-
+      // Crear el archivo de la imagen
       final savedImage = File('${imageDir.path}/$_profileImageFileName');
       await imageFile.copy(savedImage.path);
 
       await saveProfileImagePath(savedImage.path);
       return savedImage.path;
     } catch (e) {
-      print('Error guardando imagen: $e');
+      if (kDebugMode) {
+        print('Error guardando imagen: $e');
+      }
+      // Si hay error, retornar null
       return null;
     }
   }
@@ -53,6 +60,7 @@ class LocalStorageService {
         return file;
       }
     }
+    // Si no hay imagen guardada, retornar null
     return null;
   }
 
@@ -70,7 +78,9 @@ class LocalStorageService {
       try {
         return jsonDecode(dataString) as Map<String, dynamic>;
       } catch (e) {
-        print('Error parseando datos personales: $e');
+        if (kDebugMode) {
+          print('Error parseando datos personales: $e');
+        }
         return null;
       }
     }
@@ -91,7 +101,9 @@ class LocalStorageService {
       try {
         return jsonDecode(dataString) as Map<String, dynamic>;
       } catch (e) {
-        print('Error parseando datos del curriculum: $e');
+        if (kDebugMode) {
+          print('Error parseando datos del curriculum: $e');
+        }
         return null;
       }
     }
@@ -115,7 +127,9 @@ class LocalStorageService {
         await imageFile.delete();
       }
     } catch (e) {
-      print('Error eliminando imagen: $e');
+      if (kDebugMode) {
+        print('Error eliminando imagen: $e');
+      }
     }
   }
 }

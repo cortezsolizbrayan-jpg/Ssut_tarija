@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/animations/custom_animations.dart';
 import 'package:refactor_template/core/services/biometric_service.dart';
 import 'package:refactor_template/features/login/presentation/widgets/widgets.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
@@ -191,7 +192,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
   @override
   Widget build(BuildContext context) {
     const lightBackground = Color(0xFFF6F8FB);
-    const primaryBlue = Color(0xFF005BAC);
+    const primaryBlue = Color(0xFF305BA4);
     const accentYellow = Color(0xFFFFC900);
 
     return Scaffold(
@@ -230,45 +231,71 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                             ),
                             child: Column(
                               children: [
-                                SizedBox(
-                                  width: width * 0.30,
-                                  height: width * 0.30,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(width * 0.005),
-                                    child: Image.asset(
-                                      'assets/images/graduation_icon.png',
-                                      fit: BoxFit.contain,
+                                SlideInAnimation(
+                                  duration: const Duration(milliseconds: 800),
+                                  delay: const Duration(milliseconds: 100),
+                                  begin: const Offset(0, -0.5),
+                                  curve: Curves.easeOutCubic,
+                                  child: ScaleInAnimation(
+                                    duration: const Duration(milliseconds: 1000),
+                                    delay: const Duration(milliseconds: 100),
+                                    curve: Curves.easeOutBack,
+                                    child: SizedBox(
+                                      width: width * 0.30,
+                                      height: width * 0.30,
+                                      child: Padding(
+                                        padding: EdgeInsets.all(width * 0.005),
+                                        child: Image.asset(
+                                          'assets/images/graduation_icon.png',
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  'Bienvenido(a) a Posgrado UPEA',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: width * 0.052,
-                                    fontWeight: FontWeight.bold,
+                                SlideInAnimation(
+                                  duration: const Duration(milliseconds: 700),
+                                  delay: const Duration(milliseconds: 300),
+                                  begin: const Offset(0, 0.3),
+                                  child: Text(
+                                    'Bienvenido(a) a Posgrado UPEA',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: width * 0.052,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                                 SizedBox(height: width * 0.02),
-                                Text(
-                                  'Tu trayectoria profesional siempre accesible.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Color(0xFFFFCC3E),
-                                    fontSize: width * 0.03,
-                                    fontWeight: FontWeight.w600,
+                                SlideInAnimation(
+                                  duration: const Duration(milliseconds: 700),
+                                  delay: const Duration(milliseconds: 400),
+                                  begin: const Offset(0, 0.3),
+                                  child: Text(
+                                    'Tu trayectoria profesional siempre accesible.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Color(0xFFFFCC3E),
+                                      fontSize: width * 0.03,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                                 SizedBox(height: width * 0.02),
-                                Text(
-                                  'Accede a tu registro académico, programas aprobados y documentos pendientes.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: width * 0.033,
-                                    height: 1.4,
+                                SlideInAnimation(
+                                  duration: const Duration(milliseconds: 700),
+                                  delay: const Duration(milliseconds: 500),
+                                  begin: const Offset(0, 0.3),
+                                  child: Text(
+                                    'Accede a tu registro académico, programas aprobados y documentos pendientes.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: width * 0.033,
+                                      height: 1.4,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -282,195 +309,209 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                           offset: Offset(0, -width * 0.14),
                           child: Column(
                             children: [
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: width * 0.06,
-                                ),
-                                child: Align(
-                                  alignment: Alignment.center,
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: double.infinity,
-                                    ),
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        // Tarjeta blanca
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: width * 0.06,
-                                            vertical: isSmallHeight
-                                                ? width * 0.04
-                                                : width * 0.06,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              32,
+                              SlideInAnimation(
+                                duration: const Duration(milliseconds: 800),
+                                delay: const Duration(milliseconds: 600),
+                                begin: const Offset(0, 0.5),
+                                curve: Curves.easeOutCubic,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: width * 0.06,
+                                  ),
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: double.infinity,
+                                      ),
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          // Tarjeta blanca
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: width * 0.06,
+                                              vertical: isSmallHeight
+                                                  ? width * 0.04
+                                                  : width * 0.06,
                                             ),
-                                            boxShadow: const [
-                                              BoxShadow(
-                                                color: Color(0x1A0D0D0D),
-                                                blurRadius: 24,
-                                                offset: Offset(0, 18),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(
+                                                32,
                                               ),
-                                            ],
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  const Icon(
-                                                    FontAwesomeIcons.lock,
-                                                    color: primaryBlue,
-                                                  ),
-                                                  SizedBox(width: width * 0.02),
-                                                  Text(
-                                                    'INICIAR SESIÓN',
-                                                    style: TextStyle(
-                                                      // color: primaryBlue,
-                                                      fontSize: width * 0.042,
-                                                      fontWeight:
-                                                          FontWeight.w700,
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Color(0x1A0D0D0D),
+                                                  blurRadius: 24,
+                                                  offset: Offset(0, 18),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    const Icon(
+                                                      FontAwesomeIcons.lock,
+                                                      color: primaryBlue,
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                              SizedBox(
-                                                height: isSmallHeight
-                                                    ? width * 0.04
-                                                    : width * 0.06,
-                                              ),
-                                              SizedBox(height: width * 0.02),
-
-                                              // TextFormField(
-                                              //   controller: _userController,
-                                              //   validator: (value) =>
-                                              //       (value == null ||
-                                              //           value.isEmpty)
-                                              //       ? ''
-                                              //       : null,
-                                              //   decoration: _inputDecoration(
-                                              //     width,
-                                              //     hintText: 'Usuario',
-                                              //   ),
-                                              // ),
-                                              CustomTextFormField(
-                                                label: 'Usuario',
-                                                onChanged: (valor) {
-                                                  usuario = valor;
-                                                },
-                                                // errorMessage:
-                                                //     'Usuario Incorrecto',
-                                              ),
-                                              SizedBox(
-                                                height: isSmallHeight
-                                                    ? width * 0.03
-                                                    : width * 0.04,
-                                              ),
-
-                                              // Contraseña
-                                              SizedBox(height: width * 0.02),
-                                              CustomTextFormField(
-                                                label: 'Contraseña',
-                                                onChanged: (valor) {
-                                                  contra = valor;
-                                                },
-                                                obscureText: true,
-                                                icon: Icon(
-                                                  Icons.visibility_outlined,
-                                                  color: Colors.black45,
-                                                ),
-                                                // errorMessage:
-                                                //     'Contraseña Incorrecto',
-                                              ),
-                                              // TextFormField(
-                                              //   controller: _passwordController,
-                                              //   obscureText: true,
-                                              //   validator: (value) =>
-                                              //       (value == null ||
-                                              //           value.isEmpty)
-                                              //       ? ''
-                                              //       : null,
-                                              //   decoration: _inputDecoration(
-                                              //     width,
-                                              //     hintText: 'Contraseña',
-                                              //     suffixIcon: const Icon(
-                                              //       Icons.visibility_outlined,
-                                              //       color: Colors.black45,
-                                              //     ),
-                                              //   ),
-                                              // ),
-                                              SizedBox(height: width * 0.02),
-
-                                              // Recuperar contraseña
-                                              Center(
-                                                child: TextButton(
-                                                  onPressed: () {
-                                                    // TODO: Implementar recuperación de contraseña
-                                                  },
-                                                  child: const Text(
-                                                    'Recupera tu contraseña de acceso',
-                                                    style: TextStyle(
-                                                      color: Color(0xFFFF8A00),
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(height: width * 0.07),
-                                            ],
-                                          ),
-                                        ),
-
-                                        // BOTÓN ACCEDER sobrepuesto a la tarjeta
-                                        Positioned(
-                                          left: width * 0.10,
-                                          right: width * 0.10,
-                                          bottom: -width * 0.045,
-                                          child: SizedBox(
-                                            width: double.infinity,
-                                            child: ElevatedButton(
-                                              onPressed: _onLoginPressed,
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: accentYellow,
-                                                foregroundColor: const Color(
-                                                  0xFF0D1730,
-                                                ),
-                                                elevation: 8,
-                                                shadowColor: const Color(
-                                                  0x33FFC900,
-                                                ),
-                                                padding: EdgeInsets.symmetric(
-                                                  vertical: width * 0.035,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        100,
+                                                    SizedBox(width: width * 0.02),
+                                                    Text(
+                                                      'INICIAR SESIÓN',
+                                                      style: TextStyle(
+                                                        // color: primaryBlue,
+                                                        fontSize: width * 0.042,
+                                                        fontWeight:
+                                                            FontWeight.w700,
                                                       ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ),
-                                              child: Text(
-                                                'ACCEDER',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: width * 0.032,
-                                                  letterSpacing: 1.0,
+                                                SizedBox(
+                                                  height: isSmallHeight
+                                                      ? width * 0.04
+                                                      : width * 0.06,
+                                                ),
+                                                SizedBox(height: width * 0.02),
+
+                                                // TextFormField(
+                                                //   controller: _userController,
+                                                //   validator: (value) =>
+                                                //       (value == null ||
+                                                //           value.isEmpty)
+                                                //       ? ''
+                                                //       : null,
+                                                //   decoration: _inputDecoration(
+                                                //     width,
+                                                //     hintText: 'Usuario',
+                                                //   ),
+                                                // ),
+                                                CustomTextFormField(
+                                                  label: 'Usuario',
+                                                  onChanged: (valor) {
+                                                    usuario = valor;
+                                                  },
+                                                  // errorMessage:
+                                                  //     'Usuario Incorrecto',
+                                                ),
+                                                SizedBox(
+                                                  height: isSmallHeight
+                                                      ? width * 0.03
+                                                      : width * 0.04,
+                                                ),
+
+                                                // Contraseña
+                                                SizedBox(height: width * 0.02),
+                                                CustomTextFormField(
+                                                  label: 'Contraseña',
+                                                  onChanged: (valor) {
+                                                    contra = valor;
+                                                  },
+                                                  obscureText: true,
+                                                  icon: Icon(
+                                                    Icons.visibility_outlined,
+                                                    color: Colors.black45,
+                                                  ),
+                                                  // errorMessage:
+                                                  //     'Contraseña Incorrecto',
+                                                ),
+                                                // TextFormField(
+                                                //   controller: _passwordController,
+                                                //   obscureText: true,
+                                                //   validator: (value) =>
+                                                //       (value == null ||
+                                                //           value.isEmpty)
+                                                //       ? ''
+                                                //       : null,
+                                                //   decoration: _inputDecoration(
+                                                //     width,
+                                                //     hintText: 'Contraseña',
+                                                //     suffixIcon: const Icon(
+                                                //       Icons.visibility_outlined,
+                                                //       color: Colors.black45,
+                                                //     ),
+                                                //   ),
+                                                // ),
+                                                SizedBox(height: width * 0.02),
+
+                                                // Recuperar contraseña
+                                                Center(
+                                                  child: TextButton(
+                                                    onPressed: () {
+                                                      // TODO: Implementar recuperación de contraseña
+                                                    },
+                                                    child: const Text(
+                                                      'Recupera tu contraseña de acceso',
+                                                      style: TextStyle(
+                                                        color: Color(0xFFFF8A00),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(height: width * 0.07),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // BOTÓN ACCEDER sobrepuesto a la tarjeta
+                                          Positioned(
+                                            left: width * 0.10,
+                                            right: width * 0.10,
+                                            bottom: -width * 0.045,
+                                            child: ScaleInAnimation(
+                                              duration: const Duration(milliseconds: 600),
+                                              delay: const Duration(milliseconds: 1000),
+                                              curve: Curves.easeOutBack,
+                                              child: HoverScaleEffect(
+                                                scale: 1.03,
+                                                child: SizedBox(
+                                                  width: double.infinity,
+                                                  child: ElevatedButton(
+                                                    onPressed: _onLoginPressed,
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: accentYellow,
+                                                      foregroundColor: const Color(
+                                                        0xFF0D1730,
+                                                      ),
+                                                      elevation: 8,
+                                                      shadowColor: const Color(
+                                                        0x33FFC900,
+                                                      ),
+                                                      padding: EdgeInsets.symmetric(
+                                                        vertical: width * 0.035,
+                                                      ),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              100,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      'ACCEDER',
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.w800,
+                                                        fontSize: width * 0.032,
+                                                        letterSpacing: 1.0,
+                                                      ),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ),
                                           ),
-                                        ),
                                       ],
                                     ),
                                   ),
                                 ),
+                              ),
                               ),
                             ],
                           ),
@@ -513,33 +554,57 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _socialButton(
-                                  width,
-                                  buttonSize: buttonSize,
-                                  icon: Icon(
-                                    FontAwesomeIcons.google,
-                                    size: buttonSize * 0.4,
-                                    color: const Color(0xFF4285F4),
+                                SlideInAnimation(
+                                  duration: const Duration(milliseconds: 600),
+                                  delay: const Duration(milliseconds: 1100),
+                                  begin: const Offset(-0.3, 0),
+                                  child: HoverScaleEffect(
+                                    scale: 1.1,
+                                    child: _socialButton(
+                                      width,
+                                      buttonSize: buttonSize,
+                                      icon: Icon(
+                                        FontAwesomeIcons.google,
+                                        size: buttonSize * 0.4,
+                                        color: const Color(0xFF4285F4),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 SizedBox(width: spacing),
-                                _socialButton(
-                                  width,
-                                  buttonSize: buttonSize,
-                                  icon: Icon(
-                                    Icons.facebook,
-                                    size: buttonSize * 0.4,
-                                    color: const Color(0xFF3B5998),
+                                ScaleInAnimation(
+                                  duration: const Duration(milliseconds: 600),
+                                  delay: const Duration(milliseconds: 1200),
+                                  curve: Curves.easeOutBack,
+                                  child: HoverScaleEffect(
+                                    scale: 1.1,
+                                    child: _socialButton(
+                                      width,
+                                      buttonSize: buttonSize,
+                                      icon: Icon(
+                                        Icons.facebook,
+                                        size: buttonSize * 0.4,
+                                        color: const Color(0xFF3B5998),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 SizedBox(width: spacing),
-                                _socialButton(
-                                  width,
-                                  buttonSize: buttonSize,
-                                  icon: Icon(
-                                    FontAwesomeIcons.twitter,
-                                    size: buttonSize * 0.4,
-                                    color: const Color(0xFF1DA1F2),
+                                SlideInAnimation(
+                                  duration: const Duration(milliseconds: 600),
+                                  delay: const Duration(milliseconds: 1300),
+                                  begin: const Offset(0.3, 0),
+                                  child: HoverScaleEffect(
+                                    scale: 1.1,
+                                    child: _socialButton(
+                                      width,
+                                      buttonSize: buttonSize,
+                                      icon: Icon(
+                                        FontAwesomeIcons.twitter,
+                                        size: buttonSize * 0.4,
+                                        color: const Color(0xFF1DA1F2),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -556,7 +621,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                 ),
 
                 // Overlays Rive
-                if (isShowLoading)
+                if (isShowLoading) 
                   Positioned.fill(
                     child: Column(
                       children: [

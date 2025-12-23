@@ -32,6 +32,7 @@ void main() async {
           if (kDebugMode) {
             print('Timeout cargando .env, usando valores por defecto');
           }
+          
         },
       );
     } catch (e) {
@@ -72,7 +73,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
+//
 const defaultInputBorder = OutlineInputBorder(
   borderRadius: BorderRadius.all(Radius.circular(16)),
   borderSide: BorderSide(color: Color(0xFFDEE3F2), width: 1),

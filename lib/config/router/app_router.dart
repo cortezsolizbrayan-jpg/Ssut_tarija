@@ -4,17 +4,19 @@ import 'package:refactor_template/features/sistema/screens/configuracion/configu
 import 'package:refactor_template/features/sistema/screens/curriculum/mi_curriculum_screen.dart';
 import 'package:refactor_template/features/sistema/screens/diplomados/detalle_programa_screen.dart';
 import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
+import 'package:refactor_template/features/sistema/screens/diplomados/programas_disponibles_screen.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 import 'package:refactor_template/features/sistema/screens/notificaciones/notificaciones_screen.dart';
 import 'package:refactor_template/features/sistema/screens/pagos/deposito_matricula_screen.dart';
 import 'package:refactor_template/features/sistema/screens/perfil/mis_datos_personales_screen.dart';
+import 'package:refactor_template/features/sistema/screens/program_payments_screen.dart';
 
 /// Configuración central de rutas de la aplicación.
 /// En desarrollo podemos arrancar directo a una pantalla específica
 /// (por ejemplo, Detalle de Programa) para trabajar más rápido.
 final goRouter = GoRouter(
-  // Flujo normal: iniciar en el login (que ya tiene su animación propia)
-  initialLocation: '/login',
+  // Flujo normal: iniciar en la pantalla de bienvenida
+  initialLocation: '/start-screen',
   debugLogDiagnostics: false, // Desactivar logs de debug para mejor rendimiento
   routes: [
     // Splash animado inicial
@@ -29,6 +31,70 @@ final goRouter = GoRouter(
       path: '/inicial-page',
       name: InicialPage.name,
       builder: (context, state) => const InicialPage(),
+    ),
+    // Nueva Pantalla de Inicio (Bienvenida)
+    GoRoute(
+      path: '/start-screen',
+      name: StartScreen.name,
+      builder: (context, state) => const StartScreen(),
+    ),
+    // Pantalla de Registro (Binance style)
+    GoRoute(
+      path: '/register',
+      name: RegisterScreen.name,
+      builder: (context, state) => const RegisterScreen(),
+    ),
+    // Pantalla de Verificación (SMS/Email)
+    GoRoute(
+      path: '/verification',
+      name: VerificationScreen.name,
+      builder: (context, state) {
+        final target = state.extra as String? ?? 'tu carnet/correo';
+        return VerificationScreen(target: target);
+      },
+    ),
+    // Pantalla de Carga de Carnet (ID)
+    GoRoute(
+      path: '/upload-ci',
+      name: IDUploadScreen.name,
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final initialCI = extra?['ci'] as String?;
+        return IDUploadScreen(initialCI: initialCI);
+      },
+    ),
+    // Pantalla de Reconocimiento Facial
+    GoRoute(
+      path: '/face-recognition',
+      name: FaceRecognitionScreen.name,
+      builder: (context, state) {
+        final data = state.extra as Map<String, String>?;
+        return FaceRecognitionScreen(ocrData: data);
+      },
+    ),
+    // Pantalla de Formulario de Registro (Pre-llenado por OCR)
+    GoRoute(
+      path: '/registration-form',
+      name: RegistrationFormScreen.name,
+      builder: (context, state) {
+        final data = state.extra as Map<String, String>?;
+        // Si el CI viene del flujo inicial (no del OCR), bloquearlo
+        final isCIBlocked = data?['ciFromInitial'] == 'true';
+        return RegistrationFormScreen(
+          initialNombres: data?['nombres'],
+          initialApellidos: data?['apellidos'],
+          initialCI: data?['ci'],
+          initialFechaEmision: data?['fechaEmision'],
+          initialFechaExpiracion: data?['fechaExpiracion'],
+          isCIBlocked: isCIBlocked,
+        );
+      },
+    ),
+    // Pantalla de Creación de Contraseña
+    GoRoute(
+      path: '/password-setup',
+      name: PasswordSetupScreen.name,
+      builder: (context, state) => const PasswordSetupScreen(),
     ),
     // Pantalla principal de inicio de sesión
     GoRoute(
@@ -47,6 +113,12 @@ final goRouter = GoRouter(
       path: '/diplomados',
       name: 'diplomados',
       builder: (context, state) => const DiplomadosScreen(),
+    ),
+    // Pantalla de Programas Disponibles (Para invitados)
+    GoRoute(
+      path: '/programas-disponibles',
+      name: ProgramasDisponiblesScreen.name,
+      builder: (context, state) => const ProgramasDisponiblesScreen(),
     ),
 
     GoRoute(
@@ -101,6 +173,12 @@ final goRouter = GoRouter(
       path: '/mi-curriculum',
       name: MiCurriculumScreen.name,
       builder: (context, state) => const MiCurriculumScreen(),
+    ),
+    // Pantalla de Pagos del Programa (Demo de tarjetas)
+    GoRoute(
+      path: '/program-payments',
+      name: ProgramPaymentsScreen.name,
+      builder: (context, state) => const ProgramPaymentsScreen(),
     ),
   ],
 );

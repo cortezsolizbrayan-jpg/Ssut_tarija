@@ -34,20 +34,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
     _animationController =
         AnimationController(
           vsync: this,
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 350), // Más suave
         )..addListener(() {
           setState(() {});
         });
     scalAnimation = Tween<double>(begin: 1, end: 0.8).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.fastOutSlowIn,
+        curve: Curves.easeInOutCubic, // Curva más suave
       ),
     );
     animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.fastOutSlowIn,
+        curve: Curves.easeOutCubic, // Curva más suave
       ),
     );
     super.initState();
@@ -68,15 +68,17 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
       body: Stack(
         children: [
           AnimatedPositioned(
+            key: const ValueKey('sideBar'),
             width: 288,
             height: MediaQuery.of(context).size.height,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOutCubic,
             left: isSideBarOpen ? 0 : -288,
             top: 0,
             child: const SideBar(),
           ),
           Transform(
+            key: const ValueKey('mainScreen'),
             alignment: Alignment.center,
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001)
@@ -95,23 +97,37 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
             ),
           ),
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
+            key: const ValueKey('menuBtn'),
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOutCubic,
             left: isSideBarOpen ? 220 : 0,
-            top: 16,
+            top: MediaQuery.of(context).padding.top + 16,
             child: MenuBtn(
               press: () {
-                isMenuOpenInput.value = !isMenuOpenInput.value;
+                try {
+                  isMenuOpenInput.value = !isMenuOpenInput.value;
 
-                if (_animationController.value == 0) {
-                  _animationController.forward();
-                } else {
-                  _animationController.reverse();
+                  if (_animationController.value == 0) {
+                    _animationController.forward();
+                  } else {
+                    _animationController.reverse();
+                  }
+
+                  setState(() {
+                    isSideBarOpen = !isSideBarOpen;
+                  });
+                } catch (e) {
+                  print("Error al abrir menú: $e");
+                  // Fallback por si falla Rive
+                  if (_animationController.value == 0) {
+                    _animationController.forward();
+                  } else {
+                    _animationController.reverse();
+                  }
+                  setState(() {
+                    isSideBarOpen = !isSideBarOpen;
+                  });
                 }
-
-                setState(() {
-                  isSideBarOpen = !isSideBarOpen;
-                });
               },
               riveOnInit: (artboard) {
                 final controller = StateMachineController.fromArtboard(
@@ -119,11 +135,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
                   "State Machine",
                 );
 
-                artboard.addController(controller!);
-
-                isMenuOpenInput =
-                    controller.findInput<bool>("isOpen") as SMIBool;
-                isMenuOpenInput.value = true;
+                if (controller != null) {
+                  artboard.addController(controller);
+                  isMenuOpenInput =
+                      controller.findInput<bool>("isOpen") as SMIBool;
+                  isMenuOpenInput.value = true;
+                }
               },
             ),
           ),

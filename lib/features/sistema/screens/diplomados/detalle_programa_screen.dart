@@ -30,7 +30,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
   bool isSideBarOpen = false;
 
   // Sección seleccionada: 'Colegiatura', 'Matrículas', 'Monografía / Tesis'
-  String _selectedSection = 'Matrículas';
+  String _selectedSection = 'Colegiatura';
 
   // Item del menú inferior seleccionado
   String _selectedNavItem = 'Mi Seguimiento de Pagos';
@@ -237,12 +237,12 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
         ),
         borderRadius: BorderRadius.only(
           // Curva más pronunciada en la parte inferior del header
-          bottomLeft: Radius.circular(220),
-          bottomRight: Radius.circular(220),
+          bottomLeft: Radius.circular(50),
+          bottomRight: Radius.circular(50),
         ),
       ),
       // Padding interno: separa los iconos del borde superior
-      padding: const EdgeInsets.fromLTRB(16, 32, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -514,7 +514,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                   child: Opacity(
                     opacity: safeOpacity,
                     child: _AnimatedProgressCard(
-                      titulo: 'Colegiatur',
+                      titulo: 'Colegiatura',
                       pagadas: 2,
                       total: 5,
                       porcentaje: 65,
@@ -1454,17 +1454,18 @@ class _PaymentCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Botones de acción
-                  Expanded(
+                  // Botones de acción con mejor manejo de overflow
+                  Flexible(
+                    flex: 1,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (estaPagado) ...[
                           // Fila responsiva para evitar overflow en pantallas pequeñas
                           FittedBox(
                             fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
+                            alignment: Alignment.centerRight,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: const [
@@ -1487,20 +1488,24 @@ class _PaymentCard extends StatelessWidget {
                           ),
                           //se define el espacio entre el texto y el boton
                           const SizedBox(height: 8),
-                          _AnimatedButton(
-                            onPressed: () {
-                              // TODO: Implementar acción para pago completado
-                            },
-                            icon: const Icon(Icons.payments, size: 16),
-                            label: const Text('Pagado'),
-                            backgroundColor: Colors.grey.shade700,
-                            foregroundColor: Colors.white,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: _AnimatedButton(
+                              onPressed: () {
+                                // TODO: Implementar acción para pago completado
+                              },
+                              icon: const Icon(Icons.payments, size: 16),
+                              label: const Text('Pagado'),
+                              backgroundColor: Colors.grey.shade700,
+                              foregroundColor: Colors.white,
+                            ),
                           ),
                         ] else if (estaAtrasado) ...[
                           // Fila responsiva para "Pago Atrasado"
                           FittedBox(
                             fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
+                            alignment: Alignment.centerRight,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: const [
@@ -1520,48 +1525,60 @@ class _PaymentCard extends StatelessWidget {
                           //se define el espacio entre el texto y el boton
                           const SizedBox(height: 8),
                           //se define el boton de pago
-                          _AnimatedButton(
-                            onPressed: () {
-                              context.push(
-                                '/deposito-matricula',
-                                extra: {
-                                  'numeroMatricula': numero.toString(),
-                                  'monto': montoDeuda,
-                                },
-                              );
-                            },
-                            icon: const Icon(Icons.payments, size: 16),
-                            label: const Text('Pagar'),
-                            backgroundColor: const Color(0xFFFF9800), // Naranja
-                            foregroundColor: Colors.white,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: _AnimatedButton(
+                              onPressed: () {
+                                context.push(
+                                  '/deposito-matricula',
+                                  extra: {
+                                    'numeroMatricula': numero.toString(),
+                                    'monto': montoDeuda,
+                                  },
+                                );
+                              },
+                              icon: const Icon(Icons.payments, size: 16),
+                              label: const Text('Pagar'),
+                              backgroundColor: const Color(0xFFFF9800), // Naranja
+                              foregroundColor: Colors.white,
+                            ),
                           ),
                         ] else ...[
-                          _AnimatedButton(
-                            onPressed: () {
-                              context.push(
-                                '/deposito-matricula',
-                                extra: {
-                                  'numeroMatricula': numero.toString(),
-                                  'monto': montoDeuda,
-                                },
-                              );
-                            },
-                            icon: const Icon(Icons.payments, size: 16),
-                            label: const Text('Pagar'),
-                            backgroundColor: const Color(0xFF1A3A5C),
-                            foregroundColor: Colors.white,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: _AnimatedButton(
+                              onPressed: () {
+                                context.push(
+                                  '/deposito-matricula',
+                                  extra: {
+                                    'numeroMatricula': numero.toString(),
+                                    'monto': montoDeuda,
+                                  },
+                                );
+                              },
+                              icon: const Icon(Icons.payments, size: 16),
+                              label: const Text('Pagar'),
+                              backgroundColor: const Color(0xFF1A3A5C),
+                              foregroundColor: Colors.white,
+                            ),
                           ),
                         ],
                         const SizedBox(height: 8),
-                        _AnimatedButton(
-                          onPressed: () {
-                            // TODO: Implementar visualización/descarga de factura
-                          },
-                          icon: const Icon(Icons.description, size: 16),
-                          label: const Text('Factura'),
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF1A3A5C),
-                          borderColor: const Color(0xFF1A3A5C),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: _AnimatedButton(
+                            onPressed: () {
+                              // TODO: Implementar visualización/descarga de factura
+                            },
+                            icon: const Icon(Icons.description, size: 16),
+                            label: const Text('Factura'),
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF1A3A5C),
+                            borderColor: const Color(0xFF1A3A5C),
+                          ),
                         ),
                       ],
                     ),

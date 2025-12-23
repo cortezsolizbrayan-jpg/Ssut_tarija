@@ -58,7 +58,7 @@ class BiometricService {
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString(_savedUsernameKey);
     final password = prefs.getString(_savedPasswordKey);
-
+    //final passwordcito = prefs.getString(_savedPasswordKey);
     if (username != null && password != null) {
       return {'username': username, 'password': password};
     }

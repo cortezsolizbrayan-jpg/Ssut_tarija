@@ -1,3 +1,10 @@
 export 'inicial_page.dart';
 export 'pagina_login.dart';
-export 'splash_screen.dart';
+export 'pantalla_configuracion_contrasena.dart';
+export 'pantalla_formulario_registro.dart';
+export 'pantalla_inicio.dart';
+export 'pantalla_reconocimiento_facial.dart';
+export 'pantalla_registro.dart';
+export 'pantalla_splash.dart';
+export 'pantalla_subida_identidad.dart';
+export 'pantalla_verificacion.dart';

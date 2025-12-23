@@ -10,7 +10,7 @@ class Menu {
 //se define el menu lateral
 List<Menu> sidebarMenus = [
   Menu(
-    title: "Inicio",
+    title: "Principal Posgraduante",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "HOME",
@@ -18,7 +18,31 @@ List<Menu> sidebarMenus = [
     ),
   ),
   Menu(
+    title: "Mis Datos Personales",
+    rive: RiveModel(
+      src: "assets/RiveAssets/icons.riv",
+      artboard: "USER",
+      stateMachineName: "USER_Interactivity",
+    ),
+  ),
+  Menu(
+    title: "Mis Documentos Personales",
+    rive: RiveModel(
+      src: "assets/RiveAssets/icons.riv",
+      artboard: "USER",
+      stateMachineName: "USER_Interactivity",
+    ),
+  ),
+  Menu(
     title: "Mis Programas",
+    rive: RiveModel(
+      src: "assets/RiveAssets/icons.riv",
+      artboard: "SEARCH",
+      stateMachineName: "SEARCH_Interactivity",
+    ),
+  ),
+  Menu(
+    title: "Programas Vigentes",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "SEARCH",
@@ -33,14 +57,9 @@ List<Menu> sidebarMenus = [
       stateMachineName: "STAR_Interactivity",
     ),
   ),
-  Menu(
-    title: "Mis Datos Personales",
-    rive: RiveModel(
-      src: "assets/RiveAssets/icons.riv",
-      artboard: "CHAT",
-      stateMachineName: "CHAT_Interactivity",
-    ),
-  ),
+];
+
+List<Menu> sidebarMenus2 = [
   Menu(
     title: "Cambiar Contraseña",
     rive: RiveModel(
@@ -49,30 +68,20 @@ List<Menu> sidebarMenus = [
       stateMachineName: "CHAT_Interactivity",
     ),
   ),
-  // Menu(
-  //   title: "Cerrar Sesión",
-  //   rive: RiveModel(
-  //     src: "assets/RiveAssets/icons.riv",
-  //     artboard: "CHAT",
-  //     stateMachineName: "CHAT_Interactivity",
-  //   ),
-  // ),
-];
-List<Menu> sidebarMenus2 = [
   Menu(
-    title: "Historia",
+    title: "Secciones Abiertas",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
-      artboard: "TIMER",
-      stateMachineName: "TIMER_Interactivity",
+      artboard: "CHAT",
+      stateMachineName: "CHAT_Interactivity",
     ),
   ),
   Menu(
-    title: "Notificationes",
+    title: "Cerrar Sesión",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
-      artboard: "BELL",
-      stateMachineName: "BELL_Interactivity",
+      artboard: "CHAT",
+      stateMachineName: "CHAT_Interactivity",
     ),
   ),
 ];

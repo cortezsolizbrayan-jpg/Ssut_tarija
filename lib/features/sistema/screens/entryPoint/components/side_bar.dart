@@ -18,26 +18,32 @@ class _SideBarState extends State<SideBar> {
 
   void _navigateToRoute(String menuTitle) {
     switch (menuTitle) {
-      case 'Inicio':
-        context.go('/perfil');
-        break;
-      case 'Mis Programas':
-        context.go('/diplomados');
-        break;
-      case 'Curriculum':
-        context.go('/mi-curriculum');
+      case 'Principal Posgraduante':
+        context.go('/sistema/pantalla_principal');
         break;
       case 'Mis Datos Personales':
         context.go('/mis-datos-personales');
         break;
+      case 'Mis Documentos Personales':
+        // TODO: Navegar a mis documentos personales
+        break;
+      case 'Mis Programas':
+        context.go('/diplomados');
+        break;
+      case 'Programas Vigentes':
+        // TODO: Navegar a programas vigentes
+        break;
+      case 'Curriculum':
+        context.go('/mi-curriculum');
+        break;
       case 'Cambiar Contraseña':
-        // TODO: Navegar a pantalla de cambiar contraseña
+        // TODO: Navegar a cambiar contraseña
         break;
-      case 'Historia':
-        // TODO: Navegar a pantalla de historia
+      case 'Secciones Abiertas':
+        // TODO: Navegar a secciones abiertas
         break;
-      case 'Notificationes':
-        context.go('/notificaciones');
+      case 'Cerrar Sesión':
+        context.go('/login');
         break;
       default:
         break;

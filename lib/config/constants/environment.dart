@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class Environment {
   static bool _initialized = false;
   static String _defaultApiUrl =
-      'https://dev-repositorio-backend.posgradoupea.edu.bo/api/v1';
+  'https://dev-repositorio-backend.posgradoupea.edu.bo/api/v1';
 
   static Future<void> initEnvironment() async {
     if (!_initialized) {
@@ -46,7 +46,7 @@ class Environment {
       });
     }
   }
-
+/// Obtiene la URL de la API
   static String get apiUrlPsg {
     if (!_initialized) {
       throw Exception(
@@ -58,19 +58,20 @@ class Environment {
     if (kIsWeb) {
       return _defaultApiUrl;
     }
-
+/// Si es web, retornar la URL por defecto
     // Para otras plataformas, intentar obtener del .env
     try {
       final envValue = dotenv.env['THE_API_PSG'];
       if (envValue != null && envValue.isNotEmpty) {
         return envValue;
       }
+      /// Si no hay URL de la API, retornar la URL por defecto
     } catch (e) {
       if (kDebugMode) {
         print('Error leyendo variable de entorno: $e');
       }
     }
-
+/// Si no hay URL de la API, retornar la URL por defecto
     return _defaultApiUrl;
   }
 }

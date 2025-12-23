@@ -514,7 +514,7 @@ class _PerfilScreenState extends State<PerfilScreen>
                                       curve: Curves.easeOutBack,
                                       builder: (context, value, child) {
                                         return Opacity(
-                                          opacity: value,
+                                          opacity: value.clamp(0.0, 1.0),
                                           child: Transform.translate(
                                             offset: Offset(
                                               16 * (1 - value),

@@ -56,6 +56,8 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
   );
   final TextEditingController _nroCasaController = TextEditingController();
   final TextEditingController _estadoCivilController = TextEditingController();
+  final TextEditingController _celularController = TextEditingController();
+  final TextEditingController _correoController = TextEditingController();
 
   String? _selectedGenero;
   String? _selectedCiudadResidencia;
@@ -87,6 +89,8 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
         _ciudadResidenciaController.text = savedData['ciudadResidencia'] ?? '';
         _direccionController.text = savedData['direccion'] ?? '';
         _nroCasaController.text = savedData['nroCasa'] ?? '';
+        _celularController.text = savedData['celular'] ?? '';
+        _correoController.text = savedData['correo'] ?? '';
         _selectedGenero = savedData['genero'];
         _selectedCiudadResidencia = savedData['ciudadResidencia'];
         _selectedEstadoCivil = savedData['estadoCivil'];
@@ -118,6 +122,8 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     _direccionController.dispose();
     _nroCasaController.dispose();
     _estadoCivilController.dispose();
+    _celularController.dispose();
+    _correoController.dispose();
     super.dispose();
   }
 
@@ -177,7 +183,14 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // Intentar ir atrás, si no se puede, ir al inicio
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/sistema/pantalla_principal');
+            }
+          },
         ),
         title: Row(
           children: [
@@ -194,6 +207,11 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.home, color: Colors.white),
+            onPressed: () => context.go('/sistema/pantalla_principal'),
+            tooltip: 'Ir al Inicio',
+          ),
           Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -324,6 +342,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                 controller: _nombreController,
                 isRequired: true,
                 width: width,
+                icon: Icons.person_outline,
               ),
               SizedBox(height: height * 0.02),
               // Row responsive para Apellidos
@@ -343,6 +362,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _apPaternoController,
                           isRequired: true,
                           width: width,
+                          icon: Icons.person_outline,
                         ),
                       ),
                       SizedBox(width: spacing),
@@ -352,6 +372,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _apMaternoController,
                           isRequired: false,
                           width: width,
+                          icon: Icons.person_outline,
                         ),
                       ),
                     ],
@@ -365,6 +386,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                 isRequired: true,
                 width: width,
                 readOnly: true,
+                icon: Icons.calendar_today_outlined,
                 onTap: () async {
                   final DateTime? picked = await showDatePicker(
                     context: context,
@@ -378,6 +400,43 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
                     });
                   }
+                },
+              ),
+              SizedBox(height: height * 0.02),
+              // Row responsive para Celular y Correo
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final availableWidth = constraints.maxWidth;
+                  final spacing = math
+                      .max(8.0, availableWidth * 0.025)
+                      .toDouble();
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: _buildFormField(
+                          label: 'Celular',
+                          controller: _celularController,
+                          isRequired: true,
+                          width: width,
+                          icon: Icons.phone_android_outlined,
+                        ),
+                      ),
+                      SizedBox(width: spacing),
+                      Expanded(
+                        flex: 2,
+                        child: _buildFormField(
+                          label: 'Correo Electrónico',
+                          controller: _correoController,
+                          isRequired: true,
+                          width: width,
+                          icon: Icons.email_outlined,
+                        ),
+                      ),
+                    ],
+                  );
                 },
               ),
               SizedBox(height: height * 0.02),
@@ -400,6 +459,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _numeroCIController,
                           isRequired: false,
                           width: width,
+                          icon: Icons.badge_outlined,
                         ),
                       ),
                       SizedBox(width: spacing),
@@ -410,6 +470,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _complementoController,
                           isRequired: true,
                           width: width,
+                          icon: Icons.add_circle_outline,
                         ),
                       ),
                       SizedBox(width: spacing),
@@ -420,6 +481,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _expedidoEnController,
                           isRequired: false,
                           width: width,
+                          icon: Icons.map_outlined,
                         ),
                       ),
                     ],
@@ -444,6 +506,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _nacionalidadController,
                           isRequired: true,
                           width: width,
+                          icon: Icons.flag_outlined,
                         ),
                       ),
                       SizedBox(width: spacing),
@@ -453,6 +516,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _ciudadNacimientoController,
                           isRequired: false,
                           width: width,
+                          icon: Icons.location_city_outlined,
                         ),
                       ),
                     ],
@@ -466,6 +530,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                 items: const ['MASCULINO', 'FEMENINO', 'OTRO'],
                 isRequired: true,
                 width: width,
+                icon: Icons.wc_outlined,
                 onChanged: (value) {
                   setState(() {
                     _selectedGenero = value;
@@ -489,6 +554,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                 ],
                 isRequired: false,
                 width: width,
+                icon: Icons.home_work_outlined,
                 onChanged: (value) {
                   setState(() {
                     _selectedCiudadResidencia = value;
@@ -501,6 +567,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                 controller: _direccionController,
                 isRequired: false,
                 width: width,
+                icon: Icons.location_on_outlined,
               ),
               SizedBox(height: height * 0.02),
               // Row responsive para Nro de Casa y Estado Civil
@@ -521,6 +588,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           controller: _nroCasaController,
                           isRequired: false,
                           width: width,
+                          icon: Icons.home_outlined,
                         ),
                       ),
                       SizedBox(width: spacing),
@@ -537,6 +605,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                           ],
                           isRequired: false,
                           width: width,
+                          icon: Icons.favorite_border_outlined,
                           onChanged: (value) {
                             setState(() {
                               _selectedEstadoCivil = value;
@@ -548,6 +617,8 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                   );
                 },
               ),
+              SizedBox(height: height * 0.02),
+
               SizedBox(height: height * 0.04),
               // Botón guardar
               SizedBox(
@@ -571,15 +642,46 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                         'direccion': _direccionController.text,
                         'nroCasa': _nroCasaController.text,
                         'estadoCivil': _selectedEstadoCivil,
+                        'celular': _celularController.text,
+                        'correo': _correoController.text,
                       };
 
                       await LocalStorageService.savePersonalData(personalData);
 
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Datos guardados correctamente'),
-                            backgroundColor: Colors.green,
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            title: const Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.green),
+                                SizedBox(width: 10),
+                                Text('¡Éxito!'),
+                              ],
+                            ),
+                            content: const Text(
+                              'Sus datos se guardaron correctamente.',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Cerrar el diálogo
+                                  context.pop(); // Salir de la pantalla de datos
+                                },
+                                child: const Text(
+                                  'ACEPTAR',
+                                  style: TextStyle(
+                                    color: Color(0xFF1A3A5C),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }
@@ -615,10 +717,11 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     required double width,
     bool readOnly = false,
     VoidCallback? onTap,
+    IconData? icon,
   }) {
     // Calcular tamaños responsivos
     final labelFontSize = math
-        .max(11.0, math.min(14.0, width * 0.033))
+        .max(13.0, math.min(16.0, width * 0.04))
         .toDouble();
     final paddingH = math.max(10.0, math.min(16.0, width * 0.038)).toDouble();
     final paddingV = math.max(10.0, math.min(14.0, width * 0.033)).toDouble();
@@ -655,42 +758,56 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          readOnly: readOnly,
-          onTap: onTap,
-          style: TextStyle(fontSize: inputFontSize),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF1A3A5C), width: 2),
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: paddingH,
-              vertical: paddingV,
-            ),
-            isDense: true, // Reduce el padding interno para campos pequeños
+        Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          validator: isRequired
-              ? (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Este campo es obligatorio';
+          child: TextFormField(
+            controller: controller,
+            readOnly: readOnly,
+            onTap: onTap,
+            style: TextStyle(fontSize: inputFontSize, color: const Color(0xFF1A3A5C)),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              prefixIcon: icon != null
+                  ? Icon(icon, color: const Color(0xFF1A3A5C).withOpacity(0.6), size: 20)
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFEEF2F6)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF1A3A5C), width: 1.5),
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: paddingH,
+                vertical: paddingV,
+              ),
+              isDense: true,
+            ),
+            validator: isRequired
+                ? (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Campo obligatorio';
+                    }
+                    return null;
                   }
-                  return null;
-                }
-              : null,
-          maxLines: 1,
-          textInputAction: TextInputAction.next,
+                : null,
+            maxLines: 1,
+            textInputAction: TextInputAction.next,
+          ),
         ),
       ],
     );
@@ -703,6 +820,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     required bool isRequired,
     required double width,
     required Function(String?) onChanged,
+    IconData? icon,
   }) {
     // Calcular tamaños responsivos
     final fontSize = math.max(12.0, math.min(14.0, width * 0.035)).toDouble();
@@ -740,60 +858,74 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: value,
-          isExpanded:
-              true, // Importante: permite que el dropdown use todo el ancho
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF1A3A5C), width: 2),
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: paddingH,
-              vertical: paddingV,
-            ),
-          ),
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(
-                item,
-                style: TextStyle(fontSize: fontSize),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-          validator: isRequired
-              ? (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Este campo es obligatorio';
-                  }
-                  return null;
-                }
-              : null,
-          selectedItemBuilder: (BuildContext context) {
-            return items.map((String item) {
-              return Text(
-                item,
-                style: TextStyle(fontSize: fontSize, color: Colors.black87),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            ],
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            isExpanded: true,
+            icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF1A3A5C)),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              prefixIcon: icon != null
+                  ? Icon(icon, color: const Color(0xFF1A3A5C).withOpacity(0.6), size: 20)
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFEEF2F6)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF1A3A5C), width: 1.5),
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: paddingH,
+                vertical: paddingV,
+              ),
+            ),
+            items: items.map((String item) {
+              return DropdownMenuItem<String>(
+                value: item,
+                child: Text(
+                  item,
+                  style: TextStyle(fontSize: fontSize),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               );
-            }).toList();
-          },
+            }).toList(),
+            onChanged: onChanged,
+            validator: isRequired
+                ? (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Campo obligatorio';
+                    }
+                    return null;
+                  }
+                : null,
+            selectedItemBuilder: (BuildContext context) {
+              return items.map((String item) {
+                return Text(
+                  item,
+                  style: TextStyle(fontSize: fontSize, color: const Color(0xFF1A3A5C)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                );
+              }).toList();
+            },
+          ),
         ),
       ],
     );
