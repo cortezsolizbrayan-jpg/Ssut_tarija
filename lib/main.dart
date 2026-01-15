@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:refactor_template/config/constants/environment.dart';
 import 'package:refactor_template/config/router/app_router.dart';
@@ -32,7 +33,6 @@ void main() async {
           if (kDebugMode) {
             print('Timeout cargando .env, usando valores por defecto');
           }
-          
         },
       );
     } catch (e) {
@@ -53,6 +53,18 @@ class MyApp extends StatelessWidget {
       routerConfig: goRouter,
       debugShowCheckedModeBanner: false,
       title: 'The Flutter Way',
+      locale: const Locale('es'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es'),
+        Locale('es', 'ES'),
+        Locale('es', 'BO'),
+        Locale('en'),
+      ],
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFEEF1F8),
         primarySwatch: Colors.blue,
@@ -73,6 +85,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 //
 const defaultInputBorder = OutlineInputBorder(
   borderRadius: BorderRadius.all(Radius.circular(16)),

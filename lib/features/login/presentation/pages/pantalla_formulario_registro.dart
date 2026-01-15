@@ -1,7 +1,12 @@
 import 'dart:math' as math;
+
+import 'dart:io';
+
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:refactor_template/core/services/local_storage_service.dart';
 
 class RegistrationFormScreen extends StatefulWidget {
   static const name = 'registration-form-screen';
@@ -10,6 +15,7 @@ class RegistrationFormScreen extends StatefulWidget {
   final String? initialCI;
   final String? initialFechaEmision;
   final String? initialFechaExpiracion;
+  final String? initialCombinedCiPath;
   final bool isCIBlocked; // Si el CI debe estar bloqueado
 
   const RegistrationFormScreen({
@@ -19,6 +25,7 @@ class RegistrationFormScreen extends StatefulWidget {
     this.initialCI,
     this.initialFechaEmision,
     this.initialFechaExpiracion,
+    this.initialCombinedCiPath,
     this.isCIBlocked = false, // Por defecto no bloqueado
   });
 
@@ -31,16 +38,44 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
   late TextEditingController _apellidosController;
   late TextEditingController _ciController;
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _fechaNacimientoController =
+      TextEditingController();
   late TextEditingController _fechaEmisionController;
   late TextEditingController _fechaExpiracionController;
   final _formKey = GlobalKey<FormState>();
 
+  // Documentos
+  String? _combinedCiPath;
+  File? _tituloFile;
+  File? _prorrogaFile;
+  File? _profileImage;
+  
+  final ImagePicker _picker = ImagePicker();
+
+  DateTime? _tryParseDateStrict(String ddMMyyyy) {
+    final parts = ddMMyyyy.split('/');
+    if (parts.length != 3) return null;
+
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+
+    final dt = DateTime(year, month, day);
+    if (dt.year != year || dt.month != month || dt.day != day) return null;
+    return dt;
+  }
+
   String _toTitleCase(String text) {
     if (text.isEmpty) return "";
-    return text.toLowerCase().split(' ').map((word) {
-      if (word.isEmpty) return "";
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(' ');
+    return text
+        .toLowerCase()
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return "";
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
   }
 
   @override
@@ -55,6 +90,54 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
     _fechaExpiracionController = TextEditingController(
       text: widget.initialFechaExpiracion,
     );
+    _combinedCiPath = widget.initialCombinedCiPath;
+    _loadProfileImage();
+  }
+
+  Future<void> _loadProfileImage() async {
+    // Attempt to load profile image path from storage if available
+    try {
+      final path = await LocalStorageService.getProfileImagePath();
+      if (path != null) {
+        setState(() {
+          _profileImage = File(path);
+        });
+      }
+    } catch (_) {
+      // Ignore if method doesn't exist or fails
+    }
+  }
+
+  Future<void> _pickDocument(String type) async {
+    try {
+      final XFile? picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      if (picked != null) {
+        setState(() {
+          if (type == 'titulo') {
+            _tituloFile = File(picked.path);
+          } else if (type == 'prorroga') {
+            _prorrogaFile = File(picked.path);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking document: $e");
+    }
+  }
+
+  Future<void> _updateProfileImage() async {
+    try {
+      final XFile? picked = await _picker.pickImage(source: ImageSource.camera, preferredCameraDevice: CameraDevice.front);
+      if (picked != null) {
+        // Save new profile image
+        await LocalStorageService.saveProfileImage(File(picked.path));
+        setState(() {
+          _profileImage = File(picked.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error updating profile image: $e");
+    }
   }
 
   @override
@@ -63,9 +146,159 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
     _apellidosController.dispose();
     _ciController.dispose();
     _emailController.dispose();
+    _fechaNacimientoController.dispose();
     _fechaEmisionController.dispose();
     _fechaExpiracionController.dispose();
     super.dispose();
+  }
+
+  // Método auxiliar para seleccionar una fecha y establecer el texto formateado
+  Future<void> _pickDate(
+    BuildContext context,
+    TextEditingController controller, {
+    DateTime? firstDate,
+    DateTime? lastDate,
+  }) async {
+    DateTime initialDate;
+    if (controller.text.isNotEmpty) {
+      final iso = _convertToIso(controller.text);
+      initialDate = DateTime.tryParse(iso) ?? DateTime.now();
+    } else {
+      initialDate = DateTime.now();
+    }
+
+    final effectiveFirstDate = firstDate ?? DateTime(1900);
+    final effectiveLastDate = lastDate ?? DateTime(2100);
+    if (initialDate.isBefore(effectiveFirstDate)) {
+      initialDate = effectiveFirstDate;
+    }
+    if (initialDate.isAfter(effectiveLastDate)) {
+      initialDate = effectiveLastDate;
+    }
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: effectiveFirstDate,
+      lastDate: effectiveLastDate,
+      helpText: 'Seleccionar fecha',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF305BA4),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF1A3A5C),
+            ),
+            dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final formatted =
+          "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+      controller.text = formatted;
+      setState(() {}); // Actualizar UI
+    }
+  }
+
+  // Validar que la persona sea mayor de 18 años
+  bool _isAdult(String dateString) {
+    if (dateString.isEmpty) return false;
+    final iso = _convertToIso(dateString);
+    final birthDate = DateTime.tryParse(iso);
+    if (birthDate == null) return false;
+
+    final today = DateTime.now();
+    final age = today.year - birthDate.year;
+    final monthDiff = today.month - birthDate.month;
+    final dayDiff = today.day - birthDate.day;
+
+    // Calcular edad exacta considerando mes y día
+    if (monthDiff < 0 || (monthDiff == 0 && dayDiff < 0)) {
+      return age - 1 >= 18;
+    }
+    return age >= 18;
+  }
+
+  // Convert dd/MM/yyyy to ISO yyyy-MM-dd for parsing
+  String _convertToIso(String date) {
+    final parts = date.split('/');
+    if (parts.length != 3) return date;
+    return "${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}";
+  }
+
+  // Build a date field with picker
+  Widget _buildDateField(
+    String label,
+    TextEditingController controller,
+    IconData icon, {
+    required BuildContext context,
+    DateTime? firstDate,
+    DateTime? lastDate,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF848E9C),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _pickDate(
+            context,
+            controller,
+            firstDate: firstDate,
+            lastDate: lastDate,
+          ),
+          child: AbsorbPointer(
+            child: TextFormField(
+              controller: controller,
+              validator: validator,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  icon,
+                  color: const Color(0xFF305BA4).withAlpha(179),
+                  size: 20,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFEEF2F6)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF305BA4),
+                    width: 1.5,
+                  ),
+                ),
+                suffixIcon: const Icon(
+                  Icons.calendar_today_outlined,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -124,7 +357,9 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 _nombresController,
                 Icons.person_outline,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Ingresa tu nombre';
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa tu nombre';
+                  }
                   if (RegExp(r'\d').hasMatch(value)) {
                     return 'El nombre no debe contener números';
                   }
@@ -156,33 +391,120 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Ingresa tu CI';
                   // Permitir números seguidos opcionalmente por una extensión (ej: 1234567 LP)
-                  if (!RegExp(r'^\d+(\s+[A-Z]{2})?$').hasMatch(value.toUpperCase())) {
+                  if (!RegExp(
+                    r'^\d+(\s+[A-Z]{2})?$',
+                  ).hasMatch(value.toUpperCase())) {
                     return 'CI inválido (ej: 1234567 o 1234567 LP)';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 20),
-              _buildField(
-                'Fecha de Emisión',
-                _fechaEmisionController,
+              _buildDateField(
+                'Fecha de Nacimiento*',
+                _fechaNacimientoController,
                 Icons.calendar_today_outlined,
+                context: context,
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
                 validator: (value) {
-                    if (value == null || value.isEmpty) return 'Ingresa la fecha';
-                    // Validación básica de formato DD/MM/AAAA
-                    if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(value)) return 'Formato inválido (DD/MM/AAAA)';
-                    return null;
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa tu fecha de nacimiento';
+                  }
+                  // Validación básica de formato DD/MM/AAAA
+                  if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(value)) {
+                    return 'Formato inválido (DD/MM/AAAA)';
+                  }
+                  final parsed = _tryParseDateStrict(value);
+                  if (parsed == null) {
+                    return 'Fecha inválida';
+                  }
+                  // Validar que sea mayor de 18 años
+                  if (!_isAdult(value)) {
+                    return 'Debes ser mayor de 18 años para registrarte';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 20),
-              _buildField(
+              _buildDateField(
+                'Fecha de Emisión',
+                _fechaEmisionController,
+                Icons.calendar_today_outlined,
+                context: context,
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa la fecha';
+                  }
+                  // Validación básica de formato DD/MM/AAAA
+                  if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(value)) {
+                    return 'Formato inválido (DD/MM/AAAA)';
+                  }
+
+                  final emision = _tryParseDateStrict(value);
+                  if (emision == null) return 'Fecha inválida';
+
+                  final today = DateTime.now();
+                  final todayDate = DateTime(
+                    today.year,
+                    today.month,
+                    today.day,
+                  );
+                  if (emision.isAfter(todayDate)) {
+                    return 'La emisión no puede ser futura';
+                  }
+
+                  final expiracionRaw = _fechaExpiracionController.text.trim();
+                  if (expiracionRaw.isNotEmpty) {
+                    final expiracion = _tryParseDateStrict(expiracionRaw);
+                    if (expiracion != null && emision.isAfter(expiracion)) {
+                      return 'La emisión no puede ser después de la expiración';
+                    }
+                  }
+
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              _buildDateField(
                 'Fecha de Expiración',
                 _fechaExpiracionController,
                 Icons.event_outlined,
+                context: context,
+                firstDate: DateTime.now(),
+                lastDate: DateTime(2100),
                 validator: (value) {
-                    if (value == null || value.isEmpty) return 'Ingresa la fecha';
-                    if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(value)) return 'Formato inválido (DD/MM/AAAA)';
-                    return null;
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa la fecha';
+                  }
+                  if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(value)) {
+                    return 'Formato inválido (DD/MM/AAAA)';
+                  }
+
+                  final expiracion = _tryParseDateStrict(value);
+                  if (expiracion == null) return 'Fecha inválida';
+
+                  final today = DateTime.now();
+                  final todayDate = DateTime(
+                    today.year,
+                    today.month,
+                    today.day,
+                  );
+                  if (expiracion.isBefore(todayDate)) {
+                    return 'La expiración no puede ser pasada';
+                  }
+
+                  final emisionRaw = _fechaEmisionController.text.trim();
+                  if (emisionRaw.isNotEmpty) {
+                    final emision = _tryParseDateStrict(emisionRaw);
+                    if (emision != null && expiracion.isBefore(emision)) {
+                      return 'La expiración no puede ser antes de la emisión';
+                    }
+                  }
+
+                  return null;
                 },
               ),
               const SizedBox(height: 20),
@@ -192,15 +514,114 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Ingresa tu correo';
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                      .hasMatch(value)) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingresa tu correo';
+                  }
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(value)) {
                     return 'Ingresa un correo válido';
                   }
                   return null;
                 },
               ),
 
+                // Sección de Documentos Personales
+              const SizedBox(height: 30),
+              FadeInDown(
+                child: const Text(
+                  'Documentos Personales',
+                  style: TextStyle(
+                    color: primaryBlue,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Foto de Perfil
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.grey[200],
+                        border: Border.all(color: primaryBlue, width: 2),
+                        image: _profileImage != null
+                            ? DecorationImage(
+                                image: FileImage(_profileImage!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: _profileImage == null
+                          ? const Icon(Icons.person, size: 60, color: Colors.grey)
+                          : null,
+                    ),
+                    TextButton.icon(
+                      onPressed: _updateProfileImage,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text("Actualizar Foto"),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // CI Combinado
+              if (_combinedCiPath != null) ...[
+                const Text(
+                  "Carnet de Identidad (Combinado)",
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () {
+                    // Ver imagen completa
+                    showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: Image.file(File(_combinedCiPath!)),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.grey.shade100,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(
+                        File(_combinedCiPath!),
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // Otros Documentos
+              _buildDocumentUpload(
+                "Título Académico",
+                _tituloFile,
+                () => _pickDocument('titulo'),
+              ),
+              const SizedBox(height: 16),
+              _buildDocumentUpload(
+                "Carta de Prórroga",
+                _prorrogaFile,
+                () => _pickDocument('prorroga'),
+              ),
+              
               const SizedBox(height: 48),
 
               FadeInUp(
@@ -210,6 +631,25 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
+                        final parts = _apellidosController.text.trim().split(
+                          RegExp(r'\s+'),
+                        );
+                        final apPaterno = parts.isNotEmpty ? parts.first : '';
+                        final apMaterno = parts.length > 1
+                            ? parts.skip(1).join(' ')
+                            : '';
+
+                        // ignore: unawaited_futures
+                        LocalStorageService.savePersonalData({
+                          'nombre': _nombresController.text.trim(),
+                          'apPaterno': apPaterno,
+                          'apMaterno': apMaterno,
+                          'fechaNacimiento': _fechaNacimientoController.text
+                              .trim(),
+                          'numeroCI': _ciController.text.trim(),
+                          'correo': _emailController.text.trim(),
+                        });
+
                         // Siguiente: Crear contraseña
                         context.push('/password-setup');
                       }
@@ -224,8 +664,10 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                     ),
                     child: const Text(
                       'Confirmar y Registrar',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -280,18 +722,16 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 // Mantener la posición del cursor si es posible
                 try {
                   controller.selection = TextSelection.fromPosition(
-                    TextPosition(offset: math.min(position.baseOffset, formatted.length)),
+                    TextPosition(
+                      offset: math.min(position.baseOffset, formatted.length),
+                    ),
                   );
                 } catch (_) {}
               }
             }
           },
           decoration: InputDecoration(
-            prefixIcon: Icon(
-              icon,
-              color: primaryBlue.withOpacity(0.7),
-              size: 20,
-            ),
+            prefixIcon: Icon(icon, color: primaryBlue.withAlpha(179), size: 20),
             filled: true,
             fillColor: isBlocked ? Colors.grey[100] : Colors.white,
             contentPadding: const EdgeInsets.symmetric(
@@ -300,16 +740,11 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFFEEF2F6),
-              ),
+              borderSide: const BorderSide(color: Color(0xFFEEF2F6)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: primaryBlue,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: primaryBlue, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -327,6 +762,55 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 ? const Icon(Icons.lock_outline, color: Colors.grey, size: 18)
                 : null,
             hintText: isBlocked ? 'Este campo no se puede modificar' : null,
+          ),
+        ),
+      ],
+    );
+  }
+  Widget _buildDocumentUpload(String label, File? file, VoidCallback onTap) {
+    const Color primaryBlue = Color(0xFF305BA4);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF848E9C),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: file != null ? primaryBlue : const Color(0xFFEEF2F6)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  file != null ? Icons.check_circle : Icons.upload_file,
+                  color: file != null ? Colors.green : primaryBlue,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    file != null ? "Documento subido" : "Subir documento/foto",
+                    style: TextStyle(
+                      color: file != null ? Colors.black87 : Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (file != null)
+                  const Icon(Icons.edit, size: 18, color: Colors.grey),
+              ],
+            ),
           ),
         ),
       ],

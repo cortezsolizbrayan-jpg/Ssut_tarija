@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:refactor_template/core/services/biometric_service.dart';
 
 class BotonPrimario extends StatelessWidget {
@@ -14,7 +13,7 @@ class BotonPrimario extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          print('Holaa');
+          debugPrint('Holaa');
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFFC900),
@@ -127,7 +126,6 @@ class _BiometriaWidgetState extends State<BiometriaWidget>
   final _biometricService = BiometricService();
   bool _isLoading = false;
   bool _isSupported = false;
-  List<BiometricType> _availableTypes = [];
   String _biometricName = 'Biometría';
   IconData _biometricIcon = Icons.fingerprint;
   late AnimationController _animationController;
@@ -165,7 +163,6 @@ class _BiometriaWidgetState extends State<BiometriaWidget>
           // Mostrar si hay biometría disponible Y hay credenciales guardadas
           _isSupported =
               isSupported && hasCredentials && availableTypes.isNotEmpty;
-          _availableTypes = availableTypes;
           _biometricName = _biometricService.getBiometricTypeName(
             availableTypes,
           );

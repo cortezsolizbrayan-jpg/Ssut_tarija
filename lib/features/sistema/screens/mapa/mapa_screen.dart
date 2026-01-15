@@ -625,7 +625,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1A3A5C),
+                              color: Color(0xFF1A3A5C),
                             ),
                           ),
                         ),

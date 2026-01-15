@@ -23,7 +23,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
   int _selectedCategory = 0; // Índice del icono seleccionado
   String _sortBy = 'nombre'; // 'nombre', 'progreso', 'saldo'
   bool _isGridView = false; // Vista de lista o grilla
-  Set<String> _favorites = {}; // IDs de programas favoritos
+  final Set<String> _favorites = {}; // IDs de programas favoritos
   bool _showOnlyFavorites = false;
 
   final List<String> _filters = [

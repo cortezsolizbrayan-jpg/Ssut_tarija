@@ -49,6 +49,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Verificar si el CI existe en la BD
     final result = await _ciService.verifyCI(cleanCI);
 
+    if (!mounted) return;
+
     setState(() {
       _isVerifying = false;
     });
@@ -93,10 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     // Colores de la aplicación (Azul)
     const Color primaryBlue = Color(0xFF305BA4);
-    const Color secondaryBlue = Color(0xFF1A3B70);
-    const Color accentYellow = Color(
-      0xFFFFC900,
-    ); // Mantener amarillo para acentos/botones si es necesario
     const Color whiteBg = Color(0xFFF6F8FB);
     const Color textDark = Color(0xFF1A3A5C);
 

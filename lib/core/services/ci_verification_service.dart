@@ -19,7 +19,7 @@ class CIVerificationService {
       ),
     );
   }
-
+///verificaimos si un ci existen en la dicho bd 
   /// Verifica si un CI existe en la base de datos
   /// Retorna true si existe, false si no existe
   Future<Map<String, dynamic>> verifyCI(String ci) async {

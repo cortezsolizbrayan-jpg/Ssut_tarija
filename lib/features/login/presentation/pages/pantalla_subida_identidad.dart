@@ -1,15 +1,17 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/servicio_compositor_cartas_ci.dart';
+import 'package:refactor_template/core/services/servicio_ocr_inteligente_identidad.dart';
 import 'package:refactor_template/features/login/presentation/mixins/identity_ocr_mixin.dart';
-import 'package:refactor_template/core/services/identity_smart_ocr_service.dart';
 
 class IDUploadScreen extends StatefulWidget {
   static const name = 'id-upload-screen';
@@ -28,13 +30,289 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
   Rect? _backCropRect;
   final ImagePicker _picker = ImagePicker();
   bool _isProcessing = false;
+  String _processingStep = '';
+  double _progressValue = 0.0;
+
+  static const double _samePhotoSimilarityThreshold = 0.90;
+
+  Future<void> _persistCiSideForDocuments(
+    File imgFile, {
+    required bool isFront,
+  }) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final outDir = Directory(
+        '${dir.path}${Platform.pathSeparator}participant_documents',
+      );
+      if (!await outDir.exists()) {
+        await outDir.create(recursive: true);
+      }
+
+      final fileName = isFront ? 'ci_front_latest.jpg' : 'ci_back_latest.jpg';
+      final dest = File('${outDir.path}${Platform.pathSeparator}$fileName');
+      await imgFile.copy(dest.path);
+
+      final current =
+          await LocalStorageService.getParticipantDocumentsData() ??
+          <String, dynamic>{};
+      current[isFront ? 'ci_front_path' : 'ci_back_path'] = dest.path;
+      await LocalStorageService.saveParticipantDocumentsData(current);
+
+      final frontPath = current['ci_front_path'] as String?;
+      final backPath = current['ci_back_path'] as String?;
+
+      if (frontPath != null &&
+          frontPath.isNotEmpty &&
+          backPath != null &&
+          backPath.isNotEmpty) {
+        final out = await ServicioCompositorCartasCi.composeLetterFromCiImages(
+          front: File(frontPath),
+          back: File(backPath),
+        );
+        if (out != null) {
+          current['ci_letter_path'] = out.path;
+          await LocalStorageService.saveParticipantDocumentsData(current);
+        }
+      }
+    } catch (_) {
+      // Best-effort: no bloquear el flujo del usuario
+    }
+  }
+
+  DateTime? _tryParseDateStrict(String ddMMyyyy) {
+    final parts = ddMMyyyy.split('/');
+    if (parts.length != 3) return null;
+
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+
+    final dt = DateTime(year, month, day);
+    if (dt.year != year || dt.month != month || dt.day != day) return null;
+    return dt;
+  }
+
+  Future<File> _normalizeForOcr(File input) async {
+    try {
+      final bytes = await input.readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return input;
+  
+      img.Image normalized = img.bakeOrientation(decoded);
+  
+      // Pre-procesamiento de imagen para mejorar OCR
+      // 1. Escala de grises (elimina ruido de color)
+      normalized = img.grayscale(normalized);
+  
+      // 2. Redimensionar si es muy grande (mantiene aspecto)
+      const maxDim = 600;
+      final w = normalized.width;
+      final h = normalized.height;
+      if (w > maxDim || h > maxDim) {
+        if (w >= h) {
+          normalized = img.copyResize(
+            normalized,
+            width: maxDim,
+            interpolation: img.Interpolation.linear,
+          );
+        } else {
+          normalized = img.copyResize(
+            normalized,
+            height: maxDim,
+            interpolation: img.Interpolation.linear,
+          );
+        }
+      }
+  
+      final tmpDir = await getTemporaryDirectory();
+      final outPath =
+          '${tmpDir.path}${Platform.pathSeparator}id_norm_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(9999)}.jpg';
+      final outFile = File(outPath);
+      await outFile.writeAsBytes(img.encodeJpg(normalized, quality: 70));
+      return outFile;
+    } catch (_) {
+      return input;
+    }
+  }
+
+  Future<int?> _computeDHashFromFile(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return null;
+
+      final resized = img.copyResize(
+        img.bakeOrientation(decoded),
+        width: 9,
+        height: 8,
+        interpolation: img.Interpolation.average,
+      );
+
+      int hash = 0;
+      int bitIndex = 0;
+
+      int lum(int x, int y) {
+        final p = resized.getPixel(x, y);
+        final r = p.r.toInt();
+        final g = p.g.toInt();
+        final b = p.b.toInt();
+        return (0.299 * r + 0.587 * g + 0.114 * b).round();
+      }
+
+      for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+          final left = lum(x, y);
+          final right = lum(x + 1, y);
+          if (left > right) {
+            hash |= (1 << bitIndex);
+          }
+          bitIndex++;
+        }
+      }
+
+      return hash;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  int _hammingDistance64(int a, int b) {
+    int x = a ^ b;
+    int count = 0;
+    while (x != 0) {
+      count += (x & 1);
+      x >>= 1;
+    }
+    return count;
+  }
+
+  Future<double?> _photoSimilarity(File a, File b) async {
+    final ha = await _computeDHashFromFile(a);
+    final hb = await _computeDHashFromFile(b);
+    if (ha == null || hb == null) return null;
+
+    final dist = _hammingDistance64(ha, hb);
+    return 1.0 - (dist / 64.0);
+  }
+
+  Future<File> _cropToRoiIfPossible(File input, Rect roi) async {
+    try {
+      if (roi == Rect.zero) return input;
+
+      final bytes = await input.readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return input;
+
+      final pad = 50.0;
+      final left = (roi.left - pad).clamp(0.0, decoded.width.toDouble());
+      final top = (roi.top - pad).clamp(0.0, decoded.height.toDouble());
+      final right = (roi.right + pad).clamp(0.0, decoded.width.toDouble());
+      final bottom = (roi.bottom + pad).clamp(0.0, decoded.height.toDouble());
+      final width = (right - left).toInt();
+      final height = (bottom - top).toInt();
+
+      if (width < 50 || height < 50) return input;
+
+      final cropped = img.copyCrop(
+        decoded,
+        x: left.toInt(),
+        y: top.toInt(),
+        width: width,
+        height: height,
+      );
+
+      final tmpDir = await getTemporaryDirectory();
+      final outPath =
+          '${tmpDir.path}${Platform.pathSeparator}id_roi_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(9999)}.jpg';
+      final outFile = File(outPath);
+      await outFile.writeAsBytes(img.encodeJpg(cropped, quality: 80));
+      return outFile;
+    } catch (_) {
+      return input;
+    }
+  }
+
+  Future<String?> _createCombinedImage(File front, File back) async {
+    try {
+      final frontBytes = await front.readAsBytes();
+      final backBytes = await back.readAsBytes();
+      final frontImg = img.decodeImage(frontBytes);
+      final backImg = img.decodeImage(backBytes);
+
+      if (frontImg == null || backImg == null) return null;
+
+      // Letter size at ~150 DPI: 1275 x 1650
+      final canvasWidth = 1275;
+      final canvasHeight = 1650;
+      final canvas = img.Image(width: canvasWidth, height: canvasHeight);
+
+      // Fill with white
+      img.fill(canvas, color: img.ColorRgb8(255, 255, 255));
+
+      // Resize images to fit width with padding (e.g. 80% of width)
+      final targetWidth = (canvasWidth * 0.8).toInt();
+
+      final resizedFront = img.copyResize(
+        frontImg,
+        width: targetWidth,
+        interpolation: img.Interpolation.cubic,
+      );
+      final resizedBack = img.copyResize(
+        backImg,
+        width: targetWidth,
+        interpolation: img.Interpolation.cubic,
+      );
+
+      // Position: Centered horizontally.
+      // Front: Top half. Back: Bottom half.
+      final xFront = (canvasWidth - resizedFront.width) ~/ 2;
+      final yFront = (canvasHeight ~/ 4) - (resizedFront.height ~/ 2);
+
+      final xBack = (canvasWidth - resizedBack.width) ~/ 2;
+      final yBack = (canvasHeight * 3 ~/ 4) - (resizedBack.height ~/ 2);
+
+      img.compositeImage(canvas, resizedFront, dstX: xFront, dstY: yFront);
+      img.compositeImage(canvas, resizedBack, dstX: xBack, dstY: yBack);
+
+      // Dibujar borde negro sutil alrededor de las fotos para simular "recorte"
+      img.drawRect(
+        canvas,
+        x1: xFront,
+        y1: yFront,
+        x2: xFront + resizedFront.width,
+        y2: yFront + resizedFront.height,
+        color: img.ColorRgb8(200, 200, 200),
+      );
+      img.drawRect(
+        canvas,
+        x1: xBack,
+        y1: yBack,
+        x2: xBack + resizedBack.width,
+        y2: yBack + resizedBack.height,
+        color: img.ColorRgb8(200, 200, 200),
+      );
+
+      final tmpDir = await getTemporaryDirectory();
+      final outPath =
+          '${tmpDir.path}${Platform.pathSeparator}combined_ci_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final outFile = File(outPath);
+      await outFile.writeAsBytes(img.encodeJpg(canvas, quality: 90));
+      return outPath;
+    } catch (e) {
+      debugPrint("Error creating combined image: $e");
+      return null;
+    }
+  }
 
   // Controladores para edición manual
   final TextEditingController _ciController = TextEditingController();
   final TextEditingController _nombresController = TextEditingController();
   final TextEditingController _apellidosController = TextEditingController();
-  final TextEditingController _fechaEmisionController = TextEditingController(); // Nuevo
-  final TextEditingController _fechaExpiracionController = TextEditingController(); // Nuevo
+  final TextEditingController _fechaEmisionController =
+      TextEditingController(); // Nuevo
+  final TextEditingController _fechaExpiracionController =
+      TextEditingController(); // Nuevo
   bool _showCorrectionForm = false;
 
   // Colors for premium look
@@ -53,64 +331,283 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
   }
 
   Future<void> _processImageWithOCR() async {
-    if (_frontImage == null || _backImage == null) {
-      _showErrorSnackBar('Por favor sube ambas fotos del carnet.');
-      return;
-    }
-
-    setState(() => _isProcessing = true);
+     if (_isProcessing) return;
+     if (_frontImage == null || _backImage == null) {
+       _showErrorSnackBar('Por favor sube ambas fotos del carnet.');
+       return;
+     }
+ 
+     setState(() {
+       _isProcessing = true;
+       _processingStep = 'Iniciando procesamiento...';
+       _progressValue = 0.0;
+     });
 
     try {
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-      
-      final frontInputImage = InputImage.fromFilePath(_frontImage!.path);
-      final frontRecognizedText = await textRecognizer.processImage(frontInputImage);
+      final textRecognizer = TextRecognizer(
+        script: TextRecognitionScript.latin,
+      );
 
-      final backInputImage = InputImage.fromFilePath(_backImage!.path);
-      final backRecognizedText = await textRecognizer.processImage(backInputImage);
+      try {
+        // 1) Normalizar (orientación + tamaño) antes del OCR (en paralelo)
+        final normalizedFrontFuture = _normalizeForOcr(_frontImage!);
+        final normalizedBackFuture = _normalizeForOcr(_backImage!);
+        final normalizedFront = await normalizedFrontFuture;
+        final normalizedBack = await normalizedBackFuture;
 
-      // --- EXTRACCIÓN INTELIGENTE ---
-      final smartData = IdentitySmartOcrService.extractData(frontRecognizedText, backRecognizedText);
+        setState(() {
+          _processingStep = 'Normalizando imágenes...';
+          _progressValue = 0.2;
+        });
 
-      await textRecognizer.close();
+        // 2) OCR 1ra pasada (para encontrar ROI y detectar lado) en paralelo
+        final pass1FrontFuture = textRecognizer.processImage(
+          InputImage.fromFilePath(normalizedFront.path),
+        );
+        final pass1BackFuture = textRecognizer.processImage(
+          InputImage.fromFilePath(normalizedBack.path),
+        );
+        final pass1Front = await pass1FrontFuture;
+        final pass1Back = await pass1BackFuture;
+
+        setState(() {
+          _processingStep = 'Analizando texto (primera pasada)...';
+          _progressValue = 0.4;
+        });
+
+        // 3) Auto-corrección si el usuario subió reverso/anverso invertidos
+        File frontForCrop = normalizedFront;
+        File backForCrop = normalizedBack;
+        RecognizedText frontForRoi = pass1Front;
+        RecognizedText backForRoi = pass1Back;
+
+        final sideFront = ServicioOcrInteligenteIdentidad.detectSide(pass1Front);
+        final sideBack = ServicioOcrInteligenteIdentidad.detectSide(pass1Back);
+        if (sideFront == 'reverso' && sideBack == 'anverso') {
+          frontForCrop = normalizedBack;
+          backForCrop = normalizedFront;
+          frontForRoi = pass1Back;
+          backForRoi = pass1Front;
+        }
+
+        setState(() {
+          _processingStep = 'Detectando lados del documento...';
+          _progressValue = 0.5;
+        });
+
+        // 4) Calcular ROI relevante y recortar (en paralelo)
+        final frontRoi = ServicioOcrInteligenteIdentidad.getRelevantROI(frontForRoi);
+        final backRoi = ServicioOcrInteligenteIdentidad.getRelevantROI(backForRoi);
+
+        setState(() {
+          _processingStep = 'Calculando áreas de interés...';
+          _progressValue = 0.6;
+        });
+
+        final croppedFrontFuture = _cropToRoiIfPossible(frontForCrop, frontRoi);
+        final croppedBackFuture = _cropToRoiIfPossible(backForCrop, backRoi);
+        final croppedFront = await croppedFrontFuture;
+        final croppedBack = await croppedBackFuture;
+
+        setState(() {
+          _processingStep = 'Recortando imágenes...';
+          _progressValue = 0.7;
+        });
+
+        // 5) OCR 2da pasada en paralelo SOLO si es necesario
+        final frontTextLength = frontForRoi.text.length;
+        final backTextLength = backForRoi.text.length;
+        final shouldDoSecondPass = (frontTextLength < 100 || backTextLength < 100);
+
+        RecognizedText pass2Front;
+        RecognizedText pass2Back;
+
+        if (shouldDoSecondPass) {
+          final pass2FrontFuture = textRecognizer.processImage(
+            InputImage.fromFilePath(croppedFront.path),
+          );
+          final pass2BackFuture = textRecognizer.processImage(
+            InputImage.fromFilePath(croppedBack.path),
+          );
+          pass2Front = await pass2FrontFuture;
+          pass2Back = await pass2BackFuture;
+        } else {
+          pass2Front = frontForRoi;
+          pass2Back = backForRoi;
+        }
+
+        setState(() {
+          _processingStep = 'Extrayendo datos del documento...';
+          _progressValue = 0.8;
+        });
+
+        // --- EXTRACCIÓN INTELIGENTE (con OCR refinado) ---
+        final smartData = ServicioOcrInteligenteIdentidad.extractData(
+          pass2Front,
+          pass2Back,
+        );
+
+        debugPrint("📊 Datos extraídos del OCR:");
+        debugPrint("   CI: '${smartData['ci']}'");
+        debugPrint("   Nombres: '${smartData['nombres']}'");
+        debugPrint("   Apellidos: '${smartData['apellidos']}'");
+        debugPrint("   Fecha Emisión: '${smartData['fechaEmision']}'");
+        debugPrint("   Fecha Expiración: '${smartData['fechaExpiracion']}'");
+
+        setState(() {
+          _processingStep = 'Guardando datos...';
+          _progressValue = 0.9;
+        });
+
+        if (!mounted) return;
+
+        setState(() {
+          _isProcessing = false;
+          _processingStep = 'Completado';
+          _progressValue = 1.0;
+          _ciController.text = smartData['ci'] ?? "";
+          _nombresController.text = smartData['nombres'] ?? "";
+          _apellidosController.text = smartData['apellidos'] ?? "";
+          _fechaEmisionController.text = formatDate(
+            smartData['fechaEmision'] ?? "",
+          );
+          _fechaExpiracionController.text = formatDate(
+            smartData['fechaExpiracion'] ?? "",
+          );
+          _showCorrectionForm = true;
+        });
+
+        debugPrint("✅ Formulario de corrección activado");
+        debugPrint("📝 Valores asignados a controladores:");
+        debugPrint("   CI Controller: '${_ciController.text}'");
+        debugPrint("   Nombres Controller: '${_nombresController.text}'");
+        debugPrint("   Apellidos Controller: '${_apellidosController.text}'");
+        debugPrint("   Show Correction Form: $_showCorrectionForm");
+      } finally {
+        await textRecognizer.close();
+      }
       if (!mounted) return;
-
-      setState(() {
-        _isProcessing = false;
-        _ciController.text = smartData['ci'] ?? "";
-        _nombresController.text = smartData['nombres'] ?? "";
-        _apellidosController.text = smartData['apellidos'] ?? "";
-        _fechaEmisionController.text = smartData['fechaEmision'] ?? ""; // Nuevo
-        _fechaExpiracionController.text = smartData['fechaExpiracion'] ?? ""; // Nuevo
-        _showCorrectionForm = true; 
-      });
-
     } catch (e) {
       debugPrint("Error en OCR: $e");
       if (mounted) {
-        setState(() => _isProcessing = false);
+        setState(() {
+          _isProcessing = false;
+          _processingStep = '';
+          _progressValue = 0.0;
+        });
         _showErrorSnackBar('Error al procesar: $e');
       }
     }
   }
 
   void _navigateToFaceRecognition() {
-    if (_ciController.text.isEmpty || _nombresController.text.isEmpty) {
-      _showErrorSnackBar('El CI y los Nombres son obligatorios.');
+    debugPrint('🔘 Botón "Continuar" presionado');
+    // Wrapper para ser usado en callbacks (onPressed) sin cambiar firmas.
+    _navigateToFaceRecognitionAsync();
+  }
+
+  Future<void> _navigateToFaceRecognitionAsync() async {
+    debugPrint('🔄 Iniciando navegación a reconocimiento facial...');
+
+    debugPrint('🔍 Estado actual:');
+    debugPrint('   Front Image: ${_frontImage != null}');
+    debugPrint('   Back Image: ${_backImage != null}');
+    debugPrint('   CI Controller: "${_ciController.text}"');
+    debugPrint('   Nombres Controller: "${_nombresController.text}"');
+    debugPrint('   Show Correction Form: $_showCorrectionForm');
+
+    if (_frontImage == null || _backImage == null) {
+      debugPrint('❌ Error: Imágenes faltantes - Front: ${_frontImage != null}, Back: ${_backImage != null}');
+      _showErrorSnackBar('Por favor sube ambas fotos del carnet.');
       return;
     }
 
+    // Si los datos están vacíos, mostrar el formulario de corrección
+    if (_ciController.text.isEmpty || _nombresController.text.isEmpty) {
+      debugPrint('⚠️ Datos incompletos - Mostrando formulario de corrección');
+      setState(() => _showCorrectionForm = true);
+      _showErrorSnackBar('Por favor completa los datos del formulario.');
+      return;
+    }
+
+    debugPrint('✅ Validaciones pasadas, mostrando loader...');
+    // Show loading while processing
+    await _showBlockingLoader();
+
+    final emisionRaw = _fechaEmisionController.text.trim();
+    final expiracionRaw = _fechaExpiracionController.text.trim();
+    if (emisionRaw.isNotEmpty &&
+        !RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(emisionRaw)) {
+      _showErrorSnackBar('Fecha de Emisión inválida (DD/MM/AAAA).');
+      return;
+    }
+    if (expiracionRaw.isNotEmpty &&
+        !RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(expiracionRaw)) {
+      _showErrorSnackBar('Fecha de Expiración inválida (DD/MM/AAAA).');
+      return;
+    }
+    if (emisionRaw.isNotEmpty) {
+      final emision = _tryParseDateStrict(emisionRaw);
+      if (emision == null) {
+        _showErrorSnackBar('Fecha de Emisión inválida.');
+        return;
+      }
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      if (emision.isAfter(todayDate)) {
+        _showErrorSnackBar('La emisión no puede ser futura.');
+        return;
+      }
+      if (expiracionRaw.isNotEmpty) {
+        final expiracion = _tryParseDateStrict(expiracionRaw);
+        if (expiracion == null) {
+          _showErrorSnackBar('Fecha de Expiración inválida.');
+          return;
+        }
+        if (expiracion.isBefore(emision)) {
+          _showErrorSnackBar('La expiración no puede ser antes de la emisión.');
+          return;
+        }
+      }
+    }
+
+    // Generate combined image
+    String? combinedPath;
+    if (_frontImage != null && _backImage != null) {
+      debugPrint('🖼️ Creando imagen combinada...');
+      combinedPath = await _createCombinedImage(_frontImage!, _backImage!);
+      debugPrint('✅ Imagen combinada creada: ${combinedPath != null ? "Éxito" : "Falló"}');
+    }
+
+    if (!mounted) {
+      debugPrint('❌ Widget no está montado, cancelando navegación');
+      return;
+    }
+
+    debugPrint('💾 Guardando datos pendientes...');
+    // Persistimos los datos para continuar después del escaneo facial
+    final ocrData = {
+      'nombres': _nombresController.text.trim(),
+      'apellidos': _apellidosController.text.trim(),
+      'ci': cleanCI(_ciController.text),
+      'ciFromInitial': (widget.initialCI != null).toString(),
+      'fechaEmision': _fechaEmisionController.text.trim(),
+      'fechaExpiracion': _fechaExpiracionController.text.trim(),
+      'combinedCiPath': combinedPath ?? "",
+    };
+    await savePendingOcrData(ocrData);
+    debugPrint('✅ Datos guardados exitosamente');
+
+    debugPrint('🚀 Navegando a pantalla de reconocimiento facial...');
     context.push(
       '/face-recognition',
-      extra: {
-        'nombres': _nombresController.text.trim(),
-        'apellidos': _apellidosController.text.trim(),
-        'ci': cleanCI(_ciController.text),
-        'ciFromInitial': (widget.initialCI != null).toString(),
-        'fechaEmision': _fechaEmisionController.text.trim(), // Nuevo
-        'fechaExpiracion': _fechaExpiracionController.text.trim(), // Nuevo
-      },
+      extra: null,
     );
+
+    debugPrint('✅ Navegación completada, ocultando loader...');
+    _dismissBlockingLoaderIfAny(true);
+
+    _dismissBlockingLoaderIfAny(true);
   }
 
   void _showErrorSnackBar(String message) {
@@ -124,54 +621,117 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
     );
   }
 
+  Future<void> _showBlockingLoader() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: primaryBlue)),
+    );
+  }
+
+  void _dismissBlockingLoaderIfAny(bool wasShown) {
+    if (!wasShown) return;
+    if (!mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
   Future<void> _pickImage(ImageSource source, bool isFront) async {
-    if (mounted) Navigator.pop(context);
-    final XFile? pickedFile = await _picker.pickImage(source: source, imageQuality: 90);
+    if (mounted) {
+      Navigator.of(context).maybePop();
+    }
+    final XFile? pickedFile = await _picker.pickImage(
+      source: source,
+      imageQuality: 92,
+      maxWidth: 2200,
+    );
     if (pickedFile != null) {
       await _quickValidateAndSetImage(pickedFile.path, isFront);
     }
   }
 
   Future<void> _quickValidateAndSetImage(String imagePath, bool isFront) async {
+    bool loaderShown = false;
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator(color: primaryBlue)),
+      loaderShown = true;
+      // ignore: unawaited_futures
+      _showBlockingLoader();
+
+      final textRecognizer = TextRecognizer(
+        script: TextRecognitionScript.latin,
       );
 
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-      final inputImage = InputImage.fromFile(File(imagePath));
+      final normalizedFile = await _normalizeForOcr(File(imagePath));
+      final inputImage = InputImage.fromFile(normalizedFile);
       final recognizedText = await textRecognizer.processImage(inputImage);
       await textRecognizer.close();
 
+      _dismissBlockingLoaderIfAny(loaderShown);
+      loaderShown = false;
       if (!mounted) return;
-      Navigator.pop(context);
 
-      final smartData = IdentitySmartOcrService.extractData(recognizedText, null);
-      bool isValid = smartData['ci'].toString().isNotEmpty || smartData['nombres'].toString().isNotEmpty;
+      final smartData = ServicioOcrInteligenteIdentidad.extractData(
+        recognizedText,
+        null,
+      );
+      bool isValid =
+          smartData['ci'].toString().isNotEmpty ||
+          smartData['nombres'].toString().isNotEmpty;
 
-      final smartCrop = IdentitySmartOcrService.getRelevantROI(recognizedText);
+      final detectedSide = ServicioOcrInteligenteIdentidad.detectSide(recognizedText);
 
-      final shouldAccept = await _showValidationDialog(isValid, null);
+      final smartCrop = ServicioOcrInteligenteIdentidad.getRelevantROI(recognizedText);
+      final croppedFile = await _cropToRoiIfPossible(normalizedFile, smartCrop);
+
+      String? warning;
+      if (isFront && detectedSide == 'reverso') {
+        warning =
+            'Parece que esta foto es del reverso. Toma el lado frontal (anverso).';
+        isValid = false;
+      } else if (!isFront && detectedSide == 'anverso') {
+        // Solo advertir si la nueva foto es MUY similar a la foto frontal
+        // (probablemente se volvió a tomar la misma foto).
+        if (_frontImage != null) {
+          final similarity = await _photoSimilarity(_frontImage!, croppedFile);
+          if (similarity == null ||
+              similarity >= _samePhotoSimilarityThreshold) {
+            warning =
+                'Parece que esta foto es del anverso. Toma el lado posterior (reverso).';
+            isValid = false;
+          }
+        } else {
+          warning =
+              'Parece que esta foto es del anverso. Toma el lado posterior (reverso).';
+          isValid = false;
+        }
+      }
+
+      final shouldAccept = await _showValidationDialog(isValid, warning);
 
       if (shouldAccept == true && mounted) {
         setState(() {
           if (isFront) {
-            _frontImage = File(imagePath);
+            _frontImage = croppedFile;
             _frontCropRect = smartCrop != Rect.zero ? smartCrop : null;
           } else {
-            _backImage = File(imagePath);
+            _backImage = croppedFile;
             _backCropRect = smartCrop != Rect.zero ? smartCrop : null;
           }
         });
+        // ignore: unawaited_futures
+        _persistCiSideForDocuments(croppedFile, isFront: isFront);
         if (isFront) _showFlipAnimation();
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      _dismissBlockingLoaderIfAny(loaderShown);
     }
   }
-//Aqui estamos validanddo lo que es la imagen correspondiente 
+
+  //Aqui estamos validanddo lo que es la imagen correspondiente
   Future<bool?> _showValidationDialog(bool isValid, String? warningMessage) {
     return showDialog<bool>(
       context: context,
@@ -180,11 +740,22 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
         title: Row(
           children: [
             Icon(
-              warningMessage != null ? Icons.warning_amber_rounded : (isValid ? Icons.check_circle : Icons.help_outline),
-              color: warningMessage != null ? Colors.orange : (isValid ? Colors.green : Colors.grey)
+              warningMessage != null
+                  ? Icons.warning_amber_rounded
+                  : (isValid ? Icons.check_circle : Icons.help_outline),
+              color: warningMessage != null
+                  ? Colors.orange
+                  : (isValid ? Colors.green : Colors.grey),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(warningMessage != null ? "¡Atención!" : (isValid ? "Imagen Legible" : "¿Imagen clara?"), style: const TextStyle(fontSize: 18))),
+            Expanded(
+              child: Text(
+                warningMessage != null
+                    ? "¡Atención!"
+                    : (isValid ? "Imagen Legible" : "¿Imagen clara?"),
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -194,18 +765,32 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
             if (warningMessage != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Text(warningMessage, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                child: Text(
+                  warningMessage,
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            Text(isValid 
-              ? "Hemos detectado datos en el carnet correctamente." 
-              : "No pudimos detectar datos claros. Asegúrate de que no haya reflejos."),
+            Text(
+              isValid
+                  ? "Hemos detectado datos en el carnet correctamente."
+                  : "No pudimos detectar datos claros. Asegúrate de que no haya reflejos.",
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Reintentar")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Reintentar"),
+          ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true), 
-            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+            ),
             child: const Text("Usar esta foto"),
           ),
         ],
@@ -231,19 +816,32 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
   void _showPickerOptions(bool isFront) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Seleccionar origen", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const Text(
+              "Seleccionar origen",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _pickerOption(Icons.camera_alt, "Cámara", () => _pickImage(ImageSource.camera, isFront)),
-                _pickerOption(Icons.photo_library, "Galería", () => _pickImage(ImageSource.gallery, isFront)),
+                _pickerOption(
+                  Icons.camera_alt,
+                  "Cámara",
+                  () => _pickImage(ImageSource.camera, isFront),
+                ),
+                _pickerOption(
+                  Icons.photo_library,
+                  "Galería",
+                  () => _pickImage(ImageSource.gallery, isFront),
+                ),
               ],
             ),
           ],
@@ -259,7 +857,10 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
         children: [
           Container(
             padding: const EdgeInsets.all(15),
-            decoration: BoxDecoration(color: primaryBlue.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: primaryBlue.withAlpha(26),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, color: primaryBlue, size: 30),
           ),
           const SizedBox(height: 8),
@@ -276,8 +877,14 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
-        title: const Text('Identidad', style: TextStyle(color: darkBlue, fontWeight: FontWeight.bold)),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: darkBlue), onPressed: () => context.pop()),
+        title: const Text(
+          'Identidad',
+          style: TextStyle(color: darkBlue, fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: darkBlue),
+          onPressed: () => context.pop(),
+        ),
       ),
       body: Stack(
         children: [
@@ -288,13 +895,40 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
               children: [
                 FadeInDown(child: _buildStepIndicator()),
                 const SizedBox(height: 30),
-                FadeInLeft(child: const Text('Captura tu carnet', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: darkBlue))),
+                FadeInLeft(
+                  child: const Text(
+                    'Captura tu carnet',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: darkBlue,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 8),
-                FadeInLeft(delay: const Duration(milliseconds: 200), child: Text('Necesitamos verificar tus datos personales.', style: TextStyle(color: Colors.grey[600], fontSize: 15))),
+                FadeInLeft(
+                  delay: const Duration(milliseconds: 200),
+                  child: Text(
+                    'Necesitamos verificar tus datos personales.',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 15),
+                  ),
+                ),
                 const SizedBox(height: 30),
-                _buildUploadCard('Lado Frontal (Anverso)', Icons.credit_card, _frontImage, _frontCropRect, () => _showPickerOptions(true)),
+                _buildUploadCard(
+                  'Lado Frontal (Anverso)',
+                  Icons.credit_card,
+                  _frontImage,
+                  _frontCropRect,
+                  () => _showPickerOptions(true),
+                ),
                 const SizedBox(height: 20),
-                _buildUploadCard('Lado Posterior (Reverso)', Icons.credit_card_off, _backImage, _backCropRect, () => _showPickerOptions(false)),
+                _buildUploadCard(
+                  'Lado Posterior (Reverso)',
+                  Icons.credit_card_off,
+                  _backImage,
+                  _backCropRect,
+                  () => _showPickerOptions(false),
+                ),
                 const SizedBox(height: 40),
                 _buildContinueButton(),
                 const SizedBox(height: 40),
@@ -302,6 +936,13 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
             ),
           ),
           if (_isProcessing) _buildScanningOverlay(),
+          // Debug: Verificar si el formulario de corrección se debe mostrar
+          Builder(
+            builder: (context) {
+              debugPrint("🔍 Build: ShowCorrectionForm = $_showCorrectionForm, CI='${_ciController.text}', Nombres='${_nombresController.text}'");
+              return SizedBox.shrink();
+            },
+          ),
           if (_showCorrectionForm) _buildCorrectionForm(),
         ],
       ),
@@ -310,7 +951,7 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
 
   Widget _buildCorrectionForm() {
     return Container(
-      color: Colors.black.withOpacity(0.6),
+      color: Colors.black.withAlpha(153),
       child: Center(
         child: SingleChildScrollView(
           padding: EdgeInsets.only(
@@ -326,10 +967,10 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withAlpha(51),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -357,11 +998,25 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
                   const SizedBox(height: 15),
                   _buildTextField("Nombres", _nombresController, Icons.person),
                   const SizedBox(height: 15),
-                  _buildTextField("Apellidos", _apellidosController, Icons.person_outline),
+                  _buildTextField(
+                    "Apellidos",
+                    _apellidosController,
+                    Icons.person_outline,
+                  ),
                   const SizedBox(height: 15),
-                  _buildDatePickerField("Fecha de Emisión", _fechaEmisionController, Icons.date_range), // Nuevo
+                  _buildDatePickerField(
+                    "Fecha de Emisión",
+                    _fechaEmisionController,
+                    Icons.date_range,
+                    lastDate: DateTime.now(),
+                  ), // Nuevo
                   const SizedBox(height: 15),
-                  _buildDatePickerField("Fecha de Expiración", _fechaExpiracionController, Icons.event_repeat), // Nuevo
+                  _buildDatePickerField(
+                    "Fecha de Expiración",
+                    _fechaExpiracionController,
+                    Icons.event_repeat,
+                    firstDate: DateTime.now(),
+                  ), // Nuevo
                   const SizedBox(height: 30),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -380,7 +1035,8 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
                       ),
                       const SizedBox(height: 10),
                       TextButton(
-                        onPressed: () => setState(() => _showCorrectionForm = false),
+                        onPressed: () =>
+                            setState(() => _showCorrectionForm = false),
                         child: const Text("Volver a tomar fotos"),
                       ),
                     ],
@@ -394,7 +1050,11 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller,
+    IconData icon,
+  ) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -407,25 +1067,48 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
     );
   }
 
-  Widget _buildDatePickerField(String label, TextEditingController controller, IconData icon) {
+  Widget _buildDatePickerField(
+    String label,
+    TextEditingController controller,
+    IconData icon, {
+    DateTime? firstDate,
+    DateTime? lastDate,
+  }) {
     return TextField(
       controller: controller,
       readOnly: true, // No editable por teclado directo
       onTap: () async {
+        DateTime initialDate;
+        final raw = controller.text.trim();
+        final parsed = _tryParseDateStrict(raw);
+        initialDate = parsed ?? DateTime.now();
+
+        final effectiveFirstDate = firstDate ?? DateTime(1900);
+        final effectiveLastDate = lastDate ?? DateTime(2101);
+        if (initialDate.isBefore(effectiveFirstDate)) {
+          initialDate = effectiveFirstDate;
+        }
+        if (initialDate.isAfter(effectiveLastDate)) {
+          initialDate = effectiveLastDate;
+        }
+
         DateTime? pickedDate = await showDatePicker(
           context: context,
-          initialDate: DateTime.now(),
-          firstDate: DateTime(1900),
-          lastDate: DateTime(2101),
+          initialDate: initialDate,
+          firstDate: effectiveFirstDate,
+          lastDate: effectiveLastDate,
           locale: const Locale('es', 'ES'), // Asegúrate de tener conf i18n
           builder: (context, child) => Theme(
-             data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: primaryBlue)),
-             child: child!,
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(primary: primaryBlue),
+            ),
+            child: child!,
           ),
         );
         if (pickedDate != null) {
           // Formato simple DD/MM/YYYY
-          String formattedDate = "${pickedDate.day.toString().padLeft(2,'0')}/${pickedDate.month.toString().padLeft(2,'0')}/${pickedDate.year}";
+          String formattedDate =
+              "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
           controller.text = formattedDate;
         }
       },
@@ -441,7 +1124,8 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
   }
 
   Widget _buildContinueButton() {
-    bool ready = _frontImage != null && _backImage != null && !_isProcessing;
+    bool ready = _frontImage != null && _backImage != null;
+    debugPrint('🔘 Estado del botón Continuar - Imágenes listas: $ready (Front: ${_frontImage != null}, Back: ${_backImage != null})');
     return FadeInUp(
       delay: const Duration(milliseconds: 400),
       child: Container(
@@ -449,19 +1133,36 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
         height: 60,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          gradient: ready ? const LinearGradient(colors: [primaryBlue, darkBlue]) : null,
-          boxShadow: ready ? [BoxShadow(color: primaryBlue.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))] : [],
+          gradient: ready
+              ? const LinearGradient(colors: [primaryBlue, darkBlue])
+              : null,
+          boxShadow: ready
+              ? [
+                  BoxShadow(
+                    color: primaryBlue.withAlpha(77),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+              : [],
         ),
         child: ElevatedButton(
-          onPressed: ready ? _processImageWithOCR : null,
+          onPressed: ready ? _navigateToFaceRecognition : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
           ),
-          child: _isProcessing 
-            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Text('Completar Análisis', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          child: const Text(
+                  'Continuar al Escaneo Facial',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ),
     );
@@ -484,25 +1185,55 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          width: 35, height: 35,
+          width: 35,
+          height: 35,
           decoration: BoxDecoration(
             color: active ? primaryBlue : Colors.white,
             shape: BoxShape.circle,
-            border: Border.all(color: active ? primaryBlue : Colors.grey[300]!, width: 2),
+            border: Border.all(
+              color: active ? primaryBlue : Colors.grey[300]!,
+              width: 2,
+            ),
           ),
-          child: Center(child: Text(step.toString(), style: TextStyle(color: active ? Colors.white : Colors.grey, fontWeight: FontWeight.bold))),
+          child: Center(
+            child: Text(
+              step.toString(),
+              style: TextStyle(
+                color: active ? Colors.white : Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 11, color: active ? primaryBlue : Colors.grey)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: active ? primaryBlue : Colors.grey,
+          ),
+        ),
       ],
     );
   }
 
   Widget _stepLine(bool active) {
-    return Expanded(child: Container(height: 2, margin: const EdgeInsets.only(bottom: 20, left: 10, right: 10), color: active ? primaryBlue : Colors.grey[200]));
+    return Expanded(
+      child: Container(
+        height: 2,
+        margin: const EdgeInsets.only(bottom: 20, left: 10, right: 10),
+        color: active ? primaryBlue : Colors.grey[200],
+      ),
+    );
   }
 
-  Widget _buildUploadCard(String title, IconData icon, File? file, Rect? cropRect, VoidCallback onTap) {
+  Widget _buildUploadCard(
+    String title,
+    IconData icon,
+    File? file,
+    Rect? cropRect,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -512,23 +1243,48 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: file != null ? primaryBlue : Colors.transparent, width: 2),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+          border: Border.all(
+            color: file != null ? primaryBlue : Colors.transparent,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(18),
-          child: file != null 
-            ? Image.file(file, fit: BoxFit.cover)
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 45, color: primaryBlue.withOpacity(0.5)),
-                  const SizedBox(height: 15),
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: darkBlue)),
-                  const SizedBox(height: 5),
-                  Text('Toca para capturar', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
-                ],
-              ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: file != null
+                ? Image.file(file, fit: BoxFit.cover, key: ValueKey(file.path))
+                : Column(
+                    key: const ValueKey('placeholder'),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 45, color: primaryBlue.withAlpha(128)),
+                      const SizedBox(height: 15),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: darkBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Toca para capturar',
+                        style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
@@ -536,8 +1292,11 @@ class _IDUploadScreenState extends State<IDUploadScreen> with IdentityOcrMixin {
 
   Widget _buildScanningOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.8),
-      child: const Center(child: _ScanningAnimation()),
+      color: Colors.black.withAlpha(204),
+      child: _ScanningAnimation(
+        step: _processingStep,
+        progress: _progressValue,
+      ),
     );
   }
 }
@@ -548,18 +1307,24 @@ class _FlipCardAnimation extends StatefulWidget {
   State<_FlipCardAnimation> createState() => _FlipCardAnimationState();
 }
 
-class _FlipCardAnimationState extends State<_FlipCardAnimation> with SingleTickerProviderStateMixin {
+class _FlipCardAnimationState extends State<_FlipCardAnimation>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..forward();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..forward();
   }
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -568,15 +1333,26 @@ class _FlipCardAnimationState extends State<_FlipCardAnimation> with SingleTicke
         builder: (ctx, child) {
           return Transform(
             alignment: Alignment.center,
-            transform: Matrix4.identity()..setEntry(3, 2, 0.001)..rotateY(_controller.value * math.pi),
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(_controller.value * math.pi),
             child: Container(
-              width: 220, height: 140,
+              width: 220,
+              height: 140,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15),
-                gradient: const LinearGradient(colors: [Color(0xFF305BA4), Color(0xFF1A3A5C)]),
-                boxShadow: const [BoxShadow(color: Colors.blueAccent, blurRadius: 20)],
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF305BA4), Color(0xFF1A3A5C)],
+                ),
+                boxShadow: const [
+                  BoxShadow(color: Colors.blueAccent, blurRadius: 20),
+                ],
               ),
-              child: const Icon(Icons.credit_card, color: Colors.white, size: 60),
+              child: const Icon(
+                Icons.credit_card,
+                color: Colors.white,
+                size: 60,
+              ),
             ),
           );
         },
@@ -586,23 +1362,31 @@ class _FlipCardAnimationState extends State<_FlipCardAnimation> with SingleTicke
 }
 
 class _ScanningAnimation extends StatefulWidget {
-  const _ScanningAnimation();
+  final String step;
+  final double progress;
+  const _ScanningAnimation({required this.step, required this.progress});
   @override
   State<_ScanningAnimation> createState() => _ScanningAnimationState();
 }
 
-class _ScanningAnimationState extends State<_ScanningAnimation> with SingleTickerProviderStateMixin {
+class _ScanningAnimationState extends State<_ScanningAnimation>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
   }
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -614,12 +1398,58 @@ class _ScanningAnimationState extends State<_ScanningAnimation> with SingleTicke
             Stack(
               alignment: Alignment.center,
               children: [
-                const Icon(Icons.contact_page_outlined, size: 120, color: Colors.blueAccent),
-                Positioned(top: 20 + _controller.value * 80, child: Container(width: 150, height: 3, decoration: BoxDecoration(color: Colors.cyanAccent, boxShadow: [BoxShadow(color: Colors.cyanAccent.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)]))),
+                const Icon(
+                  Icons.contact_page_outlined,
+                  size: 120,
+                  color: Colors.blueAccent,
+                ),
+                Positioned(
+                  top: 20 + _controller.value * 80,
+                  child: Container(
+                    width: 150,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: Colors.cyanAccent,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.cyanAccent.withAlpha(128),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 30),
-            const Text('Analizando Documento...', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            Text(
+              widget.step,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 200,
+              child: LinearProgressIndicator(
+                value: widget.progress,
+                backgroundColor: Colors.white24,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.cyanAccent),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${(widget.progress * 100).toInt()}%',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+            ),
           ],
         );
       },

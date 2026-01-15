@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/services/local_storage_service.dart';
 
 import '../../../../../config/menu/menu.dart';
 import '../../../../../core/utils/rive_utils.dart';
@@ -15,6 +16,44 @@ class SideBar extends StatefulWidget {
 
 class _SideBarState extends State<SideBar> {
   Menu selectedSideMenu = sidebarMenus.first;
+  String _userName = 'Usuario';
+  String _userBio = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final personal = await LocalStorageService.getPersonalData();
+    if (!mounted) return;
+
+    final nombre = (personal?['nombre'] as String?)?.trim();
+    final apPaterno = (personal?['apPaterno'] as String?)?.trim();
+    final apMaterno = (personal?['apMaterno'] as String?)?.trim();
+
+    final nombreCompleto = [
+      if (nombre != null && nombre.isNotEmpty) nombre,
+      if (apPaterno != null && apPaterno.isNotEmpty) apPaterno,
+      if (apMaterno != null && apMaterno.isNotEmpty) apMaterno,
+    ].join(' ').trim();
+
+    final ci = (personal?['numeroCI'] as String?)?.trim();
+    final complemento = (personal?['complemento'] as String?)?.trim();
+    final expedidoEn = (personal?['expedidoEn'] as String?)?.trim();
+
+    final ciLine = [
+      if (ci != null && ci.isNotEmpty) 'CI:$ci',
+      if (complemento != null && complemento.isNotEmpty) complemento,
+      if (expedidoEn != null && expedidoEn.isNotEmpty) expedidoEn,
+    ].join(' ').trim();
+
+    setState(() {
+      _userName = nombreCompleto.isNotEmpty ? nombreCompleto : 'Usuario';
+      _userBio = ciLine;
+    });
+  }
 
   void _navigateToRoute(String menuTitle) {
     switch (menuTitle) {
@@ -25,7 +64,7 @@ class _SideBarState extends State<SideBar> {
         context.go('/mis-datos-personales');
         break;
       case 'Mis Documentos Personales':
-        // TODO: Navegar a mis documentos personales
+        context.go('/mis-documentos-personales');
         break;
       case 'Mis Programas':
         context.go('/diplomados');
@@ -65,10 +104,7 @@ class _SideBarState extends State<SideBar> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const InfoCard(
-                name: "Guadalupe Flores Mamani",
-                bio: "CI:9225528 LP",
-              ),
+              InfoCard(name: _userName, bio: _userBio),
               const SizedBox(height: 16),
               // Padding(
               //   padding: const EdgeInsets.only(left: 24, top: 32, bottom: 16),

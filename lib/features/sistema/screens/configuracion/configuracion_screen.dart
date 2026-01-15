@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/services/local_storage_service.dart';
 
-class ConfiguracionScreen extends StatelessWidget {
+class ConfiguracionScreen extends StatefulWidget {
   static const name = 'configuracion';
   const ConfiguracionScreen({super.key});
 
   @override
+  State<ConfiguracionScreen> createState() => _ConfiguracionScreenState();
+}
+
+class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
+  bool notificationsEnabled = true;
+  bool darkMode = false;
+
+  @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    bool notificationsEnabled = true;
-    bool darkMode = false;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -56,38 +63,30 @@ class ConfiguracionScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           _buildSectionTitle('Notificaciones'),
-          StatefulBuilder(
-            builder: (context, setState) {
-              return _buildSwitchItem(
-                context,
-                icon: Icons.notifications,
-                title: 'Notificaciones Push',
-                subtitle: 'Recibir notificaciones en tiempo real',
-                value: notificationsEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    notificationsEnabled = value;
-                  });
-                },
-              );
+          _buildSwitchItem(
+            context,
+            icon: Icons.notifications,
+            title: 'Notificaciones Push',
+            subtitle: 'Recibir notificaciones en tiempo real',
+            value: notificationsEnabled,
+            onChanged: (value) {
+              setState(() {
+                notificationsEnabled = value;
+              });
             },
           ),
           const SizedBox(height: 20),
           _buildSectionTitle('Apariencia'),
-          StatefulBuilder(
-            builder: (context, setState) {
-              return _buildSwitchItem(
-                context,
-                icon: Icons.dark_mode,
-                title: 'Modo Oscuro',
-                subtitle: 'Activar tema oscuro',
-                value: darkMode,
-                onChanged: (value) {
-                  setState(() {
-                    darkMode = value;
-                  });
-                },
-              );
+          _buildSwitchItem(
+            context,
+            icon: Icons.dark_mode,
+            title: 'Modo Oscuro',
+            subtitle: 'Activar tema oscuro',
+            value: darkMode,
+            onChanged: (value) {
+              setState(() {
+                darkMode = value;
+              });
             },
           ),
           const SizedBox(height: 20),
@@ -148,9 +147,12 @@ class ConfiguracionScreen extends StatelessWidget {
                       child: const Text('Cancelar'),
                     ),
                     TextButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(context);
-                        context.go('/login');
+                        await LocalStorageService.clearSessionData();
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
                       },
                       child: const Text(
                         'Cerrar Sesión',

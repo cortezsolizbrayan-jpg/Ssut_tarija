@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/profile_image_processor_service.dart';
 
 class MisDatosPersonalesScreen extends StatefulWidget {
   static const name = 'mis-datos-personales';
@@ -21,39 +22,21 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
   File? _profileImage;
 
   // Controladores de texto
-  final TextEditingController _nombreController = TextEditingController(
-    text: 'MARIA RENE FERNANDEZ',
-  );
-  final TextEditingController _apPaternoController = TextEditingController(
-    text: 'RODRIGUEZ',
-  );
-  final TextEditingController _apMaternoController = TextEditingController(
-    text: 'GONZALES',
-  );
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _apPaternoController = TextEditingController();
+  final TextEditingController _apMaternoController = TextEditingController();
   final TextEditingController _fechaNacimientoController =
-      TextEditingController(text: '05/04/2003');
-  final TextEditingController _numeroCIController = TextEditingController(
-    text: '13693582',
-  );
-  final TextEditingController _complementoController = TextEditingController(
-    text: '1K',
-  );
-  final TextEditingController _expedidoEnController = TextEditingController(
-    text: 'LP',
-  );
-  final TextEditingController _nacionalidadController = TextEditingController(
-    text: 'Boliviana',
-  );
+      TextEditingController();
+  final TextEditingController _numeroCIController = TextEditingController();
+  final TextEditingController _complementoController = TextEditingController();
+  final TextEditingController _expedidoEnController = TextEditingController();
+  final TextEditingController _nacionalidadController = TextEditingController();
   final TextEditingController _ciudadNacimientoController =
-      TextEditingController(text: 'El Alto');
-  final TextEditingController _generoController = TextEditingController(
-    text: 'FEMENINO',
-  );
+      TextEditingController();
+  final TextEditingController _generoController = TextEditingController();
   final TextEditingController _ciudadResidenciaController =
-      TextEditingController(text: 'SANTA CRUZ');
-  final TextEditingController _direccionController = TextEditingController(
-    text: 'C. SANCHEZ LIMA, Z. SOPOCACHI',
-  );
+      TextEditingController();
+  final TextEditingController _direccionController = TextEditingController();
   final TextEditingController _nroCasaController = TextEditingController();
   final TextEditingController _estadoCivilController = TextEditingController();
   final TextEditingController _celularController = TextEditingController();
@@ -66,8 +49,6 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedGenero = 'FEMENINO';
-    _selectedCiudadResidencia = 'SANTA CRUZ';
     _loadSavedData();
   }
 
@@ -128,13 +109,64 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
   }
 
   Future<void> _pickImage() async {
+    bool loaderShown = false;
+    bool processingDialogShown = false;
     try {
+      // Mostrar diálogo de selección de fuente
+      final ImageSource? source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Seleccionar foto'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galería'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Cámara'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      // Verificar si es la primera foto
+      final isFirstPhoto = await ProfileImageProcessorService.isFirstPhoto();
+
+      // Mostrar indicador de carga
+      if (mounted) {
+        loaderShown = true;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+        );
+      }
+
       final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 85,
       );
+
+      if (!mounted) return;
+      if (loaderShown) {
+        final navigator = Navigator.of(context, rootNavigator: true);
+        if (navigator.canPop()) {
+          navigator.pop();
+        }
+        loaderShown = false;
+      }
+
       if (image != null) {
         final fileSize = await File(image.path).length();
         const maxSize = 3.1 * 1024 * 1024; // 3.1 MB
@@ -149,18 +181,76 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           }
           return;
         }
+
+        // Procesar la imagen si es la primera foto
+        File imageToSave = File(image.path);
+        if (isFirstPhoto) {
+          if (mounted) {
+            processingDialogShown = true;
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Procesando imagen...'),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final processedImage =
+              await ProfileImageProcessorService.processProfileImage(
+                File(image.path),
+                isFirstPhoto: true,
+              );
+
+          if (!mounted) return;
+          if (processingDialogShown) {
+            final navigator = Navigator.of(context, rootNavigator: true);
+            if (navigator.canPop()) {
+              navigator.pop();
+            }
+            processingDialogShown = false;
+          }
+
+          if (processedImage != null) {
+            imageToSave = processedImage;
+          }
+        }
+
         // Guardar la imagen en almacenamiento permanente
         final savedPath = await LocalStorageService.saveProfileImage(
-          File(image.path),
+          imageToSave,
         );
         if (savedPath != null && mounted) {
           setState(() {
             _profileImage = File(savedPath);
           });
+
+          if (isFirstPhoto && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Foto de perfil procesada con fondo plomo'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
         }
       }
     } catch (e) {
       if (mounted) {
+        if (processingDialogShown || loaderShown) {
+          final navigator = Navigator.of(context, rootNavigator: true);
+          if (navigator.canPop()) {
+            navigator.pop();
+          }
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al seleccionar imagen: $e'),
@@ -275,7 +365,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                               border: Border.all(color: Colors.white, width: 4),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withAlpha(51),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -648,43 +738,43 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
 
                       await LocalStorageService.savePersonalData(personalData);
 
-                      if (mounted) {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            title: const Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.green),
-                                SizedBox(width: 10),
-                                Text('¡Éxito!'),
-                              ],
-                            ),
-                            content: const Text(
-                              'Sus datos se guardaron correctamente.',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context); // Cerrar el diálogo
-                                  context.pop(); // Salir de la pantalla de datos
-                                },
-                                child: const Text(
-                                  'ACEPTAR',
-                                  style: TextStyle(
-                                    color: Color(0xFF1A3A5C),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                      if (!context.mounted) return;
+
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          title: const Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green),
+                              SizedBox(width: 10),
+                              Text('¡Éxito!'),
                             ],
                           ),
-                        );
-                      }
+                          content: const Text(
+                            'Sus datos se guardaron correctamente.',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context); // Cerrar el diálogo
+                                context.pop(); // Salir de la pantalla de datos
+                              },
+                              child: const Text(
+                                'ACEPTAR',
+                                style: TextStyle(
+                                  color: Color(0xFF1A3A5C),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -762,7 +852,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withAlpha(13),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -772,12 +862,19 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
             controller: controller,
             readOnly: readOnly,
             onTap: onTap,
-            style: TextStyle(fontSize: inputFontSize, color: const Color(0xFF1A3A5C)),
+            style: TextStyle(
+              fontSize: inputFontSize,
+              color: const Color(0xFF1A3A5C),
+            ),
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white,
               prefixIcon: icon != null
-                  ? Icon(icon, color: const Color(0xFF1A3A5C).withOpacity(0.6), size: 20)
+                  ? Icon(
+                      icon,
+                      color: const Color(0xFF1A3A5C).withAlpha(153),
+                      size: 20,
+                    )
                   : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -789,7 +886,10 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF1A3A5C), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFF1A3A5C),
+                  width: 1.5,
+                ),
               ),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: paddingH,
@@ -862,21 +962,28 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withAlpha(13),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             isExpanded: true,
-            icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF1A3A5C)),
+            icon: const Icon(
+              Icons.arrow_drop_down_rounded,
+              color: Color(0xFF1A3A5C),
+            ),
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white,
               prefixIcon: icon != null
-                  ? Icon(icon, color: const Color(0xFF1A3A5C).withOpacity(0.6), size: 20)
+                  ? Icon(
+                      icon,
+                      color: const Color(0xFF1A3A5C).withAlpha(153),
+                      size: 20,
+                    )
                   : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -888,7 +995,10 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF1A3A5C), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFF1A3A5C),
+                  width: 1.5,
+                ),
               ),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: paddingH,
@@ -919,7 +1029,10 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
               return items.map((String item) {
                 return Text(
                   item,
-                  style: TextStyle(fontSize: fontSize, color: const Color(0xFF1A3A5C)),
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    color: const Color(0xFF1A3A5C),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 );

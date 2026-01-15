@@ -18,7 +18,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
     (index) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
-  bool _isVerifying = false;
 
   @override
   void dispose() {

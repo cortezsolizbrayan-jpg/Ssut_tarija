@@ -27,14 +27,13 @@ class MatriculaDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const primaryBlue = Color(0xFF005BAC);
     const successGreen = Color(0xFF4CAF50);
-    const lightGray = Color(0xFFF5F5F5);
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isPagado 
+          color: isPagado
               ? primaryBlue.withOpacity(0.3)
               : const Color(0xFFE0E0E0),
           width: 1.5,
@@ -81,10 +80,7 @@ class MatriculaDetailCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Concepto de pago
-                _buildInfoRow(
-                  'Concepto de Pago:',
-                  concepto,
-                ),
+                _buildInfoRow('Concepto de Pago:', concepto),
                 const SizedBox(height: 8),
 
                 // Fecha de vencimiento
@@ -108,7 +104,7 @@ class MatriculaDetailCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     // Estado de pago
                     if (isPagado)
                       Container(
@@ -146,16 +142,13 @@ class MatriculaDetailCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 8),
 
                 // Fecha de pago (si existe)
                 if (fechaPago != null)
-                  _buildInfoRow(
-                    'Fecha de Pago:',
-                    _formatDate(fechaPago!),
-                  ),
-                
+                  _buildInfoRow('Fecha de Pago:', _formatDate(fechaPago!)),
+
                 if (fechaPago != null) const SizedBox(height: 12),
 
                 // Responsable del registro
@@ -194,7 +187,7 @@ class MatriculaDetailCard extends StatelessWidget {
                         ),
                         label: const Text('Pagado'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isPagado 
+                          backgroundColor: isPagado
                               ? Colors.grey[400]
                               : primaryBlue,
                           foregroundColor: Colors.white,
@@ -208,9 +201,9 @@ class MatriculaDetailCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(width: 12),
-                    
+
                     // Botón Factura
                     ElevatedButton.icon(
                       onPressed: onFacturaPressed,
@@ -239,11 +232,7 @@ class MatriculaDetailCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(
-    String label,
-    String value, {
-    TextStyle? valueStyle,
-  }) {
+  Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
     return RichText(
       text: TextSpan(
         style: const TextStyle(
@@ -254,16 +243,16 @@ class MatriculaDetailCard extends StatelessWidget {
         children: [
           TextSpan(
             text: '$label ',
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w500),
           ),
           TextSpan(
             text: value,
-            style: valueStyle ?? const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF333333),
-            ),
+            style:
+                valueStyle ??
+                const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF333333),
+                ),
           ),
         ],
       ),

@@ -10,11 +10,11 @@ part of 'login_provider.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(AsyncLoginNotifier)
-const asyncLoginProvider = AsyncLoginNotifierFamily._();
+final asyncLoginProvider = AsyncLoginNotifierFamily._();
 
 final class AsyncLoginNotifierProvider
     extends $AsyncNotifierProvider<AsyncLoginNotifier, Login> {
-  const AsyncLoginNotifierProvider._({
+  AsyncLoginNotifierProvider._({
     required AsyncLoginNotifierFamily super.from,
     required (String, String) super.argument,
   }) : super(
@@ -51,7 +51,7 @@ final class AsyncLoginNotifierProvider
 }
 
 String _$asyncLoginNotifierHash() =>
-    r'9223abe38d6941f368676032ad08a107b2ad9059';
+    r'a924eeea41c8cc161a8d0beadcab949713e9bf3f';
 
 final class AsyncLoginNotifierFamily extends $Family
     with
@@ -62,7 +62,7 @@ final class AsyncLoginNotifierFamily extends $Family
           FutureOr<Login>,
           (String, String)
         > {
-  const AsyncLoginNotifierFamily._()
+  AsyncLoginNotifierFamily._()
     : super(
         retry: null,
         name: r'asyncLoginProvider',
@@ -90,7 +90,6 @@ abstract class _$AsyncLoginNotifier extends $AsyncNotifier<Login> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(_$args.$1, _$args.$2);
     final ref = this.ref as $Ref<AsyncValue<Login>, Login>;
     final element =
         ref.element
@@ -100,6 +99,6 @@ abstract class _$AsyncLoginNotifier extends $AsyncNotifier<Login> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, () => build(_$args.$1, _$args.$2));
   }
 }

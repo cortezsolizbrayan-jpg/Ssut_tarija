@@ -10,7 +10,7 @@ void showCustomDialog(BuildContext context, {required ValueChanged onValue}) {
     barrierDismissible: true,
     barrierColor: Colors.black.withOpacity(0.5),
     transitionDuration: const Duration(milliseconds: 400),
-    pageBuilder: (_, __, ___) {
+    pageBuilder: (context, animation, secondaryAnimation) {
       return Center(
         child: Container(
           height: 670,
@@ -130,7 +130,7 @@ void showCustomDialog(BuildContext context, {required ValueChanged onValue}) {
         ),
       );
     },
-    transitionBuilder: (_, anim, __, child) {
+    transitionBuilder: (context, anim, secondaryAnim, child) {
       Tween<Offset> tween;
       // if (anim.status == AnimationStatus.reverse) {
       //   tween = Tween(begin: const Offset(0, 1), end: Offset.zero);

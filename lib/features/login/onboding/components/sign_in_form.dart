@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rive/rive.dart';
 
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
@@ -9,64 +8,61 @@ class SignInForm extends StatefulWidget {
   State<SignInForm> createState() => _SignInFormState();
 }
 
-class _SignInFormState extends State<SignInForm> {
+class _SignInFormState extends State<SignInForm> with SingleTickerProviderStateMixin {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool isShowLoading = false;
-  bool isShowConfetti = false;
-  SMITrigger? error;
-  SMITrigger? success;
-  SMITrigger? reset;
+  bool isShowSuccess = false;
+  bool isShowError = false;
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
 
-  SMITrigger? confetti;
-
-  void _onCheckRiveInit(Artboard artboard) {
-    final controller = StateMachineController.fromArtboard(
-      artboard,
-      'State Machine 1',
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
     );
-
-    if (controller != null) {
-      artboard.addController(controller);
-      error = controller.findInput<bool>('Error') as SMITrigger?;
-      success = controller.findInput<bool>('Check') as SMITrigger?;
-      reset = controller.findInput<bool>('Reset') as SMITrigger?;
-    }
-  }
-
-  void _onConfettiRiveInit(Artboard artboard) {
-    final controller = StateMachineController.fromArtboard(
-      artboard,
-      "State Machine 1",
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
-    if (controller != null) {
-      artboard.addController(controller);
-      confetti = controller.findInput<bool>("Trigger explosion") as SMITrigger?;
-    }
   }
 
   void singIn(BuildContext context) {
     // Ya validamos el formulario antes de llamar a este método,
     // aquí solo mostramos la animación de éxito y navegamos.
     setState(() {
-      isShowConfetti = true;
       isShowLoading = true;
+      isShowError = false;
     });
 
     Future.delayed(const Duration(seconds: 1), () {
-      success?.fire();
-      Future.delayed(const Duration(seconds: 2), () {
-        setState(() {
-          isShowLoading = false;
-        });
-        confetti?.fire();
-        // Navega a la pantalla de perfil después del login exitoso
-        Future.delayed(const Duration(seconds: 1), () {
-          if (!context.mounted) return;
-          context.go('/perfil');
-        });
+      setState(() {
+        isShowLoading = false;
+        isShowSuccess = true;
       });
+      _animationController.forward();
+      
+      // Navega a la pantalla de perfil después del login exitoso
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!context.mounted) return;
+        context.go('/perfil');
+      });
+    });
+  }
+  
+  void showError() {
+    setState(() {
+      isShowError = true;
+    });
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          isShowError = false;
+        });
+      }
     });
   }
 
@@ -74,6 +70,7 @@ class _SignInFormState extends State<SignInForm> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -125,7 +122,7 @@ class _SignInFormState extends State<SignInForm> {
                   onPressed: () async {
                     // Si el formulario no es válido, mostramos la animación de error
                     if (!_formKey.currentState!.validate()) {
-                      error?.fire();
+                      showError();
                       return;
                     }
 
@@ -149,7 +146,7 @@ class _SignInFormState extends State<SignInForm> {
                     //       ),
                     //     ),
                     //   );
-                    //   error?.fire();
+                    //   showError();
                     // }
 
                     // Por ahora, navegamos directamente sin validar credenciales
@@ -180,34 +177,61 @@ class _SignInFormState extends State<SignInForm> {
             ],
           ),
         ),
-        isShowLoading
-            ? CustomPositioned(
-                child: RiveAnimation.asset(
-                  'assets/RiveAssets/check.riv',
-                  fit: BoxFit.cover,
-                  onInit: _onCheckRiveInit,
+        if (isShowLoading)
+          CustomPositioned(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFC900)),
+                strokeWidth: 3,
+              ),
+            ),
+          ),
+        if (isShowSuccess)
+          CustomPositioned(
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(50),
                 ),
-              )
-            : const SizedBox(),
-        isShowConfetti
-            ? CustomPositioned(
-                scale: 6,
-                child: RiveAnimation.asset(
-                  "assets/RiveAssets/confetti.riv",
-                  onInit: _onConfettiRiveInit,
-                  fit: BoxFit.cover,
+                padding: const EdgeInsets.all(20),
+                child: const Icon(
+                  Icons.check,
+                  color: Colors.white,
+                  size: 60,
                 ),
-              )
-            : const SizedBox(),
+              ),
+            ),
+          ),
+        if (isShowError)
+          CustomPositioned(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: const Icon(
+                Icons.close,
+                color: Colors.white,
+                size: 60,
+              ),
+            ),
+          ),
       ],
     );
   }
 }
 
 class CustomPositioned extends StatelessWidget {
-  const CustomPositioned({super.key, this.scale = 1, required this.child});
+  const CustomPositioned({super.key, required this.child});
 
-  final double scale;
   final Widget child;
 
   @override
@@ -219,7 +243,7 @@ class CustomPositioned extends StatelessWidget {
           SizedBox(
             height: 100,
             width: 100,
-            child: Transform.scale(scale: scale, child: child),
+            child: child,
           ),
           const Spacer(flex: 2),
         ],

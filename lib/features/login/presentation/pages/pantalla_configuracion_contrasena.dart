@@ -13,13 +13,43 @@ class PasswordSetupScreen extends StatefulWidget {
 class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
   final TextEditingController _passController = TextEditingController();
   final TextEditingController _confirmPassController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _isObscure = true;
+  bool _isConfirmObscure = true;
 
   @override
   void dispose() {
     _passController.dispose();
     _confirmPassController.dispose();
     super.dispose();
+  }
+
+  // Validar fortaleza de contraseña
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Ingresa una contraseña';
+    }
+    if (value.length < 8) {
+      return 'La contraseña debe tener al menos 8 caracteres';
+    }
+    if (!RegExp(r'[A-Za-z]').hasMatch(value)) {
+      return 'La contraseña debe contener al menos una letra';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'La contraseña debe contener al menos un número';
+    }
+    return null;
+  }
+
+  // Validar confirmación de contraseña
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Confirma tu contraseña';
+    }
+    if (value != _passController.text) {
+      return 'Las contraseñas no coinciden';
+    }
+    return null;
   }
 
   @override
@@ -40,66 +70,92 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            FadeInDown(
-              child: const Text(
-                'Crea tu contraseña',
-                style: TextStyle(
-                  color: textDark,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              FadeInDown(
+                child: const Text(
+                  'Crea tu contraseña',
+                  style: TextStyle(
+                    color: textDark,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            FadeInLeft(
-              child: Text(
-                'Tu contraseña debe tener al menos 8 caracteres, incluyendo letras y números para mayor seguridad.',
-                style: TextStyle(color: Colors.grey[600], fontSize: 15),
+              const SizedBox(height: 12),
+              FadeInLeft(
+                child: Text(
+                  'Tu contraseña debe tener al menos 8 caracteres, incluyendo letras y números para mayor seguridad.',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 15),
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
+              const SizedBox(height: 40),
 
-            _buildPasswordField('Nueva Contraseña', _passController),
-            const SizedBox(height: 24),
-            _buildPasswordField('Confirmar Contraseña', _confirmPassController),
+              _buildPasswordField(
+                'Nueva Contraseña',
+                _passController,
+                _isObscure,
+                (value) => setState(() => _isObscure = value),
+                validator: _validatePassword,
+              ),
+              const SizedBox(height: 24),
+              _buildPasswordField(
+                'Confirmar Contraseña',
+                _confirmPassController,
+                _isConfirmObscure,
+                (value) => setState(() => _isConfirmObscure = value),
+                validator: _validateConfirmPassword,
+              ),
 
-            const SizedBox(height: 48),
+              const SizedBox(height: 48),
 
-            FadeInUp(
-              child: SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Simular éxito final
-                    _showSuccessDialog();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              FadeInUp(
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        // Navegar a Términos y Condiciones solo si las contraseñas son válidas
+                        context.push('/terms-conditions');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Finalizar Registro',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    child: const Text(
+                      'Continuar',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPasswordField(String label, TextEditingController controller) {
+  Widget _buildPasswordField(
+    String label,
+    TextEditingController controller,
+    bool isObscure,
+    Function(bool) onToggleObscure, {
+    String? Function(String?)? validator,
+  }) {
     const Color primaryBlue = Color(0xFF305BA4);
     const Color textDark = Color(0xFF1A3A5C);
 
@@ -111,19 +167,20 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
           style: const TextStyle(color: Color(0xFF848E9C), fontSize: 13),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
-          obscureText: _isObscure,
+          obscureText: isObscure,
+          validator: validator,
           style: const TextStyle(color: textDark),
           decoration: InputDecoration(
             suffixIcon: IconButton(
               icon: Icon(
-                _isObscure
+                isObscure
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 color: Colors.grey,
               ),
-              onPressed: () => setState(() => _isObscure = !_isObscure),
+              onPressed: () => onToggleObscure(!isObscure),
             ),
             filled: true,
             fillColor: Colors.white,
@@ -135,57 +192,17 @@ class _PasswordSetupScreenState extends State<PasswordSetupScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: primaryBlue, width: 1.5),
             ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+            ),
           ),
         ),
       ],
-    );
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 20),
-            const Icon(Icons.check_circle, color: Colors.green, size: 80),
-            const SizedBox(height: 24),
-            const Text(
-              '¡Registro Completado!',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  context.go('/login');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF305BA4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'IR AL LOGIN',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -1,16 +1,17 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class ProgramasDisponiblesScreen extends StatefulWidget {
   static const name = 'programas-disponibles';
   const ProgramasDisponiblesScreen({super.key});
 
   @override
-  State<ProgramasDisponiblesScreen> createState() => _ProgramasDisponiblesScreenState();
+  State<ProgramasDisponiblesScreen> createState() =>
+      _ProgramasDisponiblesScreenState();
 }
 
-class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen> {
+class _ProgramasDisponiblesScreenState
+    extends State<ProgramasDisponiblesScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -30,12 +31,15 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
         children: [
           // Header Azul con Logo
           Container(
-            padding: const EdgeInsets.only(top: 50, bottom: 30, left: 24, right: 24),
+            padding: const EdgeInsets.only(
+              top: 50,
+              bottom: 30,
+              left: 24,
+              right: 24,
+            ),
             decoration: const BoxDecoration(
               color: primaryBlue,
-              borderRadius: BorderRadius.only(
-                bottomRight: Radius.circular(40),
-              ),
+              borderRadius: BorderRadius.only(bottomRight: Radius.circular(40)),
             ),
             child: Column(
               children: [
@@ -45,7 +49,11 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                     FadeInLeft(
                       child: Row(
                         children: [
-                          const Icon(Icons.school, color: Colors.white, size: 32),
+                          const Icon(
+                            Icons.school,
+                            color: Colors.white,
+                            size: 32,
+                          ),
                           const SizedBox(width: 8),
                           const Text(
                             'Posgrado',
@@ -99,7 +107,9 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                   delay: const Duration(milliseconds: 200),
                   child: Row(
                     children: [
-                      Expanded(child: _buildFilterSelector('Modalidad', 'TODOS')),
+                      Expanded(
+                        child: _buildFilterSelector('Modalidad', 'TODOS'),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(child: _buildFilterSelector('Área', 'TODOS')),
                     ],
@@ -108,9 +118,9 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
               ],
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -129,18 +139,20 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Tarjetas de programas
                   _buildProgramCard(
-                    title: 'Diplomado en Administración de Servidores GNU/Linux',
+                    title:
+                        'Diplomado en Administración de Servidores GNU/Linux',
                     responsable: 'GISLENE GABY VILLANUEVA VILLCA',
                     fechaLimite: '09-01-2026',
                     modalidad: 'Virtual',
-                    imagePath: 'assets/images/banner_placeholder.png', // Placeholder para la imagen de la tarjeta
+                    imagePath:
+                        'assets/images/banner_placeholder.png', // Placeholder para la imagen de la tarjeta
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   _buildProgramCard(
                     title: 'Diplomado en Gestión de Proyectos de Software',
                     responsable: 'JUAN PEREZ GUTIERREZ',
@@ -148,7 +160,7 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                     modalidad: 'Presencial',
                     imagePath: 'assets/images/banner_placeholder.png',
                   ),
-                  
+
                   const SizedBox(height: 30),
                 ],
               ),
@@ -175,7 +187,11 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Container(
@@ -233,23 +249,40 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                     height: 150,
                     width: double.infinity,
                     color: Colors.blueGrey[100],
-                    child: const Icon(Icons.image, size: 50, color: Colors.blueGrey),
+                    child: const Icon(
+                      Icons.image,
+                      size: 50,
+                      color: Colors.blueGrey,
+                    ),
                     // Nota: En producción usarías una imagen real
                   ),
                   Positioned(
                     top: 10,
                     left: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.school, size: 16, color: Colors.blue),
+                          const Icon(
+                            Icons.school,
+                            size: 16,
+                            color: Colors.blue,
+                          ),
                           const SizedBox(width: 4),
-                          const Text('Posgrado', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Posgrado',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -257,7 +290,7 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                 ],
               ),
             ),
-            
+
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -279,7 +312,7 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                   const SizedBox(height: 8),
                   _buildInfoRow('Modalidad:', modalidad),
                   const SizedBox(height: 20),
-                  
+
                   // Botón Inscribirse
                   SizedBox(
                     width: 200,
@@ -295,7 +328,10 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text('Inscribirse', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Inscribirse',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
@@ -311,15 +347,16 @@ class _ProgramasDisponiblesScreenState extends State<ProgramasDisponiblesScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),

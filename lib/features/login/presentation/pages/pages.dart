@@ -8,3 +8,4 @@ export 'pantalla_registro.dart';
 export 'pantalla_splash.dart';
 export 'pantalla_subida_identidad.dart';
 export 'pantalla_verificacion.dart';
+export 'pantalla_terminos_condiciones.dart';

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/services/local_storage_service.dart';
 import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
 import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
 
@@ -14,6 +15,8 @@ class PerfilScreen extends StatefulWidget {
 
 class _PerfilScreenState extends State<PerfilScreen>
     with TickerProviderStateMixin {
+  String? _nombreUsuario;
+
   // Controla las rotaciones de cada medalla
   final List<double> _medalTurns = List<double>.filled(5, 0.0);
   final List<AnimationController> _medalControllers = [];
@@ -51,6 +54,9 @@ class _PerfilScreenState extends State<PerfilScreen>
   @override
   void initState() {
     super.initState();
+
+    _loadSessionData();
+
     _mascotController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -104,6 +110,28 @@ class _PerfilScreenState extends State<PerfilScreen>
           _rotationVelocity *= 0.97;
         });
       }
+    });
+  }
+
+  Future<void> _loadSessionData() async {
+    final personal = await LocalStorageService.getPersonalData();
+    final session = await LocalStorageService.getSessionData();
+    if (!mounted) return;
+
+    final nombre = (personal?['nombre'] as String?)?.trim();
+    final apPaterno = (personal?['apPaterno'] as String?)?.trim();
+    final apMaterno = (personal?['apMaterno'] as String?)?.trim();
+
+    final nombreCompleto = [
+      if (nombre != null && nombre.isNotEmpty) nombre,
+      if (apPaterno != null && apPaterno.isNotEmpty) apPaterno,
+      if (apMaterno != null && apMaterno.isNotEmpty) apMaterno,
+    ].join(' ').trim();
+
+    setState(() {
+      _nombreUsuario = nombreCompleto.isNotEmpty
+          ? nombreCompleto
+          : session?['nombreUsuario'] as String?;
     });
   }
 
@@ -225,7 +253,7 @@ class _PerfilScreenState extends State<PerfilScreen>
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.4),
+                                  color: Colors.black.withAlpha(102),
                                   blurRadius: 10,
                                   offset: const Offset(0, 3),
                                   spreadRadius: 1,
@@ -253,7 +281,7 @@ class _PerfilScreenState extends State<PerfilScreen>
                     SizedBox(height: math.max(8, height * 0.2)),
                     // Nombre del usuario
                     Text(
-                      'Guadalupe Flores Mamani',
+                      _nombreUsuario ?? 'Usuario',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: math.min(22, height * 0.07),
@@ -284,7 +312,7 @@ class _PerfilScreenState extends State<PerfilScreen>
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          shadowColor: Colors.black.withOpacity(0.25),
+                          shadowColor: Colors.black.withAlpha(64),
                           minimumSize: Size(0, math.max(40, height * 0.05)),
                         ),
                         child: Row(
@@ -356,7 +384,7 @@ class _PerfilScreenState extends State<PerfilScreen>
                   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   padding: EdgeInsets.all(circleSize * 0.05),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F4F8).withOpacity(0.5),
+                    color: const Color(0xFFE8F4F8).withAlpha(128),
                     borderRadius: BorderRadius.circular(220),
                   ),
                   child: Stack(
@@ -536,8 +564,8 @@ class _PerfilScreenState extends State<PerfilScreen>
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.amber.withOpacity(
-                                                0.6,
+                                              color: Colors.amber.withAlpha(
+                                                153,
                                               ),
                                               blurRadius: 16,
                                               spreadRadius: 2,
@@ -610,7 +638,7 @@ class _PerfilScreenState extends State<PerfilScreen>
                                               width: circleSize * 0.41,
                                               height: circleSize * 0.41,
                                               decoration: const BoxDecoration(
-                                                color: const Color(0xFF1A3A5C),
+                                                color: Color(0xFF1A3A5C),
                                                 shape: BoxShape.circle,
                                               ),
                                               child: Stack(
@@ -685,9 +713,9 @@ class _PerfilScreenState extends State<PerfilScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withAlpha(64),
               blurRadius: 10,
-              offset: const Offset(0, 4),
+              offset: Offset(0, 4),
             ),
           ],
         ),
@@ -720,13 +748,14 @@ class _PerfilScreenState extends State<PerfilScreen>
             // Rotación 3D usando Matrix4
             final rotation3D = _medal3DRotations[index].value;
             final scale = _medal3DScales[index].value;
+            final amberShadowAlpha = (255 * 0.3 * scale).round().clamp(0, 255);
 
             // Efecto de rotación 3D en el eje Y (perspectiva)
             final perspective = Matrix4.identity()
               ..setEntry(3, 2, 0.001) // Perspectiva
               ..rotateY(rotation3D * 0.3) // Rotación 3D en Y
               ..rotateX(rotation3D * 0.1) // Rotación 3D en X
-              ..scale(scale);
+              ..scaleByDouble(scale, scale, scale, 1.0);
 
             return Transform(
               transform: perspective,
@@ -749,13 +778,13 @@ class _PerfilScreenState extends State<PerfilScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
+                              color: Colors.black.withAlpha(102),
                               blurRadius: 12,
                               offset: Offset(0, 4 * scale),
                               spreadRadius: 2 * scale,
                             ),
                             BoxShadow(
-                              color: Colors.amber.withOpacity(0.3 * scale),
+                              color: Colors.amber.withAlpha(amberShadowAlpha),
                               blurRadius: 20,
                               offset: Offset(0, 0),
                             ),
@@ -827,7 +856,7 @@ class _PerfilScreenState extends State<PerfilScreen>
             borderRadius: BorderRadius.zero,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0861C4).withOpacity(0.25),
+                color: const Color(0xFF0861C4).withAlpha(64),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -1077,7 +1106,7 @@ class _PintorEncabezado extends CustomPainter {
 
     canvas.drawShadow(
       path.shift(const Offset(0, 2)),
-      Colors.black.withOpacity(0.28),
+      Colors.black.withAlpha(71),
       12,
       false,
     );

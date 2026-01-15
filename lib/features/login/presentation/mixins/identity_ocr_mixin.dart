@@ -1,7 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:refactor_template/core/services/identity_smart_ocr_service.dart';
+import 'package:refactor_template/core/services/servicio_ocr_inteligente_identidad.dart';
 
 mixin IdentityOcrMixin {
   /// Detecta el modelo del CI (nuevo o antiguo) basándose en el texto reconocido
@@ -13,7 +12,7 @@ mixin IdentityOcrMixin {
       r'C[ÉE]DULA\s+DE\s+IDENTIDAD|DATOS\s+DEL\s+TITULAR|TITULAR|ESTADO\s+PLURINACIONAL',
       caseSensitive: false,
     ).hasMatch(fullText);
-    
+
     if (hasNewModelKeywords) {
       debugPrint("✓ Modelo detectado: NUEVO");
       return "nuevo";
@@ -84,14 +83,15 @@ mixin IdentityOcrMixin {
       r'(NOMBRES|APELLIDOS|NOMBRE|APELLIDO)',
       caseSensitive: false,
     ).hasMatch(fullText);
-    
+
     if (hasNames && !hasN) return "nuevo";
 
     return "desconocido";
   }
 
   String cleanCI(String raw) {
-    String fixed = raw.toUpperCase()
+    String fixed = raw
+        .toUpperCase()
         .replaceAll('S', '5')
         .replaceAll('O', '0')
         .replaceAll('I', '1')
@@ -100,7 +100,10 @@ mixin IdentityOcrMixin {
         .replaceAll('B', '8')
         .replaceAll('Z', '2');
 
-    final match = RegExp(r'(\d{5,11})\s*[-]?\s*([A-Z]{2})?', caseSensitive: false).firstMatch(fixed);
+    final match = RegExp(
+      r'(\d{5,11})\s*[-]?\s*([A-Z]{2})?',
+      caseSensitive: false,
+    ).firstMatch(fixed);
 
     if (match != null) {
       final number = match.group(1) ?? "";
@@ -137,7 +140,7 @@ mixin IdentityOcrMixin {
   /// Extrae nombres y apellidos del modelo nuevo usando el servicio inteligente
   Map<String, String> extractNewModelNames(RecognizedText recognizedText) {
     debugPrint("=== EXTRACCIÓN NUEVO MODELO (VIA SERVICE) ===");
-    final data = IdentitySmartOcrService.extractData(recognizedText, null);
+    final data = ServicioOcrInteligenteIdentidad.extractData(recognizedText, null);
     return {
       'nombres': _normalizeName(data['nombres'] ?? ""),
       'apellidos': _normalizeName(data['apellidos'] ?? ""),
@@ -147,7 +150,7 @@ mixin IdentityOcrMixin {
   /// Extrae nombre del modelo antiguo usando el servicio inteligente
   Map<String, String> extractOldModelNames(RecognizedText recognizedText) {
     debugPrint("=== EXTRACCIÓN MODELO ANTIGUO (VIA SERVICE) ===");
-    final data = IdentitySmartOcrService.extractData(recognizedText, null);
+    final data = ServicioOcrInteligenteIdentidad.extractData(recognizedText, null);
     return {
       'nombres': _normalizeName(data['nombres'] ?? ""),
       'apellidos': _normalizeName(data['apellidos'] ?? ""),
@@ -156,35 +159,33 @@ mixin IdentityOcrMixin {
 
   /// Separa un nombre completo en nombres y apellidos basándose en el número de palabras
   Map<String, String> splitFullName(String fullName) {
-    return IdentitySmartOcrService.splitFullName(fullName);
-  }
-
-
-
-
-  bool _isPotentialName(String text) {
-    if (text.isEmpty) return false;
-    // No debe contener demasiados números o símbolos
-    final letterCount = text.replaceAll(RegExp(r'[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü]'), '').length;
-    return letterCount > text.length * 0.5 && text.length > 2;
+    return ServicioOcrInteligenteIdentidad.splitFullName(fullName);
   }
 
   String _normalizeName(String text) {
     if (text.isEmpty) return "";
-    
+
     // Quitar ruidos comunes como "PROFESION:", "ESTADO CIVIL", etc. si se colaron
-    String cleaned = text.split(RegExp(r'PROFESI[ÓO]N|ESTADO|DOMICILIO|LUGAR'))[0].trim();
-    
+    String cleaned = text
+        .split(RegExp(r'PROFESI[ÓO]N|ESTADO|DOMICILIO|LUGAR'))[0]
+        .trim();
+
     // Quitar caracteres no alfabéticos al inicio y final
-    cleaned = cleaned.replaceAll(RegExp(r'^[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü]+|[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü]+$'), '');
-    
+    cleaned = cleaned.replaceAll(
+      RegExp(r'^[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü]+|[^a-zA-ZÁÉÍÓÚÑÜáéíóúñü]+$'),
+      '',
+    );
+
     if (cleaned.isEmpty) return "";
 
-    return cleaned.split(' ').map((word) {
-      if (word.isEmpty) return "";
-      final low = word.toLowerCase();
-      if (['de', 'del', 'la', 'las', 'los', 'y'].contains(low)) return low;
-      return low[0].toUpperCase() + low.substring(1);
-    }).join(' ');
+    return cleaned
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return "";
+          final low = word.toLowerCase();
+          if (['de', 'del', 'la', 'las', 'los', 'y'].contains(low)) return low;
+          return low[0].toUpperCase() + low.substring(1);
+        })
+        .join(' ');
   }
 }

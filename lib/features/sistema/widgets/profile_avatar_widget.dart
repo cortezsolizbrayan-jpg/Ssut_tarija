@@ -60,7 +60,7 @@ class _ProfileAvatarWidgetState extends State<ProfileAvatarWidget> {
       backgroundImage: _profileImage != null
           ? FileImage(_profileImage!)
           : const AssetImage('assets/icons/profile_img.png') as ImageProvider,
-      onBackgroundImageError: (_, __) {
+      onBackgroundImageError: (exception, stackTrace) {
         // Si hay error cargando la imagen, usar icono por defecto
         if (mounted) {
           setState(() {
@@ -81,7 +81,7 @@ class _ProfileAvatarWidgetState extends State<ProfileAvatarWidget> {
         child: CircleAvatar(
           radius: widget.radius - 2,
           backgroundImage: const AssetImage('assets/icons/profile_img.png'),
-          onBackgroundImageError: (_, __) {},
+          onBackgroundImageError: (exception, stackTrace) {},
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,

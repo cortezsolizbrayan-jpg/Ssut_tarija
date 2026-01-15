@@ -273,7 +273,7 @@ class _AchievementsSectionState extends State<_AchievementsSection> {
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               itemCount: _achievements.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 20),
+              separatorBuilder: (context, index) => const SizedBox(width: 20),
               itemBuilder: (context, index) {
                 final item = _achievements[index];
                 final color = item['color'] as Color;
