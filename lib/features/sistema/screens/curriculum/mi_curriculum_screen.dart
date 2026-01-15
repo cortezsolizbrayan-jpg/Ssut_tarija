@@ -8,7 +8,8 @@ import 'package:refactor_template/features/sistema/screens/entryPoint/components
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
 import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
 import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
-import 'package:rive/rive.dart' hide LinearGradient, Image;
+import 'package:rive/rive.dart'
+    hide LinearGradient, Image, Animation, PaintingStyle;
 
 class MiCurriculumScreen extends StatefulWidget {
   static const name = 'mi-curriculum';
@@ -1098,15 +1099,14 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                   });
                 });
                 await _saveCurriculumData();
+                if (!context.mounted) return;
                 Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Formación académica guardada'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Formación académica guardada'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               }
             },
             child: const Text('Guardar'),
@@ -1227,15 +1227,14 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                   };
                 });
                 await _saveCurriculumData();
+                if (!context.mounted) return;
                 Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Formación académica actualizada'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Formación académica actualizada'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               }
             },
             child: const Text('Guardar'),
@@ -1312,15 +1311,14 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                   });
                 });
                 await _saveCurriculumData();
+                if (!context.mounted) return;
                 Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Formación complementaria guardada'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Formación complementaria guardada'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               }
             },
             child: const Text('Guardar'),
@@ -1403,15 +1401,14 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                   };
                 });
                 await _saveCurriculumData();
+                if (!context.mounted) return;
                 Navigator.pop(context);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Formación complementaria actualizada'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Formación complementaria actualizada'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               }
             },
             child: const Text('Guardar'),

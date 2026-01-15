@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:rive/rive.dart';
+import 'package:rive/rive.dart' hide PaintingStyle;
 
 class MenuBtn extends StatelessWidget {
   const MenuBtn({super.key, required this.press, required this.riveOnInit});

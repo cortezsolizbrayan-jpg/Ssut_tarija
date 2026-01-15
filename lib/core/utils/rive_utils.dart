@@ -1,4 +1,4 @@
-import 'package:rive/rive.dart';
+import 'package:rive/rive.dart' hide PaintingStyle;
 
 class RiveUtils {
   static SMIBool getRiveInput(

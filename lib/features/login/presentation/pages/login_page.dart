@@ -4,9 +4,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/core/animations/custom_animations.dart';
 import 'package:refactor_template/core/services/biometric_service.dart';
+import 'package:refactor_template/core/services/local_storage_service.dart';
 import 'package:refactor_template/features/login/presentation/widgets/widgets.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
-import 'package:rive/rive.dart' hide Image;
+import 'package:rive/rive.dart' hide Image, Animation, PaintingStyle;
 
 import '../../widgets/widgets.dart';
 
@@ -108,7 +109,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
     // Secuencia de animaciones y luego navegación
     Future.delayed(const Duration(seconds: 1), () {
       _successTrigger?.fire();
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 2), () async {
         if (!mounted) return;
         setState(() {
           isShowLoading = false;
@@ -118,6 +119,11 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
 
         // Guardar credenciales para biometría después de login exitoso
         _saveCredentialsForBiometric(loginUsername, loginPassword);
+
+        await LocalStorageService.saveSessionData({
+          'nombreUsuario': loginUsername,
+          'savedAt': DateTime.now().toIso8601String(),
+        });
 
         Future.delayed(const Duration(seconds: 1), () {
           if (!mounted) return;
@@ -237,7 +243,9 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                   begin: const Offset(0, -0.5),
                                   curve: Curves.easeOutCubic,
                                   child: ScaleInAnimation(
-                                    duration: const Duration(milliseconds: 1000),
+                                    duration: const Duration(
+                                      milliseconds: 1000,
+                                    ),
                                     delay: const Duration(milliseconds: 100),
                                     curve: Curves.easeOutBack,
                                     child: SizedBox(
@@ -337,9 +345,8 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                             ),
                                             decoration: BoxDecoration(
                                               color: Colors.white,
-                                              borderRadius: BorderRadius.circular(
-                                                32,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(32),
                                               boxShadow: const [
                                                 BoxShadow(
                                                   color: Color(0x1A0D0D0D),
@@ -360,7 +367,9 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                                       FontAwesomeIcons.lock,
                                                       color: primaryBlue,
                                                     ),
-                                                    SizedBox(width: width * 0.02),
+                                                    SizedBox(
+                                                      width: width * 0.02,
+                                                    ),
                                                     Text(
                                                       'INICIAR SESIÓN',
                                                       style: TextStyle(
@@ -448,7 +457,9 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                                     child: const Text(
                                                       'Recupera tu contraseña de acceso',
                                                       style: TextStyle(
-                                                        color: Color(0xFFFF8A00),
+                                                        color: Color(
+                                                          0xFFFF8A00,
+                                                        ),
                                                         fontWeight:
                                                             FontWeight.w600,
                                                       ),
@@ -466,8 +477,12 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                             right: width * 0.10,
                                             bottom: -width * 0.045,
                                             child: ScaleInAnimation(
-                                              duration: const Duration(milliseconds: 600),
-                                              delay: const Duration(milliseconds: 1000),
+                                              duration: const Duration(
+                                                milliseconds: 600,
+                                              ),
+                                              delay: const Duration(
+                                                milliseconds: 1000,
+                                              ),
                                               curve: Curves.easeOutBack,
                                               child: HoverScaleEffect(
                                                 scale: 1.03,
@@ -476,17 +491,21 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                                   child: ElevatedButton(
                                                     onPressed: _onLoginPressed,
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: accentYellow,
-                                                      foregroundColor: const Color(
-                                                        0xFF0D1730,
-                                                      ),
+                                                      backgroundColor:
+                                                          accentYellow,
+                                                      foregroundColor:
+                                                          const Color(
+                                                            0xFF0D1730,
+                                                          ),
                                                       elevation: 8,
                                                       shadowColor: const Color(
                                                         0x33FFC900,
                                                       ),
-                                                      padding: EdgeInsets.symmetric(
-                                                        vertical: width * 0.035,
-                                                      ),
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                            vertical:
+                                                                width * 0.035,
+                                                          ),
                                                       shape: RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius.circular(
@@ -497,7 +516,8 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                                     child: Text(
                                                       'ACCEDER',
                                                       style: TextStyle(
-                                                        fontWeight: FontWeight.w800,
+                                                        fontWeight:
+                                                            FontWeight.w800,
                                                         fontSize: width * 0.032,
                                                         letterSpacing: 1.0,
                                                       ),
@@ -507,11 +527,11 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                                               ),
                                             ),
                                           ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
                               ),
                             ],
                           ),
@@ -621,7 +641,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                 ),
 
                 // Overlays Rive
-                if (isShowLoading) 
+                if (isShowLoading)
                   Positioned.fill(
                     child: Column(
                       children: [

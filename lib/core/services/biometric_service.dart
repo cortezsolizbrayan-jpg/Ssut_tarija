@@ -93,13 +93,9 @@ class BiometricService {
       }
 
       // Intentar autenticación biométrica
+      // En local_auth 3.0.0, el método authenticate solo acepta localizedReason
       final didAuthenticate = await _localAuth.authenticate(
         localizedReason: reason,
-        options: AuthenticationOptions(
-          useErrorDialogs: useErrorDialogs,
-          stickyAuth: stickyAuth,
-          biometricOnly: true,
-        ),
       );
 
       return didAuthenticate;

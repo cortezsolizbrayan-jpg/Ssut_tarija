@@ -7,7 +7,8 @@ import 'package:refactor_template/config/constants/constants.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
 import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
 import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
-import 'package:rive/rive.dart' hide LinearGradient, Image;
+import 'package:rive/rive.dart'
+    hide LinearGradient, Image, Animation, PaintingStyle;
 
 /// Pantalla que muestra el detalle de un programa académico con información
 /// de pagos, progreso y seguimiento.
@@ -1540,7 +1541,9 @@ class _PaymentCard extends StatelessWidget {
                               },
                               icon: const Icon(Icons.payments, size: 16),
                               label: const Text('Pagar'),
-                              backgroundColor: const Color(0xFFFF9800), // Naranja
+                              backgroundColor: const Color(
+                                0xFFFF9800,
+                              ), // Naranja
                               foregroundColor: Colors.white,
                             ),
                           ),

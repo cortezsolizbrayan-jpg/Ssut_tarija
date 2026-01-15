@@ -3,7 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/constants.dart';
 import 'package:refactor_template/features/sistema/screens/perfil/perfil_screen.dart';
-import 'package:rive/rive.dart';
+import 'package:rive/rive.dart'
+    hide LinearGradient, Image, Animation, PaintingStyle;
 
 import 'components/menu_btn.dart';
 import 'components/side_bar.dart';
@@ -117,7 +118,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
                     isSideBarOpen = !isSideBarOpen;
                   });
                 } catch (e) {
-                  print("Error al abrir menú: $e");
+                  debugPrint("Error al abrir menú: $e");
                   // Fallback por si falla Rive
                   if (_animationController.value == 0) {
                     _animationController.forward();

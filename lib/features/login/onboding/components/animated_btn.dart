@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:rive/rive.dart';
+import 'package:rive/rive.dart' hide PaintingStyle;
 
 class AnimatedBtn extends StatelessWidget {
   const AnimatedBtn({

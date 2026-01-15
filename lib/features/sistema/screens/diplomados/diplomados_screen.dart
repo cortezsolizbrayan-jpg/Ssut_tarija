@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:refactor_template/config/constants/constants.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/menu_btn.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
-import 'package:rive/rive.dart';
+import 'package:rive/rive.dart'
+    hide LinearGradient, Image, Animation, PaintingStyle;
 
 import 'components/app_header.dart';
 import 'components/diplomado_card.dart';

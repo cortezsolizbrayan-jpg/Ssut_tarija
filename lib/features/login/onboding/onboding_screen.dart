@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:rive/rive.dart' hide Image;
+import 'package:rive/rive.dart' hide Image, PaintingStyle;
 
 import 'components/animated_btn.dart';
 import 'components/sign_in_dialog.dart';
