@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 /// Optimizadas para rendimiento y experiencia de usuario
 class PageTransitions {
   // Duración estándar de transiciones
-  static const Duration _defaultDuration = Duration(milliseconds: 350);
-  static const Duration _fastDuration = Duration(milliseconds: 250);
+  static const Duration _defaultDuration = Duration(milliseconds: 280);
+  static const Duration _fastDuration = Duration(milliseconds: 220);
+  static const Curve _primaryCurve = Curves.easeInOutCubic;
+  static const Curve _secondaryCurve = Curves.easeOutCubic;
 
   /// Transición con slide desde la derecha (como Material)
   /// Optimizada para navegación principal
@@ -13,7 +15,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeInOutCubic;
+        final effectiveCurve = curve ?? _primaryCurve;
         final tween = Tween<Offset>(
           begin: const Offset(1.0, 0.0),
           end: Offset.zero,
@@ -22,7 +24,7 @@ class PageTransitions {
         return SlideTransition(position: animation.drive(tween), child: child);
       },
       transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      reverseTransitionDuration: duration ?? _fastDuration,
     );
   }
 
@@ -36,7 +38,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeOutCubic;
+        final effectiveCurve = curve ?? _secondaryCurve;
         final tween = Tween<Offset>(
           begin: const Offset(0.0, 1.0),
           end: Offset.zero,
@@ -44,8 +46,8 @@ class PageTransitions {
 
         return SlideTransition(position: animation.drive(tween), child: child);
       },
-      transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      transitionDuration: duration ?? const Duration(milliseconds: 320),
+      reverseTransitionDuration: duration ?? _fastDuration,
       opaque: false,
       barrierColor: Colors.black54,
     );
@@ -57,7 +59,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeOutCubic;
+        final effectiveCurve = curve ?? _secondaryCurve;
         final tween = Tween<Offset>(
           begin: const Offset(0.0, -1.0),
           end: Offset.zero,
@@ -76,7 +78,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeInOutCubic;
+        final effectiveCurve = curve ?? _primaryCurve;
         final tween = Tween<Offset>(
           begin: const Offset(-1.0, 0.0),
           end: Offset.zero,
@@ -85,7 +87,7 @@ class PageTransitions {
         return SlideTransition(position: animation.drive(tween), child: child);
       },
       transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      reverseTransitionDuration: duration ?? _fastDuration,
     );
   }
 
@@ -95,7 +97,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeInOut;
+        final effectiveCurve = curve ?? _primaryCurve;
         final opacityTween = Tween<double>(
           begin: 0.0,
           end: 1.0,
@@ -123,7 +125,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeOutQuart;
+        final effectiveCurve = curve ?? _primaryCurve;
         final scaleTween = Tween<double>(
           begin: beginScale,
           end: 1.0,
@@ -143,7 +145,7 @@ class PageTransitions {
         );
       },
       transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      reverseTransitionDuration: duration ?? _fastDuration,
       opaque: false,
       barrierColor: Colors.black54,
     );
@@ -160,8 +162,8 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeInOutCubic;
-        final effectiveBegin = begin ?? const Offset(0.3, 0.0);
+        final effectiveCurve = curve ?? _primaryCurve;
+        final effectiveBegin = begin ?? const Offset(0.24, 0.0);
 
         final slideTween = Tween<Offset>(
           begin: effectiveBegin,
@@ -182,7 +184,7 @@ class PageTransitions {
         );
       },
       transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      reverseTransitionDuration: duration ?? _fastDuration,
     );
   }
 
@@ -192,7 +194,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeInOutCubic;
+        final effectiveCurve = curve ?? _primaryCurve;
         final rotateTween = Tween<double>(
           begin: 0.5,
           end: 0.0,
@@ -212,8 +214,8 @@ class PageTransitions {
           child: child,
         );
       },
-      transitionDuration: duration ?? const Duration(milliseconds: 600),
-      reverseTransitionDuration: duration ?? const Duration(milliseconds: 600),
+      transitionDuration: duration ?? const Duration(milliseconds: 520),
+      reverseTransitionDuration: duration ?? const Duration(milliseconds: 520),
     );
   }
 
@@ -263,7 +265,7 @@ class PageTransitions {
           ],
         );
       },
-      transitionDuration: const Duration(milliseconds: 500),
+      transitionDuration: const Duration(milliseconds: 420),
     );
   }
 
@@ -279,12 +281,12 @@ class PageTransitions {
           end: Offset.zero,
         ).chain(CurveTween(curve: curve));
 
-        return SlideTransition(
-          position: animation.drive(slideTween),
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 400),
+      return SlideTransition(
+        position: animation.drive(slideTween),
+        child: child,
+      );
+    },
+      transitionDuration: const Duration(milliseconds: 320),
     );
   }
 
@@ -306,7 +308,7 @@ class PageTransitions {
         );
       },
       transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      reverseTransitionDuration: duration ?? _fastDuration,
       opaque: false,
       barrierColor: Colors.black.withOpacity(0.3),
     );
@@ -323,7 +325,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeInOutCubic;
+        final effectiveCurve = curve ?? _primaryCurve;
         final scaleTween = Tween<double>(
           begin: 0.0,
           end: 1.0,
@@ -343,7 +345,7 @@ class PageTransitions {
         );
       },
       transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      reverseTransitionDuration: duration ?? _fastDuration,
       opaque: false,
       barrierColor: Colors.black54,
     );
@@ -360,7 +362,7 @@ class PageTransitions {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final effectiveCurve = curve ?? Curves.easeInOutCubic;
+        final effectiveCurve = curve ?? _primaryCurve;
         final effectiveBegin = begin ?? const Offset(1.0, -1.0);
 
         final slideTween = Tween<Offset>(
@@ -382,7 +384,7 @@ class PageTransitions {
         );
       },
       transitionDuration: duration ?? _defaultDuration,
-      reverseTransitionDuration: duration ?? _defaultDuration,
+      reverseTransitionDuration: duration ?? _fastDuration,
     );
   }
 }

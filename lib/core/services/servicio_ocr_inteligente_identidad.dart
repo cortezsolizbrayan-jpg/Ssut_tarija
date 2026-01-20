@@ -1,451 +1,523 @@
-import 'dart:math' as math;
-import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
-enum Direction { right, bottom }
-
-/// Servicio de OCR Avanzado con Análisis Espacial (V6 'Eagle Eye')
 class ServicioOcrInteligenteIdentidad {
-  /// Extrae datos estructurados usando análisis espacial de bloques
   static Map<String, dynamic> extractData(
     RecognizedText frontOcr,
     RecognizedText? backOcr,
   ) {
-    debugPrint("🚀 Iniciando Smart OCR V6 (Análisis Espacial)...");
+    return extractDataFromText(frontOcr.text, backOcr?.text);
+  }
 
-    // Intentar extracción espacial primero (Más precisa para Nombres/Fechas con etiquetas)
-    Map<String, String> frontData = _extractSpatial(frontOcr);
+  static Map<String, dynamic> extractDataFromText(
+    String frontText,
+    String? backText,
+  ) {
+    final model = _detectModel(frontText, backText);
+    debugPrint('OCR model detectado: $model');
 
-    // Si falló algo crítico en el frente, intentar estrategias antiguas
-    if (frontData['ci'] == null || frontData['ci']!.isEmpty) {
-      frontData['ci'] = _extractCIFallback(frontOcr);
-    }
+    final newFront = _extractNewFront(frontText);
+    final oldFront = _extractOldFront(frontText);
+    final newBack = backText != null ? _extractNewBack(backText) : <String, String>{};
+    final oldBack = backText != null ? _extractOldBack(backText) : <String, String>{};
 
-    // Procesar reverso si existe (a veces el CI está mejor ahí o datos extra)
-    Map<String, String> backData = {};
-    if (backOcr != null) {
-      backData = _extractSpatial(backOcr);
-      if ((frontData['ci'] == null || frontData['ci']!.isEmpty) &&
-          backData['ci'] != null) {
-        frontData['ci'] = backData['ci'] ?? '';
-      }
-    }
+    final front = model == 'nuevo'
+        ? newFront
+        : model == 'antiguo'
+            ? oldFront
+            : _mergePrefer(newFront, oldFront);
+    final back = model == 'nuevo'
+        ? newBack
+        : model == 'antiguo'
+            ? oldBack
+            : _mergePrefer(newBack, oldBack);
 
-    // Unificar resultados
     return {
-      'ci': frontData['ci'] ?? "",
-      'nombres': frontData['nombres'] ?? "",
-      'apellidos': frontData['apellidos'] ?? "",
-      'fechaEmision': frontData['fechaEmision'] ?? "",
-      'fechaExpiracion': frontData['fechaExpiracion'] ?? "",
-      'model': 'v6-spatial',
+      'ci': _firstNotEmpty([front['ci'], back['ci'], newFront['ci'], oldFront['ci']]),
+      'nombres': _firstNotEmpty([
+        front['nombres'],
+        back['nombres'],
+        newFront['nombres'],
+        oldFront['nombres'],
+      ]),
+      'apellidos': _firstNotEmpty([
+        front['apellidos'],
+        back['apellidos'],
+        newFront['apellidos'],
+        oldFront['apellidos'],
+      ]),
+      'fechaNacimiento': _firstNotEmpty([
+        front['fechaNacimiento'],
+        back['fechaNacimiento'],
+        newFront['fechaNacimiento'],
+        oldFront['fechaNacimiento'],
+      ]),
+      'fechaEmision': _firstNotEmpty([
+        front['fechaEmision'],
+        back['fechaEmision'],
+        newFront['fechaEmision'],
+        oldFront['fechaEmision'],
+      ]),
+      'fechaExpiracion': _firstNotEmpty([
+        front['fechaExpiracion'],
+        back['fechaExpiracion'],
+        newFront['fechaExpiracion'],
+        oldFront['fechaExpiracion'],
+      ]),
+      'lugarNacimiento': _firstNotEmpty([
+        back['lugarNacimiento'],
+        front['lugarNacimiento'],
+        newBack['lugarNacimiento'],
+        oldBack['lugarNacimiento'],
+      ]),
+      'profesion': _firstNotEmpty([
+        back['profesion'],
+        front['profesion'],
+        newBack['profesion'],
+        oldBack['profesion'],
+      ]),
+      'estadoCivil': _firstNotEmpty([
+        back['estadoCivil'],
+        front['estadoCivil'],
+        newBack['estadoCivil'],
+        oldBack['estadoCivil'],
+      ]),
+      'domicilio': _firstNotEmpty([
+        back['domicilio'],
+        front['domicilio'],
+        newBack['domicilio'],
+        oldBack['domicilio'],
+      ]),
+      'grupoSanguineo': _firstNotEmpty([
+        back['grupoSanguineo'],
+        front['grupoSanguineo'],
+        newBack['grupoSanguineo'],
+        oldBack['grupoSanguineo'],
+      ]),
+      'model': model,
     };
   }
 
-  // --- MODELO ESPACIAL ---
+  static Map<String, String> splitFullName(String fullName) {
+    final cleaned = _stripNoise(fullName)
+        .replaceAll(RegExp(r'[^A-Za-z\s]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (cleaned.isEmpty) {
+      return {'nombres': '', 'apellidos': ''};
+    }
+    final parts = cleaned.split(' ');
+    if (parts.length == 1) {
+      return {'nombres': parts.first, 'apellidos': ''};
+    }
+    if (parts.length == 2) {
+      return {'nombres': parts.first, 'apellidos': parts.last};
+    }
+    if (parts.length == 3) {
+      return {'nombres': parts.first, 'apellidos': '${parts[1]} ${parts[2]}'};
+    }
+    final nombres = parts.take(2).join(' ');
+    final apellidos = parts.skip(2).join(' ');
+    return {'nombres': nombres, 'apellidos': apellidos};
+  }
 
-  static Map<String, String> _extractSpatial(RecognizedText text) {
-    debugPrint("🔍 OCR: Iniciando extracción espacial");
-    debugPrint(
-      "🔍 OCR: Total de bloques de texto encontrados: ${text.blocks.length}",
-    );
+  static Map<String, String> _mergePrefer(
+    Map<String, String> primary,
+    Map<String, String> fallback,
+  ) {
+    final out = <String, String>{};
+    final keys = <String>{
+      ...primary.keys,
+      ...fallback.keys,
+    };
+    for (final key in keys) {
+      out[key] = _firstNotEmpty([primary[key], fallback[key]]);
+    }
+    return out;
+  }
 
-    // Debug: Mostrar todo el texto reconocido
-    String allText = text.blocks.map((block) => block.text).join(' ');
-    debugPrint("🔍 OCR: Texto completo reconocido: '$allText'");
+  static String _firstNotEmpty(List<String?> values) {
+    for (final value in values) {
+      if (value == null) continue;
+      final trimmed = value.trim();
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    return '';
+  }
 
-    final Map<String, String> result = {
+  static String _detectModel(String frontText, String? backText) {
+    final front = frontText.toUpperCase();
+    final back = backText?.toUpperCase() ?? '';
+    if (RegExp(r'CEDULA\s+DE\s+IDENTIDAD').hasMatch(front)) return 'nuevo';
+    if (front.contains('DATOS DEL TITULAR') || front.contains('ESTADO PLURINACIONAL')) {
+      return 'nuevo';
+    }
+    if (back.contains('PERTENECE') || back.contains('CERTIFICA')) return 'antiguo';
+    if (front.contains('VALIDA HASTA') || front.contains('NO.')) return 'antiguo';
+    return 'desconocido';
+  }
+
+  static Map<String, String> _extractNewFront(String text) {
+    final result = <String, String>{
       'ci': '',
       'nombres': '',
       'apellidos': '',
+      'fechaNacimiento': '',
       'fechaEmision': '',
       'fechaExpiracion': '',
     };
 
-    // 1. CI (Buscar etiqueta 'CEDULA' o 'C.I.')
-    TextBlock? ciLabel = _findBlockByKeywords(text, [
-      'CEDULA',
-      'C.I.',
-      'NUMERO',
+    result['ci'] = _extractCIFallback(text);
+    result['nombres'] = _extractLineValue(text, ['NOMBRES', 'NOMBRE']);
+    result['apellidos'] = _extractLineValue(text, ['APELLIDOS', 'APELLIDO']);
+    result['fechaNacimiento'] = _extractDateAfterLabel(text, [
+      'FECHA DE NACIMIENTO',
+      'NACIMIENTO',
+      'NAC.',
     ]);
-    debugPrint("🔍 OCR: Buscando etiqueta CI - Encontrada: ${ciLabel != null}");
-    if (ciLabel != null) {
-      debugPrint("🔍 OCR: Etiqueta CI encontrada: '${ciLabel.text}'");
-      // Buscar a la derecha o abajo
-      result['ci'] = _findTextNear(text, ciLabel.boundingBox, [
-        Direction.right,
-        Direction.bottom,
-      ], pattern: r'\d{5,10}');
-      debugPrint("🔍 OCR: CI extraído cerca de etiqueta: '${result['ci']}'");
-    }
-    // Si no encuentra por etiqueta, buscar patrón directo
-    if (result['ci']!.isEmpty) {
-      result['ci'] = _extractCIFallback(text);
-      debugPrint("🔍 OCR: CI extraído por fallback: '${result['ci']}'");
-    }
-
-    // 2. NOMBRES (Buscar etiqueta 'NOMBRES')
-    TextBlock? nombresLabel = _findBlockByKeywords(text, ['NOMBRES', 'NOMBRE']);
-    debugPrint(
-      "🔍 OCR: Buscando etiqueta NOMBRES - Encontrada: ${nombresLabel != null}",
-    );
-    if (nombresLabel != null) {
-      debugPrint("🔍 OCR: Etiqueta NOMBRES encontrada: '${nombresLabel.text}'");
-      result['nombres'] = _findTextNear(text, nombresLabel.boundingBox, [
-        Direction.bottom,
-        Direction.right,
-      ], onlyLetters: true);
-      debugPrint("🔍 OCR: Nombres extraídos: '${result['nombres']}'");
-    }
-
-    // 3. APELLIDOS (Buscar etiqueta 'APELLIDOS', 'PATERNO', 'MATERNO')
-    // Intentar buscar PATERNO y MATERNO por separado
-    TextBlock? paternoLabel = _findBlockByKeywords(text, ['PATERNO']);
-    TextBlock? maternoLabel = _findBlockByKeywords(text, ['MATERNO']);
-
-    if (paternoLabel != null || maternoLabel != null) {
-      String p = paternoLabel != null
-          ? _findTextNear(text, paternoLabel.boundingBox, [
-              Direction.bottom,
-              Direction.right,
-            ], onlyLetters: true)
-          : "";
-      String m = maternoLabel != null
-          ? _findTextNear(text, maternoLabel.boundingBox, [
-              Direction.bottom,
-              Direction.right,
-            ], onlyLetters: true)
-          : "";
-      result['apellidos'] = "$p $m".trim();
-    }
-
-    if (result['apellidos']!.isEmpty) {
-      TextBlock? apellidosLabel = _findBlockByKeywords(text, [
-        'APELLIDOS',
-        'APELLIDO',
-      ]);
-      if (apellidosLabel != null) {
-        result['apellidos'] = _findTextNear(text, apellidosLabel.boundingBox, [
-          Direction.bottom,
-          Direction.right,
-        ], onlyLetters: true);
-      } else {
-        // Fallback: A veces "Apellidos" no está explícito, pero está debajo de nombres
-        // O es el formato antiguo "PERTENECE A:"
-        TextBlock? perteneceLabel = _findBlockByKeywords(text, [
-          'PERTENECE',
-          'PERTENECE A',
-        ]);
-        if (perteneceLabel != null) {
-          String fullName = _findTextNear(text, perteneceLabel.boundingBox, [
-            Direction.right,
-            Direction.bottom,
-          ], onlyLetters: true);
-          if (fullName.isNotEmpty) {
-            final parts = splitFullName(fullName);
-            result['nombres'] = parts['nombres'] ?? "";
-            result['apellidos'] = parts['apellidos'] ?? "";
-          }
-        }
-      }
-    }
-
-    // 4. FECHAS
-    // Regex flexible: DD/MM/AAAA o DD-MM-AAAA o DD.MM.AAAA o con espacios
-    final datePattern = r'\d{1,2}[-/. \s]\d{1,2}[-/. \s]\d{2,4}';
-
-    // (Opcional, no la pedimos en el form, pero ayuda a ubicar otras)
-
-    // Emision
-    TextBlock? emisionLabel = _findBlockByKeywords(text, [
+    result['fechaEmision'] = _extractDateAfterLabel(text, [
+      'FECHA DE EMISION',
       'EMISION',
-      'EMISIÓN',
+      'EMIS',
     ]);
-    if (emisionLabel != null) {
-      result['fechaEmision'] = _findTextNear(text, emisionLabel.boundingBox, [
-        Direction.right,
-        Direction.bottom,
-      ], pattern: datePattern);
-    }
-
-    // Expiracion / Vencimiento / Validez
-    TextBlock? expLabels = _findBlockByKeywords(text, [
+    result['fechaExpiracion'] = _extractDateAfterLabel(text, [
+      'FECHA DE EXPIRACION',
       'EXPIRACION',
       'VENCIMIENTO',
       'VALIDEZ',
-      'VÁLIDA',
-      'HASTA',
       'VENCE',
     ]);
-    if (expLabels != null) {
-      result['fechaExpiracion'] = _findTextNear(text, expLabels.boundingBox, [
-        Direction.right,
-        Direction.bottom,
-      ], pattern: datePattern);
-    }
-
-    // Fallback: Si no se encuentran por etiqueta espacial, buscar fechas sueltas
-    // (Cuidado: esto es agresivo, asumimos lógica de posición si hay múltiples fechas)
-    if (result['fechaExpiracion']!.isEmpty) {
-      // En carnets nuevos, la fecha de expiración suele estar abajo a la derecha o ser la fecha más futura
-      final allDates = _findAllDates(text, datePattern);
-      if (allDates.isNotEmpty) {
-        // Asumir la fecha más lejana es la de expiración
-        result['fechaExpiracion'] = allDates.last; // Simple heurística
-      }
-    }
 
     return result;
   }
 
-  // --- UTILS ESPACIALES ---
+  static Map<String, String> _extractNewBack(String text) {
+    return {
+      'lugarNacimiento': _extractLineValue(text, [
+        'LUGAR DE NACIMIENTO',
+        'LUGAR NACIMIENTO',
+      ]),
+      'domicilio': _extractLineValue(text, ['DOMICILIO']),
+      'profesion': _extractLineValue(text, ['PROFESION', 'OCUPACION']),
+      'estadoCivil': _extractLineValue(text, ['ESTADO CIVIL']),
+      'grupoSanguineo': _extractLineValue(text, ['GRUPO SANGUINEO']),
+    };
+  }
 
-  static TextBlock? _findBlockByKeywords(
-    RecognizedText text,
-    List<String> keywords,
+  static Map<String, String> _extractOldFront(String text) {
+    final ciByLabel = _extractLineValue(text, [
+      'NO',
+      'Nº',
+      'N°',
+      'NUMERO',
+      'NRO',
+    ]);
+    return {
+      'ci': _firstNotEmpty([ciByLabel, _extractCIFallback(text)]),
+      'fechaExpiracion': _extractDateAfterLabel(text, [
+        'VALIDA HASTA',
+        'VALIDEZ',
+        'VENCE',
+      ]),
+    };
+  }
+
+  static Map<String, String> _extractOldBack(String text) {
+    final result = <String, String>{
+      'nombres': '',
+      'apellidos': '',
+      'fechaNacimiento': '',
+      'lugarNacimiento': '',
+      'profesion': '',
+      'estadoCivil': '',
+      'domicilio': '',
+    };
+
+    final fullName = _extractFullNameOldBack(text);
+    if (fullName.isNotEmpty) {
+      final parts = splitFullName(fullName);
+      result['nombres'] = parts['nombres'] ?? '';
+      result['apellidos'] = parts['apellidos'] ?? '';
+    }
+
+    result['fechaNacimiento'] = _extractDateAfterLabel(text, [
+      'NACIDO EL',
+      'FECHA DE NACIMIENTO',
+    ]);
+    result['lugarNacimiento'] = _extractTextAfterLabelStart(text, ['EN']);
+    result['profesion'] = _extractLineValue(text, ['PROFESION', 'OCUPACION']);
+    result['estadoCivil'] = _extractLineValue(text, ['ESTADO CIVIL']);
+    result['domicilio'] = _extractLineValue(text, ['DOMICILIO']);
+
+    return result;
+  }
+
+  static String _extractCIFallback(String text) {
+    final candidates = <String>[];
+    final lines = text.split(RegExp(r'[\r\n]+'));
+    for (final line in lines) {
+      final upper = line.toUpperCase();
+      if (upper.contains('FECHA') || upper.contains('NAC')) {
+        continue;
+      }
+      for (final match in RegExp(r'\b(\d{5,11})\s*([A-Z]{1,2})?\b')
+          .allMatches(upper)) {
+        final number = match.group(1) ?? '';
+        final ext = (match.group(2) ?? '').trim();
+        if (number.length < 5) continue;
+        if (upper.contains('/') || upper.contains('-')) {
+          if (RegExp(r'\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}').hasMatch(upper)) {
+            continue;
+          }
+        }
+        if (ext.isNotEmpty) {
+          const validExt = [
+            'LP',
+            'SC',
+            'CB',
+            'OR',
+            'PT',
+            'CH',
+            'TJ',
+            'BE',
+            'PA',
+          ];
+          if (validExt.contains(ext)) {
+            candidates.add('$number $ext');
+            continue;
+          }
+        }
+        candidates.add(number);
+      }
+    }
+    if (candidates.isEmpty) return '';
+    candidates.sort((a, b) => b.length.compareTo(a.length));
+    return candidates.first;
+  }
+
+  static String _extractLineValue(String text, List<String> labels) {
+    final lines = text.split(RegExp(r'[\r\n]+'));
+    for (int i = 0; i < lines.length; i++) {
+      final raw = lines[i].trim();
+      if (raw.isEmpty) continue;
+      final upper = raw.toUpperCase();
+      for (final label in labels) {
+        if (upper.contains(label)) {
+          final cleaned = _stripNoise(_cleanLabel(raw, label));
+          if (cleaned.isNotEmpty) return cleaned;
+          if (i + 1 < lines.length) {
+            final next = lines[i + 1].trim();
+            final nextClean = _stripNoise(next);
+            if (nextClean.isNotEmpty) return nextClean;
+          }
+        }
+      }
+    }
+    return '';
+  }
+
+  static String _extractDateAfterLabel(String text, List<String> labels) {
+    final lines = text.split(RegExp(r'[\r\n]+'));
+    for (int i = 0; i < lines.length; i++) {
+      final raw = lines[i].trim();
+      if (raw.isEmpty) continue;
+      final upper = raw.toUpperCase();
+      for (final label in labels) {
+        if (upper.contains(label)) {
+          final date = _extractDateFromText(raw);
+          if (date.isNotEmpty) return date;
+          if (i + 1 < lines.length) {
+            final next = lines[i + 1].trim();
+            final dateNext = _extractDateFromText(next);
+            if (dateNext.isNotEmpty) return dateNext;
+          }
+        }
+      }
+    }
+    return '';
+  }
+
+  static String _extractTextAfterLabelStart(
+    String text,
+    List<String> labels,
   ) {
-    for (final block in text.blocks) {
-      final str = block.text.toUpperCase();
-      for (final k in keywords) {
-        if (str.contains(k)) return block;
-        // Fuzzy simple (si la palabra es larga)
-        if (k.length > 4) {
-          final words = str.split(RegExp(r'\s+'));
-          for (final w in words) {
-            if (w.isEmpty) continue;
-            if (_levenshtein(w, k) < 2) return block;
+    final lines = text.split(RegExp(r'[\r\n]+'));
+    for (int i = 0; i < lines.length; i++) {
+      final raw = lines[i].trim();
+      if (raw.isEmpty) continue;
+      final upper = raw.toUpperCase();
+      for (final label in labels) {
+        if (upper == label || upper.startsWith('$label ')) {
+          final cleaned = _cleanLabel(raw, label);
+          final cleanValue = _stripNoise(cleaned);
+          if (cleanValue.isNotEmpty) return cleanValue;
+          if (i + 1 < lines.length) {
+            final next = lines[i + 1].trim();
+            final nextClean = _stripNoise(next);
+            if (nextClean.isNotEmpty) return nextClean;
           }
         }
       }
     }
-    return null;
+    return '';
   }
 
-  /// Busca texto "cerca" de un rectángulo ancla en las direcciones dadas.
-  static String _findTextNear(
-    RecognizedText text,
-    Rect anchor,
-    List<Direction> directions, {
-    String? pattern,
-    bool onlyLetters = false,
-  }) {
-    // Definir zonas de búsqueda
-    // "Right": misma franja Y, X > anchor.right
-    // "Bottom": X similar (solapamiento), Y > anchor.bottom
-
-    double closestDist = double.infinity;
-    String bestMatch = "";
-
-    for (final block in text.blocks) {
-      if (block.boundingBox == anchor) continue; // Skip self
-
-      // Check if valid candidate content
-      String content = block.text.trim();
-      if (pattern != null) {
-        final reg = RegExp(pattern);
-        if (!reg.hasMatch(content)) continue;
-        // Extract specific match
-        final m = reg.firstMatch(content);
-        if (m != null) content = m.group(0)!;
-      }
-      if (onlyLetters) {
-        // Filtrar basura corta
-        if (content.length < 3) continue;
-        if (content.contains(RegExp(r'[0-9]')) && content.length < 5) continue;
-      }
-
-      bool isCandidate = false;
-      double dist = double.infinity;
-
-      for (final dir in directions) {
-        if (dir == Direction.right) {
-          // Verificar solapamiento Y
-          double yOverlap = math.max(
-            0,
-            math.min(anchor.bottom, block.boundingBox.bottom) -
-                math.max(anchor.top, block.boundingBox.top),
-          );
-          bool isRowAligned =
-              yOverlap >
-              (anchor.height * 0.3); // Al menos 30% de altura compartida
-
-          if (isRowAligned && block.boundingBox.left > (anchor.right - 20)) {
-            double d = block.boundingBox.left - anchor.right;
-            if (d > -20 && d < 300) {
-              // Cerca a la derecha
-              if (d < dist) {
-                dist = d;
-                isCandidate = true;
-              }
-            }
+  static String _extractFullNameOldBack(String text) {
+    final lines = text.split(RegExp(r'[\r\n]+'));
+    for (int i = 0; i < lines.length; i++) {
+      final raw = lines[i].trim();
+      if (raw.isEmpty) continue;
+      final upper = raw.toUpperCase();
+      if (upper.contains('PERTENECE') || upper.contains('CERTIFICA')) {
+        for (int j = i; j < lines.length && j < i + 6; j++) {
+          final line = lines[j].trim();
+          final match = RegExp(r'A\s*:\s*(.+)', caseSensitive: false).firstMatch(line);
+          if (match != null) {
+            final name = _stripNoise(match.group(1) ?? '');
+            if (_looksLikeName(name)) return name;
           }
-        } else if (dir == Direction.bottom) {
-          // Verificar solapamiento X
-          double xOverlap = math.max(
-            0,
-            math.min(anchor.right, block.boundingBox.right) -
-                math.max(anchor.left, block.boundingBox.left),
-          );
-          bool isColAligned =
-              xOverlap >
-              (math.min(anchor.width, block.boundingBox.width) * 0.3);
-
-          if (isColAligned && block.boundingBox.top > (anchor.bottom - 10)) {
-            double d = block.boundingBox.top - anchor.bottom;
-            if (d > -10 && d < 150) {
-              // Inmediatamente abajo
-              if (d < dist) {
-                dist = d;
-                isCandidate = true;
-              }
-            }
+          final cleaned = _stripNoise(line);
+          if (_looksLikeName(cleaned)) {
+            return cleaned;
           }
         }
       }
+      final inlineMatch = RegExp(r'PERTENECE\s+A\s*:\s*(.+)', caseSensitive: false)
+          .firstMatch(upper);
+      if (inlineMatch != null) {
+        final name = _stripNoise(inlineMatch.group(1) ?? '');
+        if (_looksLikeName(name)) return name;
+      }
+    }
+    return '';
+  }
 
-      if (isCandidate && dist < closestDist) {
-        closestDist = dist;
-        bestMatch = content;
+  static bool _looksLikeName(String value) {
+    final cleaned = _stripNoise(value);
+    if (cleaned.isEmpty) return false;
+    final upper = cleaned.toUpperCase();
+    if (RegExp(r'(PERTENECE|CERTIFICA|IMPRESI[ÓO]N|FOTOGRAF[ÍI]A)').hasMatch(upper)) {
+      return false;
+    }
+    if (cleaned.length < 5) return false;
+    if (!RegExp(r'^[A-Za-z\s\.\-]+$').hasMatch(cleaned)) return false;
+    final words = cleaned.split(RegExp(r'\s+')).where((w) => w.length > 1).toList();
+    return words.length >= 2 && words.length <= 6;
+  }
+
+  static String _cleanLabel(String raw, String label) {
+    final upper = raw.toUpperCase();
+    final idx = upper.indexOf(label);
+    if (idx == -1) return raw.trim();
+    var out = raw.substring(idx + label.length).trim();
+    if (out.startsWith(':')) out = out.substring(1).trim();
+    return out;
+  }
+
+  static String _stripNoise(String value) {
+    var cleaned = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    const noise = [
+      'PERTENECE A',
+      'CERTIFICA',
+      'IMPRESION',
+      'IMPRESIÓN',
+      'FOTOGRAFIA',
+      'FOTOGRAFÍA',
+      'NOMBRES',
+      'NOMBRE',
+      'APELLIDOS',
+      'APELLIDO',
+      'CEDULA DE IDENTIDAD',
+      'CEDULA',
+      'CÉDULA',
+      'CI',
+      'DOCUMENTO',
+      'DEL TITULAR',
+      'DE IDENTIDAD',
+      'DATOS DEL TITULAR',
+    ];
+    var result = cleaned;
+    for (final word in noise) {
+      final pattern = RegExp('\\b${RegExp.escape(word)}\\b', caseSensitive: false);
+      result = result.replaceAll(pattern, '');
+    }
+    result = result.replaceAll(RegExp(r'^\s*[:\-\s]+'), '').trim();
+    result = result.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
+    return result;
+  }
+
+  static String _extractDateFromText(String raw) {
+    // 1) Intentar fechas numéricas comunes
+    final numericMatch =
+        RegExp(r'\d{1,2}[-/.\s]\d{1,2}[-/.\s]\d{2,4}').firstMatch(raw);
+    if (numericMatch != null) {
+      final value = numericMatch.group(0) ?? '';
+      final fixed = value.replaceAll(RegExp(r'[-.\s]'), '/');
+      final parts = fixed.split('/');
+      if (parts.length == 3) {
+        final day = parts[0].padLeft(2, '0');
+        final month = parts[1].padLeft(2, '0');
+        var year = parts[2];
+        if (year.length == 2) {
+          final y = int.tryParse(year) ?? 0;
+          year = y > 30 ? '19$year' : '20$year';
+        }
+        return '$day/$month/$year';
+      }
+      return fixed;
+    }
+
+    // 2) Intentar fechas con meses en texto: "14 DE SEPTIEMBRE DE 1999"
+    final upper = _replaceAccents(raw.toUpperCase());
+    final monthMatch = RegExp(
+      r'(\d{1,2})\s+DE\s+([A-ZÁÉÍÓÚ]+)\s+DE\s+(\d{2,4})',
+      caseSensitive: false,
+    ).firstMatch(upper);
+    if (monthMatch != null) {
+      final day = monthMatch.group(1)!.padLeft(2, '0');
+      final monthName = monthMatch.group(2) ?? '';
+      final monthNum = _spanishMonthToNumber(monthName);
+      var year = monthMatch.group(3) ?? '';
+      if (year.length == 2) {
+        final y = int.tryParse(year) ?? 0;
+        year = y > 30 ? '19$year' : '20$year';
+      }
+      if (monthNum != null) {
+        final mm = monthNum.toString().padLeft(2, '0');
+        return '$day/$mm/$year';
       }
     }
 
-    return bestMatch.replaceAll(RegExp(r'[\r\n]'), ' ').trim();
-  }
-  //logiquita antigua
-  // --- LOGICA ANTIGUA / HIBRIDA (Optimizado) ---
-
-  static String _extractCIFallback(RecognizedText text) {
-    final validCIPattern = RegExp(r'\b(\d{5,10})\b');
-
-    // Recorrer bloques buscando patrón de número puro
-    for (final block in text.blocks) {
-      // Ignorar bloques muy grandes (párrafos) o muy pequeños
-      if (block.text.length > 50) continue;
-
-      final normalized = block.text
-          .toUpperCase()
-          .replaceAll('O', '0')
-          .replaceAll('I', '1')
-          .replaceAll('B', '8');
-      final match = validCIPattern.firstMatch(normalized);
-      if (match != null) {
-        String ci = match.group(1)!;
-        // Validar que no sea un año (ej 2025)
-        int? val = int.tryParse(ci);
-        if (val != null && (val > 1900 && val < 2100)) continue;
-        return ci;
-      }
-    }
-    return "";
+    return '';
   }
 
-  static String detectSide(RecognizedText text) {
-    final str = text.text.toUpperCase();
-    if (str.contains('HUELLA') ||
-        str.contains('DACTILAR') ||
-        str.contains('CIVIL') ||
-        str.contains('PROFESION')) {
-      return 'reverso';
-    }
-    return 'anverso';
+  static int? _spanishMonthToNumber(String month) {
+    final normalized = _replaceAccents(month.toUpperCase());
+    const months = {
+      'ENERO': 1,
+      'FEBRERO': 2,
+      'MARZO': 3,
+      'ABRIL': 4,
+      'MAYO': 5,
+      'JUNIO': 6,
+      'JULIO': 7,
+      'AGOSTO': 8,
+      'SEPTIEMBRE': 9,
+      'SETIEMBRE': 9,
+      'OCTUBRE': 10,
+      'NOVIEMBRE': 11,
+      'DICIEMBRE': 12,
+    };
+    return months[normalized];
   }
 
-  static Rect getRelevantROI(RecognizedText text) {
-    // Retorna el bounding box total del texto detectado más un margen
-    double minX = double.infinity, minY = double.infinity, maxX = 0, maxY = 0;
-    if (text.blocks.isEmpty) return Rect.zero;
-
-    for (final b in text.blocks) {
-      if (b.boundingBox.left < minX) minX = b.boundingBox.left;
-      if (b.boundingBox.top < minY) minY = b.boundingBox.top;
-      if (b.boundingBox.right > maxX) maxX = b.boundingBox.right;
-      if (b.boundingBox.bottom > maxY) maxY = b.boundingBox.bottom;
-    }
-    double padding =
-        120.0; // Píxeles base aumentado para cubrir mejor el área del carnet (recorte al margen)
-    return Rect.fromLTRB(
-      minX - padding,
-      minY - padding,
-      maxX + padding,
-      maxY + padding,
-    );
-  }
-
-  // --- UTILS COMUNES ---
-  static int _levenshtein(String s, String t) {
-    if (s == t) return 0;
-    if (s.isEmpty) return t.length;
-    if (t.isEmpty) return s.length;
-    List<int> v0 = List<int>.filled(t.length + 1, 0);
-    List<int> v1 = List<int>.filled(t.length + 1, 0);
-    for (int i = 0; i < v0.length; i++) {
-      v0[i] = i;
-    }
-    for (int i = 0; i < s.length; i++) {
-      v1[0] = i + 1;
-      for (int j = 0; j < t.length; j++) {
-        int cost = (s[i] == t[j]) ? 0 : 1;
-        v1[j + 1] = [v1[j] + 1, v0[j + 1] + 1, v0[j] + cost].reduce(math.min);
-      }
-      for (int j = 0; j < v0.length; j++) {
-        v0[j] = v1[j];
-      }
-    }
-    return v1[t.length];
-  }
-
-  static Map<String, String> splitFullName(String fullName) {
-    final words = fullName.trim().split(RegExp(r'\s+'));
-    if (words.length < 2) return {'nombres': fullName, 'apellidos': ''};
-
-    // Heurística simple: Últimos 2 son apellidos, resto nombres
-    // (Funciona bien para la mayoría de latinos: Juan Carlos Perez Lopez)
-    if (words.length >= 3) {
-      final apellidos = words.sublist(words.length - 2).join(' ');
-      final nombres = words.sublist(0, words.length - 2).join(' ');
-      return {'nombres': nombres, 'apellidos': apellidos};
-    }
-
-    return {'nombres': words[0], 'apellidos': words.sublist(1).join(' ')};
-  }
-
-  //Fecha de nacimiento
-  static List<String> _findAllDates(RecognizedText text, String pattern) {
-    final reg = RegExp(pattern);
-    final List<String> dates = [];
-    for (final b in text.blocks) {
-      final matches = reg.allMatches(b.text);
-      for (final m in matches) {
-        String d = m.group(0)!;
-        // Normalizar separadores a '/'
-        d = d.replaceAll(RegExp(r'[-. \s]'), '/');
-        dates.add(d);
-      }
-    }
-
-    DateTime? parseDate(String raw) {
-      final parts = raw.split('/');
-      if (parts.length < 3) return null;
-      final day = int.tryParse(parts[0]);
-      final month = int.tryParse(parts[1]);
-      int? year = int.tryParse(parts[2]);
-      if (day == null || month == null || year == null) return null;
-      if (year < 100) year = year > 30 ? 1900 + year : 2000 + year;
-      if (month < 1 || month > 12) return null;
-      if (day < 1 || day > 31) return null;
-      return DateTime(year, month, day);
-    }
-
-    dates.sort((a, b) {
-      final da = parseDate(a);
-      final db = parseDate(b);
-      if (da == null && db == null) return 0;
-      if (da == null) return -1;
-      if (db == null) return 1;
-      return da.compareTo(db);
-    });
-    return dates;
+  static String _replaceAccents(String input) {
+    return input
+        .replaceAll('Á', 'A')
+        .replaceAll('É', 'E')
+        .replaceAll('Í', 'I')
+        .replaceAll('Ó', 'O')
+        .replaceAll('Ú', 'U')
+        .replaceAll('Ü', 'U');
   }
 }

@@ -87,6 +87,18 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     }
   }
 
+  Future<void> _refreshProfileImageIfNeeded() async {
+    final imageFile = await LocalStorageService.getProfileImageFile();
+    if (!mounted) return;
+    final currentPath = _profileImage?.path ?? '';
+    final nextPath = imageFile?.path ?? '';
+    if (currentPath != nextPath) {
+      setState(() {
+        _profileImage = imageFile;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _nombreController.dispose();
@@ -137,9 +149,6 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
 
       if (source == null) return;
 
-      // Verificar si es la primera foto
-      final isFirstPhoto = await ProfileImageProcessorService.isFirstPhoto();
-
       // Mostrar indicador de carga
       if (mounted) {
         loaderShown = true;
@@ -182,45 +191,42 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           return;
         }
 
-        // Procesar la imagen si es la primera foto
         File imageToSave = File(image.path);
-        if (isFirstPhoto) {
-          if (mounted) {
-            processingDialogShown = true;
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Procesando imagen...'),
-                  ],
-                ),
+        if (mounted) {
+          processingDialogShown = true;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Procesando imagen...'),
+                ],
               ),
+            ),
+          );
+        }
+
+        final processedImage =
+            await ProfileImageProcessorService.processProfileImage(
+              File(image.path),
+              isFirstPhoto: true,
             );
-          }
 
-          final processedImage =
-              await ProfileImageProcessorService.processProfileImage(
-                File(image.path),
-                isFirstPhoto: true,
-              );
-
-          if (!mounted) return;
-          if (processingDialogShown) {
-            final navigator = Navigator.of(context, rootNavigator: true);
-            if (navigator.canPop()) {
-              navigator.pop();
-            }
-            processingDialogShown = false;
+        if (!mounted) return;
+        if (processingDialogShown) {
+          final navigator = Navigator.of(context, rootNavigator: true);
+          if (navigator.canPop()) {
+            navigator.pop();
           }
+          processingDialogShown = false;
+        }
 
-          if (processedImage != null) {
-            imageToSave = processedImage;
-          }
+        if (processedImage != null) {
+          imageToSave = processedImage;
         }
 
         // Guardar la imagen en almacenamiento permanente
@@ -232,7 +238,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
             _profileImage = File(savedPath);
           });
 
-          if (isFirstPhoto && mounted) {
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Foto de perfil procesada con fondo plomo'),
@@ -263,6 +269,9 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshProfileImageIfNeeded();
+    });
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
 

@@ -45,6 +45,7 @@ class _PantallaEscaneoInteligenteState
   bool _procesando = false;
   bool _mostrarReverso = false;
   late AnimationController _animationController;
+  late final TextRecognizer _textRecognizer;
 
   @override
   void initState() {
@@ -53,10 +54,14 @@ class _PantallaEscaneoInteligenteState
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
+    _textRecognizer = TextRecognizer(
+      script: TextRecognitionScript.latin,
+    );
   }
 
   @override
   void dispose() {
+    _textRecognizer.close();
     _animationController.dispose();
     super.dispose();
   }
@@ -80,9 +85,7 @@ class _PantallaEscaneoInteligenteState
       });
 
       // Procesar automáticamente si tenemos la imagen del frente
-      if (!esReverso) {
-        await _procesarImagenes();
-      }
+      await _maybeAutoProcess(esReverso: esReverso);
     } catch (e) {
       _mostrarError('Error al tomar la foto: $e');
     }
@@ -107,17 +110,28 @@ class _PantallaEscaneoInteligenteState
       });
 
       // Procesar automáticamente
-      if (!esReverso) {
-        await _procesarImagenes();
-      }
+      await _maybeAutoProcess(esReverso: esReverso);
     } catch (e) {
       _mostrarError('Error al seleccionar la imagen: $e');
+    }
+  }
+
+  Future<void> _maybeAutoProcess({required bool esReverso}) async {
+    if (_procesando) return;
+    if (!_mostrarReverso && !esReverso) {
+      await _procesarImagenes();
+    } else if (_mostrarReverso && esReverso && _imagenFrente != null) {
+      await _procesarImagenes();
     }
   }
 
   Future<void> _procesarImagenes() async {
     if (_imagenFrente == null) {
       _mostrarError('Debes capturar al menos la imagen del frente');
+      return;
+    }
+    if (_mostrarReverso && _imagenReverso == null) {
+      _mostrarError('Debes capturar el reverso antes de procesar');
       return;
     }
 
@@ -130,15 +144,13 @@ class _PantallaEscaneoInteligenteState
 
     try {
       // Realizar OCR en las imágenes
-      final textRecognizer = TextRecognizer();
-      
       final inputImageFrente = InputImage.fromFile(_imagenFrente!);
-      final textoFrente = await textRecognizer.processImage(inputImageFrente);
+      final textoFrente = await _textRecognizer.processImage(inputImageFrente);
 
       RecognizedText? textoReverso;
       if (_imagenReverso != null) {
         final inputImageReverso = InputImage.fromFile(_imagenReverso!);
-        textoReverso = await textRecognizer.processImage(inputImageReverso);
+        textoReverso = await _textRecognizer.processImage(inputImageReverso);
       }
 
       // Analizar con IA
@@ -147,8 +159,6 @@ class _PantallaEscaneoInteligenteState
         textoOcrReverso: textoReverso,
         tipoEsperado: widget.tipoEsperado,
       );
-
-      await textRecognizer.close();
 
       if (!mounted) return;
 
@@ -224,6 +234,40 @@ class _PantallaEscaneoInteligenteState
                 child: _buildInstruccionesCard(),
               ),
               const SizedBox(height: 24),
+              if (_mostrarReverso &&
+                  _imagenFrente != null &&
+                  _imagenReverso == null)
+                FadeInUp(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: kWarningColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: kWarningColor.withOpacity(0.4),
+                      ),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.info_outline, color: kWarningColor),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Captura el reverso para continuar el escaneo.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: kTextColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_mostrarReverso &&
+                  _imagenFrente != null &&
+                  _imagenReverso == null)
+                const SizedBox(height: 16),
 
               // Imagen Frente
               FadeInLeft(
@@ -275,7 +319,9 @@ class _PantallaEscaneoInteligenteState
               const SizedBox(height: 24),
 
               // Botón Procesar
-              if (_imagenFrente != null && !_procesando)
+              if (_imagenFrente != null &&
+                  (!_mostrarReverso || _imagenReverso != null) &&
+                  !_procesando)
                 FadeInUp(
                   delay: const Duration(milliseconds: 500),
                   child: ElevatedButton(

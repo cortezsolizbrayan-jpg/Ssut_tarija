@@ -1,5 +1,6 @@
 import 'rive_model.dart';
 
+/// Clase para definir el menu
 class Menu {
   final String title;
   final RiveModel rive;
@@ -10,29 +11,15 @@ class Menu {
 //se define el menu lateral
 List<Menu> sidebarMenus = [
   Menu(
-    title: "Principal Posgraduante",
+    title: "Inicio",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
       artboard: "HOME",
       stateMachineName: "HOME_interactivity",
     ),
   ),
-  Menu(
-    title: "Mis Datos Personales",
-    rive: RiveModel(
-      src: "assets/RiveAssets/icons.riv",
-      artboard: "USER",
-      stateMachineName: "USER_Interactivity",
-    ),
-  ),
-  Menu(
-    title: "Mis Documentos Personales",
-    rive: RiveModel(
-      src: "assets/RiveAssets/icons.riv",
-      artboard: "USER",
-      stateMachineName: "USER_Interactivity",
-    ),
-  ),
+
+  /// Menu para mis programas
   Menu(
     title: "Mis Programas",
     rive: RiveModel(
@@ -41,14 +28,8 @@ List<Menu> sidebarMenus = [
       stateMachineName: "SEARCH_Interactivity",
     ),
   ),
-  Menu(
-    title: "Programas Vigentes",
-    rive: RiveModel(
-      src: "assets/RiveAssets/icons.riv",
-      artboard: "SEARCH",
-      stateMachineName: "SEARCH_Interactivity",
-    ),
-  ),
+
+  /// Menu para curriculum
   Menu(
     title: "Curriculum",
     rive: RiveModel(
@@ -57,9 +38,22 @@ List<Menu> sidebarMenus = [
       stateMachineName: "STAR_Interactivity",
     ),
   ),
-];
-
-List<Menu> sidebarMenus2 = [
+  Menu(
+    title: "Mis Datos Personales",
+    rive: RiveModel(
+      src: "assets/RiveAssets/icons.riv",
+      artboard: "CHAT",
+      stateMachineName: "CHAT_Interactivity",
+    ),
+  ),
+  Menu(
+    title: "Mis Documentos Personales",
+    rive: RiveModel(
+      src: "assets/RiveAssets/icons.riv",
+      artboard: "CHAT",
+      stateMachineName: "CHAT_Interactivity",
+    ),
+  ),
   Menu(
     title: "Cambiar Contraseña",
     rive: RiveModel(
@@ -68,20 +62,30 @@ List<Menu> sidebarMenus2 = [
       stateMachineName: "CHAT_Interactivity",
     ),
   ),
+  // Menu(
+  //   title: "Cerrar Sesión",
+  //   rive: RiveModel(
+  //     src: "assets/RiveAssets/icons.riv",
+  //     artboard: "CHAT",
+  //     stateMachineName: "CHAT_Interactivity",
+  //   ),
+  // ),
+];
+List<Menu> sidebarMenus2 = [
   Menu(
-    title: "Secciones Abiertas",
+    title: "Historia",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
-      artboard: "CHAT",
-      stateMachineName: "CHAT_Interactivity",
+      artboard: "TIMER",
+      stateMachineName: "TIMER_Interactivity",
     ),
   ),
   Menu(
-    title: "Cerrar Sesión",
+    title: "Notificationes",
     rive: RiveModel(
       src: "assets/RiveAssets/icons.riv",
-      artboard: "CHAT",
-      stateMachineName: "CHAT_Interactivity",
+      artboard: "BELL",
+      stateMachineName: "BELL_Interactivity",
     ),
   ),
 ];
@@ -111,6 +115,7 @@ List<Menu> bottomNavItems = [
       stateMachineName: "TIMER_Interactivity",
     ),
   ),
+  // Menu para Notificationes
   Menu(
     title: "Notification",
     rive: RiveModel(

@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Environment {
   static bool _initialized = false;
-  static const String _defaultApiUrl =
+  static String _defaultApiUrl =
       'https://dev-repositorio-backend.posgradoupea.edu.bo/api/v1';
 
   static Future<void> initEnvironment() async {
@@ -11,9 +11,7 @@ class Environment {
       // En Flutter Web, no intentar cargar .env debido a problemas de codificación
       if (kIsWeb) {
         if (kDebugMode) {
-          debugPrint(
-            'Ejecutando en Web - usando URL por defecto: $_defaultApiUrl',
-          );
+          print('Ejecutando en Web - usando URL por defecto: $_defaultApiUrl');
         }
         _initialized = true;
         return;
@@ -32,19 +30,17 @@ class Environment {
                 const Duration(milliseconds: 1000), // Reducido a 1 segundo
                 onTimeout: () {
                   if (kDebugMode) {
-                    debugPrint(
-                      'Timeout cargando .env, usando valores por defecto',
-                    );
+                    print('Timeout cargando .env, usando valores por defecto');
                   }
                 },
               );
           if (kDebugMode) {
-            debugPrint('Archivo .env cargado correctamente');
+            print('Archivo .env cargado correctamente');
           }
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('Error cargando .env: $e');
-            debugPrint('Usando URL por defecto: $_defaultApiUrl');
+            print('Error cargando .env: $e');
+            print('Usando URL por defecto: $_defaultApiUrl');
           }
         }
       });
@@ -75,7 +71,7 @@ class Environment {
       /// Si no hay URL de la API, retornar la URL por defecto
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Error leyendo variable de entorno: $e');
+        print('Error leyendo variable de entorno: $e');
       }
     }
 

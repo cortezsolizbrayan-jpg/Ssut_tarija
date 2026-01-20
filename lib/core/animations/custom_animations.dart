@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 
 /// Clase con curvas de animación personalizadas para la aplicación
 class CustomCurves {
-  static const Curve smooth = Curves.easeInOutCubic;
+  static const Curve smooth = Curves.easeOutCubic;
   static const Curve bouncy = Curves.elasticOut;
-  static const Curve quick = Curves.easeOutQuart;
+  static const Curve quick = Cubic(0.2, 0.9, 0.25, 1.0);
   static const Curve spring = Curves.easeOutBack;
-  static const Curve elegant = Curves.easeInOutQuint;
+  static const Curve elegant = Curves.easeInOutCubic;
+  static const Curve subtleFade = Curves.easeOutQuad;
 }
 
 /// Duraciones estándar para animaciones
 class AnimationDurations {
-  static const Duration ultraFast = Duration(milliseconds: 150);
-  static const Duration fast = Duration(milliseconds: 250);
-  static const Duration normal = Duration(milliseconds: 350);
-  static const Duration slow = Duration(milliseconds: 500);
-  static const Duration verySlow = Duration(milliseconds: 700);
+  static const Duration ultraFast = Duration(milliseconds: 140);
+  static const Duration fast = Duration(milliseconds: 220);
+  static const Duration normal = Duration(milliseconds: 320);
+  static const Duration slow = Duration(milliseconds: 450);
+  static const Duration verySlow = Duration(milliseconds: 600);
 }
 
 /// Widget de animación de entrada con fade y slide personalizable
@@ -29,10 +30,10 @@ class SlideInAnimation extends StatefulWidget {
   const SlideInAnimation({
     super.key,
     required this.child,
-    this.duration = const Duration(milliseconds: 600),
+    this.duration = AnimationDurations.normal,
     this.delay = Duration.zero,
-    this.begin = const Offset(0, 0.3),
-    this.curve = Curves.easeOutQuart,
+    this.begin = const Offset(0, 0.18),
+    this.curve = CustomCurves.quick,
   });
 
   @override
@@ -58,7 +59,11 @@ class _SlideInAnimationState extends State<SlideInAnimation>
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: widget.curve,
+      curve: Interval(
+        0.05,
+        1,
+        curve: widget.curve,
+      ),
     ));
 
     _fadeAnimation = Tween<double>(
@@ -66,7 +71,11 @@ class _SlideInAnimationState extends State<SlideInAnimation>
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeIn,
+      curve: const Interval(
+        0.0,
+        0.85,
+        curve: CustomCurves.subtleFade,
+      ),
     ));
 
     Future.delayed(widget.delay, () {
@@ -105,9 +114,9 @@ class ScaleInAnimation extends StatefulWidget {
   const ScaleInAnimation({
     super.key,
     required this.child,
-    this.duration = const Duration(milliseconds: 500),
+    this.duration = AnimationDurations.normal,
     this.delay = Duration.zero,
-    this.curve = Curves.elasticOut,
+    this.curve = CustomCurves.spring,
     this.initialScale = 0.0,
   });
 
@@ -133,7 +142,11 @@ class _ScaleInAnimationState extends State<ScaleInAnimation>
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: widget.curve,
+      curve: Interval(
+        0.08,
+        1,
+        curve: widget.curve,
+      ),
     ));
 
     Future.delayed(widget.delay, () {
@@ -383,7 +396,7 @@ class StaggeredListAnimation extends StatelessWidget {
   const StaggeredListAnimation({
     super.key,
     required this.children,
-    this.delay = const Duration(milliseconds: 100),
+    this.delay = const Duration(milliseconds: 70),
     this.direction = Axis.vertical,
   });
 

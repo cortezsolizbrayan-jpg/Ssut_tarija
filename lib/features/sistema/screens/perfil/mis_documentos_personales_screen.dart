@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:refactor_template/core/services/carnet_photocopy_service.dart';
 import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/profile_image_processor_service.dart';
 import 'package:refactor_template/core/services/servicio_compositor_cartas_ci.dart';
 import 'package:refactor_template/core/services/servicio_ocr_ia_avanzado.dart';
 import 'package:refactor_template/features/sistema/screens/perfil/pantalla_escaneo_inteligente.dart';
@@ -51,6 +53,9 @@ class _MisDocumentosPersonalesScreenState
   String? _ciLetterPath;
   String? _tituloPath;
   String? _prorrogaPath;
+  File? _profilePhoto;
+  Map<String, dynamic>? _participantDocs;
+  bool _deferDocuments = false;
 
   bool _hasTitle = true; // Default assumption
 
@@ -67,13 +72,17 @@ class _MisDocumentosPersonalesScreenState
   Future<void> _load() async {
     setState(() => _busyGlobal = true);
     final data = await LocalStorageService.getParticipantDocumentsData();
+    final profilePhoto = await LocalStorageService.getProfileImageFile();
     if (!mounted) return;
     setState(() {
+      _participantDocs = data;
       _ciFrontPath = data?['ci_front_path'] as String?;
       _ciBackPath = data?['ci_back_path'] as String?;
       _ciLetterPath = data?['ci_letter_path'] as String?;
       _tituloPath = data?['titulo_path'] as String?;
       _prorrogaPath = data?['prorroga_path'] as String?;
+      _deferDocuments = (data?['defer_documents'] as bool?) ?? false;
+      _profilePhoto = profilePhoto;
 
       // Determine mode based on existing data
       if (_prorrogaPath != null &&
@@ -85,6 +94,16 @@ class _MisDocumentosPersonalesScreenState
 
       _busyGlobal = false;
     });
+  }
+
+  Future<void> _setDeferDocuments(bool value) async {
+    final current =
+        await LocalStorageService.getParticipantDocumentsData() ??
+        <String, dynamic>{};
+    current['defer_documents'] = value;
+    await LocalStorageService.saveParticipantDocumentsData(current);
+    if (!mounted) return;
+    setState(() => _deferDocuments = value);
   }
 
   Future<void> _saveDocPath(String key, String? path) async {
@@ -124,6 +143,46 @@ class _MisDocumentosPersonalesScreenState
     final sep = Platform.pathSeparator;
     final parts = path.split(sep);
     return parts.isNotEmpty ? parts.last : path;
+  }
+
+  Future<void> _generatePhotocopyFromPaths() async {
+    final front = _ciFrontPath;
+    final back = _ciBackPath;
+    if (front == null || back == null || front.isEmpty || back.isEmpty) return;
+    setState(() => _busyKey = 'ci_photocopy_pdf_path');
+    try {
+      final pdfPath = await CarnetPhotocopyService.generatePdf(
+        frontFile: File(front),
+        backFile: File(back),
+      );
+      if (pdfPath != null) {
+        await _saveDocPath('ci_photocopy_pdf_path', pdfPath);
+        if (!mounted) return;
+        setState(() {
+          _participantDocs ??= <String, dynamic>{};
+          _participantDocs!['ci_photocopy_pdf_path'] = pdfPath;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fotocopia de carnet generada'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error generando fotocopia PDF: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generando fotocopia: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyKey = null);
+    }
   }
 
   Future<bool> _confirmDelete(String title) async {
@@ -766,6 +825,54 @@ class _MisDocumentosPersonalesScreenState
     }
   }
 
+  Future<void> _updateProfilePhoto() async {
+    final source = await _askSource();
+    if (source == null) return;
+
+    setState(() => _busyKey = 'profile_photo');
+    try {
+      final imageSource = source == _SourceType.camera
+          ? ImageSource.camera
+          : ImageSource.gallery;
+      final picked = await _picker.pickImage(
+        source: imageSource,
+        imageQuality: 92,
+        maxWidth: 2000,
+      );
+      if (picked == null) return;
+
+      final original = File(picked.path);
+      final processed = await ProfileImageProcessorService.processProfileImage(
+        original,
+        isFirstPhoto: true,
+      );
+      final toSave = processed ?? original;
+      final savedPath = await LocalStorageService.saveProfileImage(toSave);
+      if (savedPath == null) {
+        throw Exception('No se pudo guardar la foto');
+      }
+      if (!mounted) return;
+      setState(() => _profilePhoto = File(savedPath));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto 4x4 actualizada correctamente.'),
+          backgroundColor: kSuccessColor,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error actualizando foto: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar la foto: $e'),
+          backgroundColor: kErrorColor,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyKey = null);
+    }
+  }
+
   Future<void> _previewDoc(String path) async {
     if (path.toLowerCase().endsWith('.pdf')) {
       final result = await OpenFilex.open(path);
@@ -1307,9 +1414,7 @@ C.I. $ci""";
                         textAlign: TextAlign.justify,
                       ),
 
-                      const SizedBox(height: 40),
-
-                      // Signature Placeholder
+// Signature Placeholder
                       if (onConfirm != null) ...[
                         const Divider(height: 40, thickness: 1),
                         Row(
@@ -1516,10 +1621,6 @@ C.I. $ci""";
               onPressed: (_busyGlobal || _busyKey != null)
                   ? null
                   : () {
-                      if (!ciOk || !tituloOk) {
-                        _showIncompleteSnackBar();
-                        return;
-                      }
                       context.pop();
                     },
               style: ElevatedButton.styleFrom(
@@ -1561,82 +1662,51 @@ C.I. $ci""";
                 ),
                 const SizedBox(height: 24),
                 FadeInLeft(
-                  delay: const Duration(milliseconds: 200),
+                  delay: const Duration(milliseconds: 100),
                   duration: const Duration(milliseconds: 500),
-                  child: _buildSectionTitle('Identificación'),
+                  child: _buildSectionTitle('Foto de perfil'),
                 ),
                 const SizedBox(height: 12),
                 FadeInUp(
-                  delay: const Duration(milliseconds: 300),
-                  child: _DocUploadCard(
-                    title: 'Cédula (Anverso)',
-                    description: 'Foto clara del lado frontal',
-                    path: _ciFrontPath,
-                    isLoading: _busyKey == 'ci_front_path',
-                    isRequired: true,
-                    onUpload: () => _pickAndSave(
-                      key: 'ci_front_path',
-                      prefix: 'cedula_anverso',
-                      onSet: (p) => _ciFrontPath = p,
+                  delay: const Duration(milliseconds: 150),
+                  child: _buildProfilePhotoCard(),
+                ),
+                const SizedBox(height: 24),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 220),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    onPreview: () => _previewDoc(_ciFrontPath!),
-                    onDelete: () async {
-                      if (await _confirmDelete('C.I. Anverso')) {
-                        await _saveDocPath('ci_front_path', null);
-                        setState(() => _ciFrontPath = null);
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 400),
-                  child: _DocUploadCard(
-                    title: 'Cédula (Reverso)',
-                    description: 'Foto clara del lado posterior',
-                    path: _ciBackPath,
-                    isLoading: _busyKey == 'ci_back_path',
-                    isRequired: true,
-                    onUpload: () => _pickAndSave(
-                      key: 'ci_back_path',
-                      prefix: 'cedula_reverso',
-                      onSet: (p) => _ciBackPath = p,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
-                    onPreview: () => _previewDoc(_ciBackPath!),
-                    onDelete: () async {
-                      if (await _confirmDelete('C.I. Reverso')) {
-                        await _saveDocPath('ci_back_path', null);
-                        setState(() => _ciBackPath = null);
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FadeInUp(
-                  delay: const Duration(milliseconds: 500),
-                  child: _DocUploadCard(
-                    title: 'Cédula Hoja Carta (Fusionado)',
-                    description: 'Generada o Subida (PDF/Foto)',
-                    path: _ciLetterPath,
-                    isLoading: _busyKey == 'ci_letter_path',
-                    isRequired: false,
-                    isAutoGenerated: _ciLetterPath == null,
-                    canGenerate:
-                        true, // Always show action to allow upload even if cant generate
-                    onUpload: _onCiLetterAction,
-                    onPreview: () => _previewDoc(_ciLetterPath!),
-                    onDelete: () async {
-                      if (await _confirmDelete('Hoja Carta')) {
-                        await _saveDocPath('ci_letter_path', null);
-                        setState(() => _ciLetterPath = null);
-                      }
-                    },
+                    child: SwitchListTile(
+                      value: _deferDocuments,
+                      activeColor: kPrimaryColor,
+                      title: const Text(
+                        'Cargaré mis documentos después',
+                        style: TextStyle(
+                          fontFamily: fontBody,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Puedes continuar ahora y subirlos más tarde.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      onChanged: (val) => _setDeferDocuments(val),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 FadeInLeft(
                   delay: const Duration(milliseconds: 600),
-                  child: _buildSectionTitle('Académico'),
+                  child: _buildSectionTitle('Academico'),
                 ),
                 const SizedBox(height: 12),
 
@@ -1665,13 +1735,15 @@ C.I. $ci""";
                           fontSize: 14,
                         ),
                       ),
-                      onChanged: (val) {
-                        setState(() {
-                          _hasTitle = val;
-                          // Clear the other path to avoid confusion? Optional.
-                          // For now we keep them but validation logic ignores the hidden one.
-                        });
-                      },
+                      onChanged: _deferDocuments
+                          ? null
+                          : (val) {
+                          setState(() {
+                            _hasTitle = val;
+                            // Clear the other path to avoid confusion? Optional.
+                            // For now we keep them but validation logic ignores the hidden one.
+                          });
+                        },
                     ),
                   ),
                 ),
@@ -1685,6 +1757,7 @@ C.I. $ci""";
                       path: _tituloPath,
                       isLoading: _busyKey == 'titulo_path',
                       isRequired: true,
+                      enabled: !_deferDocuments,
                       onUpload: () => _pickAndSave(
                         key: 'titulo_path',
                         prefix: 'titulo_prov_nacional',
@@ -1709,6 +1782,7 @@ C.I. $ci""";
                       path: _prorrogaPath,
                       isLoading: _busyKey == 'prorroga_path',
                       isRequired: true,
+                      enabled: !_deferDocuments,
                       isAutoGenerated:
                           _prorrogaPath == null ||
                           (_prorrogaPath!.contains(
@@ -1725,6 +1799,111 @@ C.I. $ci""";
                       },
                     ),
                   ),
+                const SizedBox(height: 24),
+                FadeInLeft(
+                  delay: const Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 500),
+                  child: _buildSectionTitle('Identificacion'),
+                ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 300),
+                  child: _DocUploadCard(
+                    title: 'Cedula (Anverso)',
+                    description: 'Foto clara del lado frontal',
+                    path: _ciFrontPath,
+                    isLoading: _busyKey == 'ci_front_path',
+                    isRequired: false,
+                    enabled: !_deferDocuments,
+                    onUpload: () => _pickAndSave(
+                      key: 'ci_front_path',
+                      prefix: 'cedula_anverso',
+                      onSet: (p) => _ciFrontPath = p,
+                    ),
+                    onPreview: () => _previewDoc(_ciFrontPath!),
+                    onDelete: () async {
+                      if (await _confirmDelete('C.I. Anverso')) {
+                        await _saveDocPath('ci_front_path', null);
+                        setState(() => _ciFrontPath = null);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 400),
+                  child: _DocUploadCard(
+                    title: 'Cedula (Reverso)',
+                    description: 'Foto clara del lado posterior',
+                    path: _ciBackPath,
+                    isLoading: _busyKey == 'ci_back_path',
+                    isRequired: false,
+                    enabled: !_deferDocuments,
+                    onUpload: () => _pickAndSave(
+                      key: 'ci_back_path',
+                      prefix: 'cedula_reverso',
+                      onSet: (p) => _ciBackPath = p,
+                    ),
+                    onPreview: () => _previewDoc(_ciBackPath!),
+                    onDelete: () async {
+                      if (await _confirmDelete('C.I. Reverso')) {
+                        await _saveDocPath('ci_back_path', null);
+                        setState(() => _ciBackPath = null);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if ((_ciFrontPath ?? '').isNotEmpty && (_ciBackPath ?? '').isNotEmpty)
+                  FadeInUp(
+                    delay: const Duration(milliseconds: 450),
+                    child: _DocUploadCard(
+                      title: 'Fotocopia de C.I. (PDF)',
+                      description: 'Anverso y reverso fusionados en hoja carta, B/N',
+                      path: (_participantDocs?['ci_photocopy_pdf_path'] as String?) ?? '',
+                      isLoading: _busyKey == 'ci_photocopy_pdf_path',
+                      isRequired: false,
+                      enabled: !_deferDocuments,
+                      canGenerate: true,
+                      onUpload: () => _generatePhotocopyFromPaths(),
+                      onPreview: () {
+                        final p = _participantDocs?['ci_photocopy_pdf_path'] as String?;
+                        if (p != null && p.isNotEmpty) {
+                          _previewDoc(p);
+                        }
+                      },
+                      onDelete: () async {
+                        if (await _confirmDelete('Fotocopia de C.I.')) {
+                          await _saveDocPath('ci_photocopy_pdf_path', null);
+                          setState(() {
+                            _participantDocs?.remove('ci_photocopy_pdf_path');
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 500),
+                  child: _DocUploadCard(
+                    title: 'Cedula Hoja Carta (Fusionado)',
+                    description: 'Generada o Subida (PDF/Foto)',
+                    path: _ciLetterPath,
+                    isLoading: _busyKey == 'ci_letter_path',
+                    isRequired: false,
+                    isAutoGenerated: _ciLetterPath == null,
+                    enabled: !_deferDocuments,
+                    canGenerate: true,
+                    onUpload: _onCiLetterAction,
+                    onPreview: () => _previewDoc(_ciLetterPath!),
+                    onDelete: () async {
+                      if (await _confirmDelete('Hoja Carta')) {
+                        await _saveDocPath('ci_letter_path', null);
+                        setState(() => _ciLetterPath = null);
+                      }
+                    },
+                  ),
+                ),
                 const SizedBox(height: 40),
               ],
             ),
@@ -1760,6 +1939,117 @@ C.I. $ci""";
           color: kTextSecondary,
           letterSpacing: 1.2,
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfilePhotoCard() {
+    final hasPhoto = _profilePhoto != null;
+    final isBusy = _busyKey == 'profile_photo';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kCardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 96,
+              height: 96,
+              color: const Color(0xFF808080),
+              child: hasPhoto
+                  ? Image.file(_profilePhoto!, fit: BoxFit.cover)
+                  : const Icon(Icons.person, color: Colors.white70, size: 48),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Foto 4x4 (Fondo Plomo)',
+                  style: TextStyle(
+                    fontFamily: fontHeading,
+                    fontWeight: FontWeight.w600,
+                    color: kTextColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Se procesa con recorte del rostro y fondo gris 4x4. Si ya registraste una foto, se usa como base.',
+                  style: TextStyle(
+                    fontFamily: fontBody,
+                    fontSize: 12,
+                    color: kTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: isBusy ? null : _updateProfilePhoto,
+                      icon: isBusy
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.camera_alt_outlined, size: 18),
+                      label: const Text('Actualizar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    if (hasPhoto)
+                      OutlinedButton(
+                        onPressed: isBusy
+                            ? null
+                            : () => _previewImage(_profilePhoto!.path),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: kPrimaryColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Ver'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1899,6 +2189,7 @@ class _DocUploadCard extends StatelessWidget {
   final bool isLoading;
   final bool isAutoGenerated;
   final bool canGenerate;
+  final bool enabled;
   final VoidCallback onUpload;
   final VoidCallback onPreview;
   final VoidCallback onDelete;
@@ -1914,260 +2205,273 @@ class _DocUploadCard extends StatelessWidget {
     this.isLoading = false,
     this.isAutoGenerated = false,
     this.canGenerate = true,
+    this.enabled = true,
   });
 
   bool get hasFile => path != null && path!.isNotEmpty;
 
+  
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _MisDocumentosPersonalesScreenState.kCardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.5,
+      child: AbsorbPointer(
+        absorbing: !enabled,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _MisDocumentosPersonalesScreenState.kCardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.05),
+                blurRadius: 15,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(color: const Color(0xFFF1F5F9)),
           ),
-        ],
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: hasFile
-              ? onPreview
-              : (isAutoGenerated && !canGenerate ? null : onUpload),
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Thumbnail or Icon
-                Hero(
-                  tag: 'doc_$title',
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: hasFile
-                          ? Colors.transparent
-                          : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(16),
-                      image: (hasFile && !path!.toLowerCase().endsWith('.pdf'))
-                          ? DecorationImage(
-                              image: FileImage(File(path!)),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      border: hasFile
-                          ? Border.all(
-                              color: _MisDocumentosPersonalesScreenState
-                                  .kPrimaryColor
-                                  .withOpacity(0.2),
-                              width: 1,
-                            )
-                          : null,
-                    ),
-                    child: isLoading
-                        ? const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                              ),
-                            ),
-                          )
-                        : (!hasFile
-                              ? Icon(
-                                  isAutoGenerated
-                                      ? Icons.auto_awesome
-                                      : Icons.upload_file_rounded,
-                                  color: _MisDocumentosPersonalesScreenState
-                                      .kPrimaryColor,
-                                  size: 28,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: hasFile
+                  ? onPreview
+                  : (isAutoGenerated && !canGenerate ? null : onUpload),
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Thumbnail or Icon
+                    Hero(
+                      tag: 'doc_$title',
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: hasFile
+                              ? Colors.transparent
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(16),
+                          image: (hasFile && !path!.toLowerCase().endsWith('.pdf'))
+                              ? DecorationImage(
+                                  image: FileImage(File(path!)),
+                                  fit: BoxFit.cover,
                                 )
-                              : (path!.toLowerCase().endsWith('.pdf')
+                              : null,
+                          border: hasFile
+                              ? Border.all(
+                                  color: _MisDocumentosPersonalesScreenState
+                                      .kPrimaryColor
+                                      .withOpacity(0.2),
+                                  width: 1,
+                                )
+                              : null,
+                        ),
+                        child: isLoading
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                  ),
+                                ),
+                              )
+                            : (!hasFile
+                                ? Icon(
+                                    isAutoGenerated
+                                        ? Icons.auto_awesome
+                                        : Icons.upload_file_rounded,
+                                    color: _MisDocumentosPersonalesScreenState
+                                        .kPrimaryColor,
+                                    size: 28,
+                                  )
+                                : (path!.toLowerCase().endsWith('.pdf')
                                     ? const Icon(
                                         Icons.picture_as_pdf_rounded,
                                         color: Colors.red,
                                         size: 32,
                                       )
                                     : null)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                fontFamily: _MisDocumentosPersonalesScreenState
-                                    .fontHeading,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: _MisDocumentosPersonalesScreenState
-                                    .kTextColor,
-                              ),
-                            ),
-                          ),
-                          if (hasFile)
-                            const Icon(
-                              Icons.check_circle_rounded,
-                              color: _MisDocumentosPersonalesScreenState
-                                  .kSuccessColor,
-                              size: 18,
-                            )
-                          else if (isRequired)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _MisDocumentosPersonalesScreenState
-                                    .kWarningBg,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'REQ',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: _MisDocumentosPersonalesScreenState
-                                      .kWarningText,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontFamily:
+                                        _MisDocumentosPersonalesScreenState
+                                            .fontHeading,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: _MisDocumentosPersonalesScreenState
+                                        .kTextColor,
+                                  ),
                                 ),
                               ),
+                              if (hasFile)
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: _MisDocumentosPersonalesScreenState
+                                      .kSuccessColor,
+                                  size: 18,
+                                )
+                              else if (isRequired)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _MisDocumentosPersonalesScreenState
+                                        .kWarningBg,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'REQ',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          _MisDocumentosPersonalesScreenState
+                                              .kWarningText,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            hasFile ? 'Documento cargado' : description,
+                            style: TextStyle(
+                              fontFamily:
+                                  _MisDocumentosPersonalesScreenState.fontBody,
+                              fontSize: 12,
+                              color: _MisDocumentosPersonalesScreenState
+                                  .kTextSecondary,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        hasFile ? 'Documento cargado' : description,
-                        style: TextStyle(
-                          fontFamily:
-                              _MisDocumentosPersonalesScreenState.fontBody,
-                          fontSize: 12,
-                          color: _MisDocumentosPersonalesScreenState
-                              .kTextSecondary,
+                    ),
+                    // Actions
+                    if (hasFile)
+                      PopupMenuButton<String>(
+                        icon: const Icon(
+                          Icons.more_vert_rounded,
+                          color:
+                              _MisDocumentosPersonalesScreenState.kTextSecondary,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'view') onPreview();
+                          if (value == 'delete') onDelete();
+                          if (value == 'update' && !isAutoGenerated) onUpload();
+                          if (value == 'update' && isAutoGenerated) {
+                            onUpload(); // Regenerate
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'view',
+                            child: Row(
+                              children: [
+                                Icon(Icons.visibility_outlined, size: 20),
+                                SizedBox(width: 8),
+                                Text('Ver'),
+                              ],
+                            ),
+                          ),
+                          if (!isAutoGenerated)
+                            const PopupMenuItem(
+                              value: 'update',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('Actualizar'),
+                                ],
+                              ),
+                            ),
+                          if (isAutoGenerated)
+                            const PopupMenuItem(
+                              value: 'update',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.refresh_rounded, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('Regenerar'),
+                                ],
+                              ),
+                            ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                  color: Colors.red,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Eliminar',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    if (!hasFile)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: isAutoGenerated
+                            ? IconButton(
+                                onPressed: canGenerate ? onUpload : null,
+                                icon: Icon(
+                                  Icons.flash_on_rounded,
+                                  color: canGenerate
+                                      ? _MisDocumentosPersonalesScreenState
+                                            .kPrimaryColor
+                                      : Colors.grey.withOpacity(0.3),
+                                ),
+                              )
+                            : Container(
+                                decoration: BoxDecoration(
+                                  color: _MisDocumentosPersonalesScreenState
+                                      .kPrimaryColor
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.all(8),
+                                child: const Icon(
+                                  Icons.add_rounded,
+                                  color: _MisDocumentosPersonalesScreenState
+                                      .kPrimaryColor,
+                                ),
+                              ),
+                      ),
+                  ],
                 ),
-                // Actions
-                if (hasFile)
-                  PopupMenuButton<String>(
-                    icon: const Icon(
-                      Icons.more_vert_rounded,
-                      color: _MisDocumentosPersonalesScreenState.kTextSecondary,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'view') onPreview();
-                      if (value == 'delete') onDelete();
-                      if (value == 'update' && !isAutoGenerated) onUpload();
-                      if (value == 'update' && isAutoGenerated)
-                        onUpload(); // Regenerate
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'view',
-                        child: Row(
-                          children: [
-                            Icon(Icons.visibility_outlined, size: 20),
-                            SizedBox(width: 8),
-                            Text('Ver'),
-                          ],
-                        ),
-                      ),
-                      if (!isAutoGenerated)
-                        const PopupMenuItem(
-                          value: 'update',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 20),
-                              SizedBox(width: 8),
-                              Text('Actualizar'),
-                            ],
-                          ),
-                        ),
-                      if (isAutoGenerated)
-                        const PopupMenuItem(
-                          value: 'update',
-                          child: Row(
-                            children: [
-                              Icon(Icons.refresh_rounded, size: 20),
-                              SizedBox(width: 8),
-                              Text('Regenerar'),
-                            ],
-                          ),
-                        ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
-                              size: 20,
-                              color: Colors.red,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Eliminar',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                if (!hasFile)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: isAutoGenerated
-                        ? IconButton(
-                            onPressed: canGenerate ? onUpload : null,
-                            icon: Icon(
-                              Icons.flash_on_rounded,
-                              color: canGenerate
-                                  ? _MisDocumentosPersonalesScreenState
-                                        .kPrimaryColor
-                                  : Colors.grey.withOpacity(0.3),
-                            ),
-                          )
-                        : Container(
-                            decoration: BoxDecoration(
-                              color: _MisDocumentosPersonalesScreenState
-                                  .kPrimaryColor
-                                  .withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.all(8),
-                            child: const Icon(
-                              Icons.add_rounded,
-                              color: _MisDocumentosPersonalesScreenState
-                                  .kPrimaryColor,
-                            ),
-                          ),
-                  ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
 }
