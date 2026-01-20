@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/profile_image_processor_service.dart';
 import 'package:rive/rive.dart' hide LinearGradient, RadialGradient;
 
 enum FaceStep { center, completed }
@@ -150,6 +151,14 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
       await _cameraController!.initialize();
       if (!mounted) return;
 
+      // Listener para errores de cámara: detener stream y volver a la pantalla previa
+      _cameraController!.addListener(() {
+        if (_cameraController?.value.hasError == true) {
+          debugPrint("❌ Error de cámara: ${_cameraController?.value.errorDescription}");
+          _safeStopCamera("Ocurrió un problema con la cámara. Intenta de nuevo.");
+        }
+      });
+
       // Actualizar estado para mostrar el preview de la cámara inmediatamente
       setState(() {});
       debugPrint("✓ Cámara inicializada. Mostrando preview...");
@@ -181,6 +190,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
           _isInitialDelayComplete =
               true; // Permitir continuar aunque haya error
         });
+        _safeStopCamera("No se pudo iniciar la cámara. Reintenta.");
       }
     }
   }
@@ -586,6 +596,9 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
       _capturePhoto();
     }
 
+    // Procesar la foto capturada como 4x4 con fondo plomo y guardarla para todo el flujo
+    _processAndStoreProfilePhoto();
+
     // Animación de éxito final con Confeti Rive
     if (_confettiController != null) {
       _confettiController!.isActive = true;
@@ -671,6 +684,49 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
     _cameraController?.stopImageStream();
     _isProcessingPaused = true;
     _consecutiveTimeouts = 0; // Reset para posible reinicio manual
+  }
+
+  void _safeStopCamera(String message) {
+    try {
+      _cameraController?.stopImageStream();
+      _cameraController?.dispose();
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      // Volver a la pantalla anterior en vez de reiniciar al inicio
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  Future<void> _processAndStoreProfilePhoto() async {
+    try {
+      if (_capturedPhotos.isEmpty) return;
+      final file = File(_capturedPhotos.first.path);
+      if (!await file.exists()) return;
+
+      final processed = await ProfileImageProcessorService.processProfileImage(
+        file,
+        isFirstPhoto: true,
+      );
+      final toSave = processed ?? file;
+      final savedPath = await LocalStorageService.saveProfileImage(toSave);
+      if (savedPath == null) return;
+
+      final current =
+          await LocalStorageService.getParticipantDocumentsData() ?? <String, dynamic>{};
+      current['profile_photo_path'] = savedPath;
+      await LocalStorageService.saveParticipantDocumentsData(current);
+      debugPrint("✅ Foto 4x4 (rostro) guardada en $savedPath");
+    } catch (e) {
+      debugPrint("Error guardando foto 4x4 desde rostro: $e");
+    }
   }
 
   @override

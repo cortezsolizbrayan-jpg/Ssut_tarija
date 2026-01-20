@@ -28,6 +28,7 @@ class CarnetPhotocopyService {
       const pdfWidth = 595.28; // A4 points
       const margin = 24.0;
       final availableWidth = (pdfWidth - (margin * 2) - 8);
+      const maxDisplayHeight = 360; // limitar alto para que ambos lados quepan bien
 
       img.Image resizedFront = grayFront;
       if (grayFront.width > availableWidth) {
@@ -37,12 +38,26 @@ class CarnetPhotocopyService {
           interpolation: img.Interpolation.linear,
         );
       }
+      if (resizedFront.height > maxDisplayHeight) {
+        resizedFront = img.copyResize(
+          resizedFront,
+          height: maxDisplayHeight,
+          interpolation: img.Interpolation.linear,
+        );
+      }
 
       img.Image resizedBack = grayBack;
       if (grayBack.width > availableWidth) {
         resizedBack = img.copyResize(
           grayBack,
           width: availableWidth.toInt(),
+          interpolation: img.Interpolation.linear,
+        );
+      }
+      if (resizedBack.height > maxDisplayHeight) {
+        resizedBack = img.copyResize(
+          resizedBack,
+          height: maxDisplayHeight,
           interpolation: img.Interpolation.linear,
         );
       }
@@ -100,16 +115,30 @@ class CarnetPhotocopyService {
                       decoration: pw.BoxDecoration(
                         border: pw.Border.all(color: PdfColor.fromHex('#999999'), width: 0.5),
                       ),
-                      padding: const pw.EdgeInsets.all(4),
-                      child: pw.Image(front, fit: pw.BoxFit.contain),
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Anverso', style: pw.TextStyle(fontSize: 11, color: PdfColor.fromHex('#555555'))),
+                          pw.SizedBox(height: 4),
+                          pw.Image(front, fit: pw.BoxFit.contain),
+                        ],
+                      ),
                     ),
                     pw.SizedBox(height: 8),
                     pw.Container(
                       decoration: pw.BoxDecoration(
                         border: pw.Border.all(color: PdfColor.fromHex('#999999'), width: 0.5),
                       ),
-                      padding: const pw.EdgeInsets.all(4),
-                      child: pw.Image(back, fit: pw.BoxFit.contain),
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Reverso', style: pw.TextStyle(fontSize: 11, color: PdfColor.fromHex('#555555'))),
+                          pw.SizedBox(height: 4),
+                          pw.Image(back, fit: pw.BoxFit.contain),
+                        ],
+                      ),
                     ),
                   ],
                 ),

@@ -1,8 +1,12 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class ServicioCompositorCartasCi {
   static Future<File?> composeLetterFromCiImages({
@@ -103,18 +107,15 @@ class ServicioCompositorCartasCi {
     required String fullName,
     required String ci,
     String? career = "Educación Superior",
+    Uint8List? signatureBytes,
   }) async {
     try {
-      final int pageW = 1275;
-      final int pageH = 1650;
-
-      final page = img.Image(width: pageW, height: pageH);
-      img.fill(page, color: img.ColorRgb8(255, 255, 255));
-
-      final font = img.arial24;
-      
+      final fontData = await rootBundle.load('assets/Fonts/Inter-Regular.ttf');
+      final font = pw.Font.ttf(fontData.buffer.asByteData());
+      final pdf = pw.Document();
       final now = DateTime.now();
-      final dateStr = "La Paz, ${now.day} de ${_getMonthName(now.month)} de ${now.year}";
+      final dateStr =
+          "La Paz, ${now.day} de ${_getMonthName(now.month)} de ${now.year}";
 
       final String body = """$dateStr
 
@@ -123,29 +124,83 @@ Dr. Richard Jorge Torrez Juaniquina Ph. D.
 DIRECTOR DE POSGRADO - UPEA
 Presente.-
 
-Ref.: SOLICITUD DE PRÓRROGA PARA LA PRESENTACIÓN DE LA FOTOCOPIA LEGALIZADA DEL TÍTULO ACADÉMICO O TITULO EN PROVISIÓN NACIONAL
+Ref.: SOLICITUD DE PRÓRROGA PARA LA PRESENTACIÓN DE LA FOTOCOPIA LEGALIZADA DEL TÍTULO ACADÉMICO O TÍTULO EN PROVISIÓN NACIONAL
 
 Distinguido Magister:
 Me es grato hacerle llegar un saludo cordial y fraterno a nombre mío, deseándole mis mejores deseos de éxitos en las labores que desempeña.
 El motivo de la presente es para solicitar a su autoridad una PRÓRROGA PARA LA PRESENTACIÓN DE LA FOTOCOPIA LEGALIZADA DEL TÍTULO ACADÉMICO O TÍTULO EN PROVISIÓN NACIONAL, para la inscripción al PROGRAMA: “Diplomado en: $career” MODALIDAD: Virtual; siendo que mi persona debe realizar solicitud en la Universidad de origen de estudios, por ese motivo es que le mando mi solicitud de prórroga. Por ese motivo es que le mando mi solicitud, esperando el visto bueno de su autoridad me despido.
 Atentamente,
+""";
 
-
-………………………………………………………………
-NOMBRE: $fullName
-C.I. $ci
-c/Dirección de Posgrado – UPEA
-c/Archivo persona.""";
-
-      _drawMultiLineText(page, body, font, 100, 150, 1075);
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          build: (context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  body,
+                  style: pw.TextStyle(
+                    font: font,
+                    fontSize: 12,
+                    height: 1.5,
+                  ),
+                ),
+                pw.SizedBox(height: 40),
+                if (signatureBytes != null) ...[
+                  pw.Center(
+                    child: pw.Container(
+                      width: 180,
+                      height: 80,
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: PdfColors.grey500, width: 0.5),
+                      ),
+                      child: pw.Image(
+                        pw.MemoryImage(signatureBytes),
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(height: 12),
+                ] else
+                  pw.SizedBox(height: 52),
+                pw.Text(
+                  "………………………………………………………………",
+                  textAlign: pw.TextAlign.center,
+                  style: pw.TextStyle(font: font, fontSize: 12),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  "NOMBRE: $fullName",
+                  style: pw.TextStyle(font: font, fontSize: 12),
+                ),
+                pw.Text(
+                  "C.I. $ci",
+                  style: pw.TextStyle(font: font, fontSize: 12),
+                ),
+                pw.Text(
+                  "c/Dirección de Posgrado – UPEA",
+                  style: pw.TextStyle(font: font, fontSize: 12),
+                ),
+                pw.Text(
+                  "c/Archivo persona.",
+                  style: pw.TextStyle(font: font, fontSize: 12),
+                ),
+              ],
+            );
+          },
+        ),
+      );
 
       final dir = await getApplicationDocumentsDirectory();
       final outDir = Directory('${dir.path}${Platform.pathSeparator}participant_documents');
       if (!await outDir.exists()) await outDir.create(recursive: true);
 
-      final fileName = 'prorroga_generada_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName = 'prorroga_generada_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final outFile = File('${outDir.path}${Platform.pathSeparator}$fileName');
-      await outFile.writeAsBytes(img.encodeJpg(page, quality: 85));
+      await outFile.writeAsBytes(await pdf.save());
       return outFile;
     } catch (e) {
       return null;
@@ -156,16 +211,13 @@ c/Archivo persona.""";
     required String fullName,
     required String ci,
     String? career = "Educación Superior",
+    Uint8List? signatureBytes,
   }) async {
     try {
-      final int pageW = 1275;
-      final int pageH = 1650;
+      final fontData = await rootBundle.load('assets/Fonts/Inter-Regular.ttf');
+      final font = pw.Font.ttf(fontData.buffer.asByteData());
+      final pdf = pw.Document();
 
-      final page = img.Image(width: pageW, height: pageH);
-      img.fill(page, color: img.ColorRgb8(255, 255, 255));
-
-      final font = img.arial24;
-      
       final now = DateTime.now();
       final dateStr = "La Paz, ${now.day} de ${_getMonthName(now.month)} de ${now.year}";
 
@@ -180,29 +232,69 @@ REF.: SOLICITUD DE INSCRIPCIÓN Y COMPROMISO
 Distinguido Director:
 Me es grato hacerle llegar un saludo cordial y fraterno a nombre mío, deseándole mis mejores deseos de éxitos en las labores que desempeña.
 El motivo de la presente es para solicitar a su autoridad la INSCRIPCIÓN AL PROGRAMA: “Diplomado en: $career” MODALIDAD Virtual, así mismo, me comprometo:
- Cumplir con todas las actividades académicas hasta culminar las clases del posgrado en la Universidad Pública de El Alto. 
- Realizar los pagos de colegiatura y matrícula, y presentar mis comprobantes de depósito en un máximo de 48 horas después de realizar el depósito.
- Completar mis documentos en un máximo de 8 meses después de concluir el último módulo del Diplomado.
+• Cumplir con todas las actividades académicas hasta culminar las clases del posgrado en la Universidad Pública de El Alto.
+• Realizar los pagos de colegiatura y matrícula, y presentar mis comprobantes de depósito en un máximo de 48 horas después de realizar el depósito.
+• Completar mis documentos en un máximo de 8 meses después de concluir el último módulo del Diplomado.
 Adjunto los requisitos exigidos por la Unidad de Posgrado.
 Sin más que decir, me despido con las consideraciones más distinguidas.
 Atentamente,
+""";
 
-
-………………………………………………………………
-$fullName
-C.I. $ci
-c/Dirección de Posgrado – UPEA
-c/Archivo persona""";
-
-      _drawMultiLineText(page, body, font, 100, 150, 1075);
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          build: (context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  body,
+                  style: pw.TextStyle(font: font, fontSize: 12, height: 1.5),
+                ),
+                pw.SizedBox(height: 40),
+                if (signatureBytes != null) ...[
+                  pw.Center(
+                    child: pw.Container(
+                      width: 180,
+                      height: 80,
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: PdfColors.grey500, width: 0.5),
+                      ),
+                      child: pw.Image(
+                        pw.MemoryImage(signatureBytes),
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(height: 12),
+                ] else
+                  pw.SizedBox(height: 52),
+                pw.Text(
+                  "………………………………………………………………",
+                  textAlign: pw.TextAlign.center,
+                  style: pw.TextStyle(font: font, fontSize: 12),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text(fullName, style: pw.TextStyle(font: font, fontSize: 12)),
+                pw.Text("C.I. $ci", style: pw.TextStyle(font: font, fontSize: 12)),
+                pw.Text("c/Dirección de Posgrado – UPEA",
+                    style: pw.TextStyle(font: font, fontSize: 12)),
+                pw.Text("c/Archivo persona",
+                    style: pw.TextStyle(font: font, fontSize: 12)),
+              ],
+            );
+          },
+        ),
+      );
 
       final dir = await getApplicationDocumentsDirectory();
       final outDir = Directory('${dir.path}${Platform.pathSeparator}participant_documents');
       if (!await outDir.exists()) await outDir.create(recursive: true);
 
-      final fileName = 'inscripcion_generada_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName = 'inscripcion_generada_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final outFile = File('${outDir.path}${Platform.pathSeparator}$fileName');
-      await outFile.writeAsBytes(img.encodeJpg(page, quality: 85));
+      await outFile.writeAsBytes(await pdf.save());
       return outFile;
     } catch (e) {
       return null;
@@ -218,44 +310,4 @@ c/Archivo persona""";
     return months[month - 1];
   }
 
-  static int _drawMultiLineText(
-    img.Image image,
-    String text,
-    img.BitmapFont font,
-    int x,
-    int y,
-    int maxWidth, {
-    int lineHeight = 30,
-  }) {
-    final lines = text.split('\n');
-    int currentY = y;
-    
-    // Average char width estimate for arial24
-    const double avgCharWidth = 12.0; 
-
-    for (final line in lines) {
-       if (line.isEmpty) {
-         currentY += lineHeight;
-         continue;
-       }
-       
-       final words = line.split(' ');
-       String buffer = '';
-       
-       for (final word in words) {
-          if ((buffer.length + word.length + 1) * avgCharWidth <= maxWidth) {
-             buffer += (buffer.isEmpty ? '' : ' ') + word;
-          } else {
-             img.drawString(image, buffer, font: font, x: x, y: currentY, color: img.ColorRgb8(0, 0, 0));
-             currentY += lineHeight;
-             buffer = word;
-          }
-       }
-       if (buffer.isNotEmpty) {
-          img.drawString(image, buffer, font: font, x: x, y: currentY, color: img.ColorRgb8(0, 0, 0));
-          currentY += lineHeight;
-       }
-    }
-    return currentY;
-  }
 }

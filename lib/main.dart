@@ -21,26 +21,24 @@ void main() async {
     }
   };
 
-  // Ejecutar la app primero para mostrar el splash inmediatamente
-  runApp(const ProviderScope(child: MyApp()));
-
-  // Inicializar environment en background con delay para no interferir con el inicio
-  Future.delayed(const Duration(milliseconds: 500), () async {
-    try {
-      await Environment.initEnvironment().timeout(
-        const Duration(milliseconds: 1000), // Reducido a 1 segundo
-        onTimeout: () {
-          if (kDebugMode) {
-            print('Timeout cargando .env, usando valores por defecto');
-          }
-        },
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error inicializando environment: $e');
-      }
+  // Cargar variables de entorno antes de arrancar la app (necesarias para Vision/Gemini)
+  try {
+    await Environment.initEnvironment().timeout(
+      const Duration(milliseconds: 1000),
+      onTimeout: () {
+        if (kDebugMode) {
+          print('Timeout cargando .env, usando valores por defecto');
+        }
+      },
+    );
+  } catch (e) {
+    if (kDebugMode) {
+      print('Error inicializando environment: $e');
     }
-  });
+  }
+
+  // Ejecutar la app
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

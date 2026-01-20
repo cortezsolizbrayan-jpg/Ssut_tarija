@@ -113,12 +113,18 @@ class ServicioOcrInteligenteIdentidad {
     if (parts.length == 2) {
       return {'nombres': parts.first, 'apellidos': parts.last};
     }
-    if (parts.length == 3) {
-      return {'nombres': parts.first, 'apellidos': '${parts[1]} ${parts[2]}'};
-    }
-    final nombres = parts.take(2).join(' ');
-    final apellidos = parts.skip(2).join(' ');
+    // Heurística: personas suelen tener 1-2 nombres y 2 apellidos.
+    // Tomamos siempre los últimos 2 tokens como apellidos cuando hay 3+ partes.
+    final apellidosTokens = parts.skip(parts.length - 2).toList();
+    final nombresTokens = parts.take(parts.length - 2).toList();
+    final nombres = nombresTokens.join(' ');
+    final apellidos = apellidosTokens.join(' ');
     return {'nombres': nombres, 'apellidos': apellidos};
+  }
+
+  static bool _isFamilyMemberLine(String line) {
+    final upper = line.toUpperCase();
+    return upper.contains('MADRE') || upper.contains('PADRE') || upper.contains('MADRES') || upper.contains('PADRES');
   }
 
   static Map<String, String> _mergePrefer(
@@ -174,6 +180,8 @@ class ServicioOcrInteligenteIdentidad {
       'FECHA DE NACIMIENTO',
       'NACIMIENTO',
       'NAC.',
+      'NACIDO EL',
+      'NACIO EL',
     ]);
     result['fechaEmision'] = _extractDateAfterLabel(text, [
       'FECHA DE EMISION',
@@ -186,6 +194,8 @@ class ServicioOcrInteligenteIdentidad {
       'VENCIMIENTO',
       'VALIDEZ',
       'VENCE',
+      'EXPIRA',
+      'EXPIRA EL',
     ]);
 
     return result;
@@ -218,6 +228,8 @@ class ServicioOcrInteligenteIdentidad {
         'VALIDA HASTA',
         'VALIDEZ',
         'VENCE',
+        'EXPIRA',
+        'EXPIRA EL',
       ]),
     };
   }
@@ -260,34 +272,29 @@ class ServicioOcrInteligenteIdentidad {
       if (upper.contains('FECHA') || upper.contains('NAC')) {
         continue;
       }
-      for (final match in RegExp(r'\b(\d{5,11})\s*([A-Z]{1,2})?\b')
+      // Evitar líneas de SECCIÓN / SERIE
+      if (upper.contains('SECCI') || upper.contains('SERIE')) continue;
+
+      for (final match in RegExp(r'(?:NO\\.?|NRO\\.?|N[°º]|N)\\s*[:\\-]?\\s*([0-9]{6,12})')
           .allMatches(upper)) {
         final number = match.group(1) ?? '';
-        final ext = (match.group(2) ?? '').trim();
-        if (number.length < 5) continue;
-        if (upper.contains('/') || upper.contains('-')) {
-          if (RegExp(r'\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}').hasMatch(upper)) {
-            continue;
-          }
-        }
-        if (ext.isNotEmpty) {
-          const validExt = [
-            'LP',
-            'SC',
-            'CB',
-            'OR',
-            'PT',
-            'CH',
-            'TJ',
-            'BE',
-            'PA',
-          ];
-          if (validExt.contains(ext)) {
-            candidates.add('$number $ext');
-            continue;
-          }
-        }
+        if (number.length < 6) continue;
         candidates.add(number);
+      }
+
+      // Si no hay prefijo, buscar números largos y descartar fechas
+      if (!upper.contains('NO') && !upper.contains('NRO') && !upper.contains('N°')) {
+        for (final match in RegExp(r'\\b(\\d{7,12})\\b').allMatches(upper)) {
+          final number = match.group(1) ?? '';
+          if (number.length < 7) continue;
+          if (upper.contains('/') || upper.contains('-')) {
+            if (RegExp(r'\\d{1,2}[/.-]\\d{1,2}[/.-]\\d{2,4}').hasMatch(upper)) {
+              continue;
+            }
+          }
+          if (upper.contains('SECCI') || upper.contains('SERIE')) continue;
+          candidates.add(number);
+        }
       }
     }
     if (candidates.isEmpty) return '';
@@ -330,6 +337,12 @@ class ServicioOcrInteligenteIdentidad {
             final next = lines[i + 1].trim();
             final dateNext = _extractDateFromText(next);
             if (dateNext.isNotEmpty) return dateNext;
+          }
+          // Búsqueda extendida en las siguientes 3 líneas si no se encontró
+          for (int j = i + 2; j <= i + 3 && j < lines.length; j++) {
+            final extra = lines[j].trim();
+            final dateExtra = _extractDateFromText(extra);
+            if (dateExtra.isNotEmpty) return dateExtra;
           }
         }
       }
@@ -469,23 +482,45 @@ class ServicioOcrInteligenteIdentidad {
 
     // 2) Intentar fechas con meses en texto: "14 DE SEPTIEMBRE DE 1999"
     final upper = _replaceAccents(raw.toUpperCase());
-    final monthMatch = RegExp(
-      r'(\d{1,2})\s+DE\s+([A-ZÁÉÍÓÚ]+)\s+DE\s+(\d{2,4})',
-      caseSensitive: false,
-    ).firstMatch(upper);
-    if (monthMatch != null) {
-      final day = monthMatch.group(1)!.padLeft(2, '0');
-      final monthName = monthMatch.group(2) ?? '';
-      final monthNum = _spanishMonthToNumber(monthName);
-      var year = monthMatch.group(3) ?? '';
-      if (year.length == 2) {
-        final y = int.tryParse(year) ?? 0;
-        year = y > 30 ? '19$year' : '20$year';
+    final monthPatterns = [
+      // "14 DE SEPTIEMBRE DE 1999" o con faltas de espacios
+      RegExp(r'(\d{1,2})\s*DE\s*([A-ZÁÉÍÓÚ]+)\s*DE\s*(\d{2,4})', caseSensitive: false),
+      // "14 SEPTIEMBRE 1999" sin "DE"
+      RegExp(r'(\d{1,2})\s*([A-ZÁÉÍÓÚ]+)\s*(\d{2,4})', caseSensitive: false),
+      // "14DESEPTIEMBREDE1999" fusionado
+      RegExp(r'(\d{1,2})\s*DE?([A-ZÁÉÍÓÚ]+)DE?(\d{2,4})', caseSensitive: false),
+    ];
+    for (final pattern in monthPatterns) {
+      final match = pattern.firstMatch(upper);
+      if (match != null) {
+        final day = match.group(1)!.padLeft(2, '0');
+        final monthName = match.group(2) ?? '';
+        final monthNum = _spanishMonthToNumber(monthName);
+        var year = match.group(3) ?? '';
+        if (year.length == 2) {
+          final y = int.tryParse(year) ?? 0;
+          year = y > 30 ? '19$year' : '20$year';
+        }
+        if (monthNum != null) {
+          final mm = monthNum.toString().padLeft(2, '0');
+          return '$day/$mm/$year';
+        }
       }
-      if (monthNum != null) {
-        final mm = monthNum.toString().padLeft(2, '0');
-        return '$day/$mm/$year';
-      }
+    }
+
+    // 3) Números pegados: 14091999 o 140999 (ddmmyyyy / ddmmyy)
+    final packedDigits = RegExp(r'\b(\d{8}|\d{6})\b').firstMatch(raw);
+    if (packedDigits != null) {
+      final value = packedDigits.group(1)!;
+      final day = value.substring(0, 2);
+      final month = value.substring(2, 4);
+      final yearRaw = value.length == 8 ? value.substring(4, 8) : value.substring(4, 6);
+      final year = value.length == 8
+          ? yearRaw
+          : (int.tryParse(yearRaw) ?? 0) > 30
+              ? '19$yearRaw'
+              : '20$yearRaw';
+      return '$day/$month/$year';
     }
 
     return '';

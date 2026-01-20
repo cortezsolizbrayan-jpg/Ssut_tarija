@@ -22,8 +22,8 @@ class GeminiStructuredOcrService {
   static String _model() {
     final fromEnv = dotenv.env['GEMINI_MODEL'];
     if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
-    // Default a modelo estable y accesible con API key de Google AI Studio
-    return 'gemini-1.5-flash-latest';
+    // Modelo por defecto (Google AI Studio)
+    return 'gemini-1.5-flash';
   }
 
   /// Retorna un mapa con campos: ci, nombres, apellidos, fechaNacimiento, fechaEmision, fechaExpiracion.
@@ -33,7 +33,14 @@ class GeminiStructuredOcrService {
   }) async {
     final apiKey = dotenv.env['GOOGLE_GEMINI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) return null;
-    final model = _model();
+    final candidatesModels = <String>[
+      _model(),
+      // Fallbacks en caso de 404 del endpoint
+      'gemini-1.5-flash-002',
+      'gemini-1.5-flash-001',
+      'gemini-1.5-pro',
+      'gemini-pro-vision',
+    ];
 
     final prompt = '''
 Eres un sistema de extracción de datos de Cédulas de Identidad de Bolivia.
@@ -60,48 +67,56 @@ Texto reverso:
 ${backText ?? ''}
 ''';
 
-    try {
-      final resp = await _dio.post(
-        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent',
-        queryParameters: {'key': apiKey},
-        data: {
-          "contents": [
-            {
-              "parts": [
-                {"text": prompt}
-              ]
-            }
-          ]
-        },
-        options: Options(
-          // Si el modelo o la ruta no existen, no explotar: devolver null
-          validateStatus: (status) => status != null && status < 500,
-        ),
+    for (final model in candidatesModels) {
+      debugPrint(
+        '→ Gemini structuring call (model: $model, front chars: ${frontText.length}, back chars: ${backText?.length ?? 0})',
       );
+      try {
+        final resp = await _dio.post(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent',
+          queryParameters: {'key': apiKey},
+          data: {
+            "contents": [
+              {
+                "parts": [
+                  {"text": prompt}
+                ]
+              }
+            ]
+          },
+          options: Options(
+            validateStatus: (status) => status != null && status < 500,
+          ),
+        );
 
-      // Si no es 2xx, salimos sin romper el flujo
-      final status = resp.statusCode ?? 0;
-      if (status < 200 || status >= 300) {
-        debugPrint('Gemini OCR structuring error: status $status, model=$model, body: ${resp.data}');
+        final status = resp.statusCode ?? 0;
+        if (status < 200 || status >= 300) {
+          debugPrint('Gemini OCR structuring error: status $status, model=$model, body: ${resp.data}');
+          // Si es 404, probamos el siguiente modelo
+          if (status == 404) continue;
+          return null;
+        }
+
+        final candidates = resp.data?['candidates'] as List<dynamic>?;
+        if (candidates == null || candidates.isEmpty) continue;
+        final text = candidates.first['content']?['parts']?[0]?['text'] as String?;
+        if (text == null) continue;
+
+        debugPrint('✔ Gemini structuring response OK (model: $model)');
+
+        final jsonString = _extractJsonString(text);
+        if (jsonString == null) continue;
+
+        final decoded = jsonDecode(jsonString);
+        if (decoded is! Map<String, dynamic>) continue;
+
+        return decoded.map((k, v) => MapEntry(k, v?.toString() ?? ''));
+      } catch (e) {
+        debugPrint('Gemini OCR structuring error: $e');
         return null;
       }
-
-      final candidates = resp.data?['candidates'] as List<dynamic>?;
-      if (candidates == null || candidates.isEmpty) return null;
-      final text = candidates.first['content']?['parts']?[0]?['text'] as String?;
-      if (text == null) return null;
-
-      final jsonString = _extractJsonString(text);
-      if (jsonString == null) return null;
-
-      final decoded = jsonDecode(jsonString);
-      if (decoded is! Map<String, dynamic>) return null;
-
-      return decoded.map((k, v) => MapEntry(k, v?.toString() ?? ''));
-    } catch (e) {
-      debugPrint('Gemini OCR structuring error: $e');
-      return null;
     }
+    return null;
   }
 
   static String? _extractJsonString(String raw) {

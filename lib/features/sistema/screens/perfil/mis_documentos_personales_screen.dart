@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:animate_do/animate_do.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -54,6 +57,7 @@ class _MisDocumentosPersonalesScreenState
   String? _tituloPath;
   String? _prorrogaPath;
   File? _profilePhoto;
+  Uint8List? _signaturePng;
   Map<String, dynamic>? _participantDocs;
   bool _deferDocuments = false;
 
@@ -1077,6 +1081,7 @@ class _MisDocumentosPersonalesScreenState
     const key = 'prorroga_path';
     setState(() => _busyKey = key);
     try {
+      // Usa la última firma capturada (si existe)
       final personalData = await LocalStorageService.getPersonalData();
       final name =
           '${personalData?['nombre'] ?? ''} ${personalData?['apPaterno'] ?? ''} ${personalData?['apMaterno'] ?? ''}'
@@ -1086,6 +1091,7 @@ class _MisDocumentosPersonalesScreenState
       final out = await ServicioCompositorCartasCi.generateProrrogaLetter(
         fullName: name.isEmpty ? 'PARTICIPANTE' : name,
         ci: ci,
+        signatureBytes: _signaturePng,
       );
       if (out == null) return;
 
@@ -1311,197 +1317,311 @@ C.I. $ci""";
     VoidCallback? onConfirm,
     String confirmText = "Aceptar",
   }) {
+    _signaturePng = null;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      builder: (ctx) {
+        final signatureKey = GlobalKey();
+        List<Offset?> points = [];
+
+        Future<Uint8List?> captureSignature() async {
+          if (points.length < 2) return null;
+          try {
+            final boundary = signatureKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+            if (boundary == null) return null;
+            final image = await boundary.toImage(pixelRatio: 3.0);
+            final data = await image.toByteData(format: ui.ImageByteFormat.png);
+            return data?.buffer.asUint8List();
+          } catch (_) {
+            return null;
+          }
+        }
+
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                color: Colors.white,
+                color: Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              child: Row(
+              child: Column(
                 children: [
+                  // Header
                   Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: kPrimaryColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                     ),
-                    child: const Icon(
-                      Icons.description_outlined,
-                      color: kPrimaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontFamily: fontHeading,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: kTextColor,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: kTextSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Scrollable Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 15,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Paper Header Effect
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(2),
+                            color: kPrimaryColor.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.description_outlined,
+                            color: kPrimaryColor,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Actual Text Content
-                      SelectableText(
-                        content,
-                        style: const TextStyle(
-                          fontFamily:
-                              'Times New Roman', // Serif looks more legal/official? Or use standard clean font
-                          fontSize: 16,
-                          height: 1.6,
-                          color: Color(0xFF334155),
-                        ),
-                        textAlign: TextAlign.justify,
-                      ),
-
-// Signature Placeholder
-                      if (onConfirm != null) ...[
-                        const Divider(height: 40, thickness: 1),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.check_circle_outline,
-                              color: kSuccessColor,
-                              size: 20,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontFamily: fontHeading,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: kTextColor,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Al continuar, aceptas firmar este documento digitalmente con tus datos registrados.",
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: kTextSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Scrollable Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 15,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Paper Header Effect
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Actual Text Content
+                            SelectableText(
+                              content,
+                              style: const TextStyle(
+                                fontFamily: 'Times New Roman',
+                                fontSize: 16,
+                                height: 1.6,
+                                color: Color(0xFF334155),
+                              ),
+                              textAlign: TextAlign.justify,
+                            ),
+
+                            if (onConfirm != null) ...[
+                              const Divider(height: 32, thickness: 1),
+                              Text(
+                                "Firma digital",
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                  fontStyle: FontStyle.italic,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              RepaintBoundary(
+                                key: signatureKey,
+                                child: Container(
+                                  height: 170,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF5F5F5),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: points.length < 2
+                                          ? const Color(0xFFCBD5E1)
+                                          : kPrimaryColor.withOpacity(0.6),
+                                    ),
+                                  ),
+                                  child: GestureDetector(
+                                    onPanStart: (details) {
+                                      final box = signatureKey.currentContext?.findRenderObject() as RenderBox?;
+                                      if (box == null) return;
+                                      final local = box.globalToLocal(details.globalPosition);
+                                      setModalState(() {
+                                        points = List.of(points)..add(local);
+                                      });
+                                    },
+                                    onPanUpdate: (details) {
+                                      final box = signatureKey.currentContext?.findRenderObject() as RenderBox?;
+                                      if (box == null) return;
+                                      final local = box.globalToLocal(details.globalPosition);
+                                      setModalState(() {
+                                        points = List.of(points)..add(local);
+                                      });
+                                    },
+                                    onPanEnd: (_) {
+                                      setModalState(() {
+                                        points = List.of(points)..add(null);
+                                      });
+                                    },
+                                    child: CustomPaint(
+                                      painter: _SignaturePainter(points),
+                                      child: Container(
+                                        alignment: Alignment.center,
+                                        child: points.length < 2
+                                            ? const Text(
+                                                "Firma aquí con tu dedo",
+                                                style: TextStyle(
+                                                  color: Color(0xFF94A3B8),
+                                                  fontSize: 13,
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "Puedes borrar y volver a firmar si lo necesitas.",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      setModalState(() => points = []);
+                                      _signaturePng = null;
+                                    },
+                                    icon: const Icon(Icons.refresh, size: 16),
+                                    label: const Text("Limpiar"),
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 24, thickness: 1),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline,
+                                    color: kSuccessColor,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "Al continuar, aceptas firmar este documento digitalmente con tus datos registrados.",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Fixed Bottom Action
+                  if (onConfirm != null)
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                      ),
+                      child: SafeArea(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Cancelar",
+                                  style: TextStyle(
+                                    color: kTextSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  if (onConfirm != null) {
+                                    final png = await captureSignature();
+                                    if (mounted) {
+                                      setState(() => _signaturePng = png);
+                                    }
+                                  }
+                                  onConfirm?.call();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kPrimaryColor,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  confirmText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Fixed Bottom Action
-            if (onConfirm != null)
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: SafeArea(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(color: Color(0xFFCBD5E1)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            "Cancelar",
-                            style: TextStyle(
-                              color: kTextSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: onConfirm,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            confirmText,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -2474,4 +2594,31 @@ class _DocUploadCard extends StatelessWidget {
     );
   }
 
+}
+
+class _SignaturePainter extends CustomPainter {
+  _SignaturePainter(this.points);
+
+  final List<Offset?> points;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF0F172A)
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round;
+
+    for (int i = 0; i < points.length - 1; i++) {
+      final p1 = points[i];
+      final p2 = points[i + 1];
+      if (p1 != null && p2 != null) {
+        canvas.drawLine(p1, p2, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SignaturePainter oldDelegate) {
+    return oldDelegate.points != points;
+  }
 }

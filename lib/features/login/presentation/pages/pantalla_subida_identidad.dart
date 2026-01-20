@@ -35,6 +35,9 @@ class _IDUploadScreenState extends State<IDUploadScreen>
   File? _backImage;
   final ImagePicker _picker = ImagePicker();
   bool _isProcessing = false;
+  double _progress = 0.0;
+  DateTime? _processStart;
+  bool _isFlipDialogOpen = false;
   late final AnimationController _hintController;
   late final Animation<double> _hintOpacity;
   late final Animation<Offset> _hintSlide;
@@ -55,6 +58,20 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     ).animate(
       CurvedAnimation(parent: _hintController, curve: Curves.easeInOut),
     );
+  }
+
+  void _setProgress(double value) {
+    if (!mounted) return;
+    setState(() {
+      _progress = value.clamp(0.0, 1.0);
+    });
+  }
+
+  void _logStep(String message) {
+    final elapsed = _processStart != null
+        ? DateTime.now().difference(_processStart!).inMilliseconds
+        : 0;
+    debugPrint("[OCR ${elapsed}ms] $message");
   }
 
   String _pickBestCIFromTexts(String? front, String? back, String current) {
@@ -93,6 +110,14 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     return best;
   }
 
+  bool _isFamilyMemberLine(String line) {
+    final upper = line.toUpperCase();
+    return upper.contains('MADRE') ||
+        upper.contains('PADRE') ||
+        upper.contains('MADRES') ||
+        upper.contains('PADRES');
+  }
+
   @override
   void dispose() {
     _hintController.dispose();
@@ -114,7 +139,10 @@ class _IDUploadScreenState extends State<IDUploadScreen>
 
     setState(() {
       _isProcessing = true;
+      _progress = 0.05;
+      _processStart = DateTime.now();
     });
+    _logStep("Iniciando OCR");
 
     try {
       // Usar TextRecognizer con mejor configuración para OCR más preciso
@@ -140,10 +168,13 @@ class _IDUploadScreenState extends State<IDUploadScreen>
       // Archivos preparados para OCR (preprocesados y persistentes)
       final frontOcrFile = await _prepareFileForOcr(_frontImage!);
       final backOcrFile = await _prepareFileForOcr(_backImage!);
+      _setProgress(0.15);
+      _logStep("Archivos preparados para OCR");
 
       // Intentar Google Vision primero si está habilitado
       if (CloudVisionOcrService.isEnabled) {
         try {
+          _logStep("Llamando a Google Vision (frente y reverso)");
           rawVisionFrontText = await CloudVisionOcrService.extractText(frontOcrFile);
           rawVisionBackText = backOcrFile.path.isNotEmpty ? await CloudVisionOcrService.extractText(backOcrFile) : null;
           if (rawVisionFrontText != null) {
@@ -181,9 +212,12 @@ class _IDUploadScreenState extends State<IDUploadScreen>
             usedRemote = true; // Considerar Vision como OCR remoto principal siempre que responda
             usedVision = true;
             debugPrint("OCR Google Vision aplicado con éxito");
+            _setProgress(0.45);
+            _logStep("Vision OK, extrayendo campos");
 
             // Refinar con Gemini si está habilitado (mejor clasificación de campos).
             if (GeminiStructuredOcrService.isEnabled) {
+              _logStep("Llamando a Gemini structuring");
               final gemini = await GeminiStructuredOcrService.structureOcr(
                 frontText: rawVisionFrontText!,
                 backText: rawVisionBackText,
@@ -198,6 +232,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
                 extractedFechaExpiracion =
                     _pickFirstNonEmpty([gemini['fechaExpiracion'] ?? '', extractedFechaExpiracion]);
               }
+              _setProgress(0.6);
             }
           }
         } catch (e) {
@@ -214,6 +249,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
               extractedFechaExpiracion.isEmpty ||
               extractedFechaNacimiento.isEmpty)) {
         try {
+          _logStep("Reintento Vision con preprocesado mejorado");
           final enhancedFront = await _preprocessForOcrEnhanced(frontOcrFile);
           final enhancedBack = await _preprocessForOcrEnhanced(backOcrFile);
           final visionFrontText = await CloudVisionOcrService.extractText(enhancedFront);
@@ -248,8 +284,11 @@ class _IDUploadScreenState extends State<IDUploadScreen>
             usedRemote = true;
             usedVision = true;
             debugPrint("OCR Vision (mejorado) aplicado");
+            _setProgress(0.75);
+            _logStep("Vision mejorado OK, extrayendo campos");
 
             if (GeminiStructuredOcrService.isEnabled) {
+              _logStep("Llamando a Gemini structuring (mejorado)");
               final gemini = await GeminiStructuredOcrService.structureOcr(
                 frontText: visionFrontText,
                 backText: visionBackText,
@@ -264,76 +303,11 @@ class _IDUploadScreenState extends State<IDUploadScreen>
                 extractedFechaExpiracion =
                     _pickFirstNonEmpty([gemini['fechaExpiracion'] ?? '', extractedFechaExpiracion]);
               }
+              _setProgress(0.85);
             }
           }
         } catch (e) {
           debugPrint("Error Vision (mejorado): $e");
-        }
-      }
-
-      // Reintento Vision con preprocesado más agresivo si faltan campos clave
-      if (CloudVisionOcrService.isEnabled &&
-          (extractedCI.isEmpty ||
-              extractedNombres.isEmpty ||
-              extractedApellidos.isEmpty ||
-              extractedFechaEmision.isEmpty ||
-              extractedFechaExpiracion.isEmpty ||
-              extractedFechaNacimiento.isEmpty)) {
-        try {
-          final enhancedFront = await _preprocessForOcrEnhanced(frontOcrFile);
-          final enhancedBack = await _preprocessForOcrEnhanced(backOcrFile);
-          final visionFrontText = await CloudVisionOcrService.extractText(enhancedFront);
-          final visionBackText = await CloudVisionOcrService.extractText(enhancedBack);
-          if (visionFrontText != null) {
-            rawVisionFrontText ??= visionFrontText;
-            rawVisionBackText ??= visionBackText;
-            final visionData = ServicioOcrInteligenteIdentidad.extractDataFromText(
-              visionFrontText,
-              visionBackText,
-            );
-            extractedCI = _pickFirstNonEmpty([extractedCI, visionData['ci']?.toString() ?? '']);
-            extractedNombres = _pickFirstNonEmpty([extractedNombres, visionData['nombres']?.toString() ?? '']);
-            extractedApellidos =
-                _pickFirstNonEmpty([extractedApellidos, visionData['apellidos']?.toString() ?? '']);
-            extractedFechaEmision =
-                _pickFirstNonEmpty([extractedFechaEmision, visionData['fechaEmision']?.toString() ?? '']);
-            extractedFechaExpiracion =
-                _pickFirstNonEmpty([extractedFechaExpiracion, visionData['fechaExpiracion']?.toString() ?? '']);
-            extractedFechaNacimiento =
-                _pickFirstNonEmpty([extractedFechaNacimiento, visionData['fechaNacimiento']?.toString() ?? '']);
-            extractedLugarNacimiento =
-                _pickFirstNonEmpty([extractedLugarNacimiento, visionData['lugarNacimiento']?.toString() ?? '']);
-            extractedProfesion =
-                _pickFirstNonEmpty([extractedProfesion, visionData['profesion']?.toString() ?? '']);
-            extractedEstadoCivil =
-                _pickFirstNonEmpty([extractedEstadoCivil, visionData['estadoCivil']?.toString() ?? '']);
-            extractedDomicilio =
-                _pickFirstNonEmpty([extractedDomicilio, visionData['domicilio']?.toString() ?? '']);
-            extractedGrupoSanguineo =
-                _pickFirstNonEmpty([extractedGrupoSanguineo, visionData['grupoSanguineo']?.toString() ?? '']);
-            usedRemote = true;
-            usedVision = true;
-            debugPrint("OCR Vision mejorado aplicado");
-
-            if (GeminiStructuredOcrService.isEnabled) {
-              final gemini = await GeminiStructuredOcrService.structureOcr(
-                frontText: visionFrontText,
-                backText: visionBackText,
-              );
-              if (gemini != null && gemini.isNotEmpty) {
-                extractedCI = _pickFirstNonEmpty([gemini['ci'] ?? '', extractedCI]);
-                extractedNombres = _pickFirstNonEmpty([gemini['nombres'] ?? '', extractedNombres]);
-                extractedApellidos = _pickFirstNonEmpty([gemini['apellidos'] ?? '', extractedApellidos]);
-                extractedFechaNacimiento =
-                    _pickFirstNonEmpty([gemini['fechaNacimiento'] ?? '', extractedFechaNacimiento]);
-                extractedFechaEmision = _pickFirstNonEmpty([gemini['fechaEmision'] ?? '', extractedFechaEmision]);
-                extractedFechaExpiracion =
-                    _pickFirstNonEmpty([gemini['fechaExpiracion'] ?? '', extractedFechaExpiracion]);
-              }
-            }
-          }
-        } catch (e) {
-          debugPrint("Error Vision (reintento mejorado): $e");
         }
       }
 
@@ -628,6 +602,8 @@ class _IDUploadScreenState extends State<IDUploadScreen>
             duration: Duration(seconds: 2),
           ),
         );
+        _setProgress(1.0);
+        _logStep("Validación completa, navegando a reconocimiento facial");
 
         // Cerrar cualquier diálogo o modal abierto antes de navegar
         if (mounted) {
@@ -685,6 +661,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
           _isProcessing = false;
         });
       }
+      _logStep("Proceso finalizado");
     }
   }
 
@@ -1364,6 +1341,9 @@ class _IDUploadScreenState extends State<IDUploadScreen>
             !nextUpper.contains('SECCION') &&
             !nextUpper.contains('FECHA') &&
             !nextUpper.contains('BIO') &&
+            !nextUpper.contains('PLURINAC') &&
+            !nextUpper.contains('ESTADO') &&
+            !nextUpper.contains('BOLIVIA') &&
             !_isCommonNonNameWord(next) &&
             !_isLocationOrAddress(next) &&
             !_containsProfession(next)) {
@@ -1402,6 +1382,17 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     if (apellidosClean.isNotEmpty && _containsProfession(apellidosClean)) {
       return {'nombres': nombresClean, 'apellidos': ''};
     }
+    // Filtrar nombres que son ruido ("ESTADO PLURINACIONAL", etc.)
+    if (nombresClean.toUpperCase().contains('PLURINAC') ||
+        nombresClean.toUpperCase().contains('ESTADO') ||
+        nombresClean.toUpperCase().contains('BOLIVIA')) {
+      return {'nombres': '', 'apellidos': apellidosClean};
+    }
+    if (apellidosClean.toUpperCase().contains('PLURINAC') ||
+        apellidosClean.toUpperCase().contains('ESTADO') ||
+        apellidosClean.toUpperCase().contains('BOLIVIA')) {
+      return {'nombres': nombresClean, 'apellidos': ''};
+    }
 
     debugPrint(
       "✓ RESULTADO FINAL - Nombres: '$nombresClean', Apellidos: '$apellidosClean'",
@@ -1427,7 +1418,8 @@ class _IDUploadScreenState extends State<IDUploadScreen>
       if (strongNamePattern.hasMatch(line) &&
           !_isCarnetText(line) &&
           !_containsProfession(line) &&
-          !_isLocationOrAddress(line)) {
+          !_isLocationOrAddress(line) &&
+          !_isFamilyMemberLine(line)) {
         debugPrint("✓ Nombre detectado por patrón fuerte: $line");
         return _removeProfessions(line);
       }
@@ -1478,6 +1470,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
       for (int i = 0; i < linesAfterPertenece.length && i < 8; i++) {
         final line = linesAfterPertenece[i].trim();
         if (line.isEmpty) continue;
+        if (_isFamilyMemberLine(line)) continue;
 
         // Remover "A:" si está al inicio
         final cleanLine = line
@@ -1703,7 +1696,8 @@ class _IDUploadScreenState extends State<IDUploadScreen>
               // Validación más flexible: verificar que no sea un lugar, profesión o texto del carnet
               if (!_isLocationOrAddress(clean) &&
                   !_containsProfession(clean) &&
-                  !_isCarnetText(clean)) {
+                  !_isCarnetText(clean) &&
+                  !_isFamilyMemberLine(clean)) {
                 // Excluir líneas que son claramente campos del carnet
                 final lineUpper = nextLine.toUpperCase();
                 if (!lineUpper.contains('SERIE') &&
@@ -2052,6 +2046,9 @@ class _IDUploadScreenState extends State<IDUploadScreen>
       'VIGENCIA',
       'VENCE',
       'VENCIMIENTO',
+      'EXPIRA',
+      'EXPIRA EL',
+      'EXPIRATION',
     ];
 
     // Buscar en cada línea
@@ -2139,7 +2136,10 @@ class _IDUploadScreenState extends State<IDUploadScreen>
           lineUpper.contains('VALIDA HASTA') ||
           lineUpper.contains('VIGENCIA') ||
           lineUpper.contains('VENCE') ||
-          lineUpper.contains('VENCIMIENTO')) {
+          lineUpper.contains('VENCIMIENTO') ||
+          lineUpper.contains('EXPIRA') ||
+          lineUpper.contains('EXPIRA EL') ||
+          lineUpper.contains('EXPIRATION')) {
         // Buscar fecha en un rango más amplio (línea actual y siguientes 5)
         for (int j = i; j < lines.length && j < i + 6; j++) {
           final searchLine = lines[j].trim();
@@ -2619,14 +2619,16 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     final decoded = img.decodeImage(imageBytes);
     if (decoded == null) return imageFile;
 
+    // Recortar bordes blancos o ruido externo para evitar texto fuera del carnet
+    img.Image processed = _autoCropBorders(decoded);
+
     const int minShortSide = 1200;
     const int maxLongSide = 2000;
-    int width = decoded.width;
-    int height = decoded.height;
+    int width = processed.width;
+    int height = processed.height;
     int shortSide = width < height ? width : height;
     int longSide = width > height ? width : height;
 
-    img.Image processed = decoded;
     if (shortSide < minShortSide) {
       final scale = minShortSide / shortSide;
       processed = img.copyResize(
@@ -2711,7 +2713,9 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     final decoded = img.decodeImage(bytes);
     if (decoded == null) return imageFile;
 
-    var processed = img.grayscale(decoded);
+    final cropped = _autoCropBorders(decoded);
+
+    var processed = img.grayscale(cropped);
     processed = img.adjustColor(
       processed,
       contrast: 1.35,
@@ -2719,6 +2723,41 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     );
 
     return _writeOcrImage(processed, suffix: 'ocr_enhanced');
+  }
+
+  img.Image _autoCropBorders(img.Image src) {
+    const threshold = 245; // casi blanco
+    int minX = src.width, minY = src.height, maxX = 0, maxY = 0;
+    bool found = false;
+
+    for (int y = 0; y < src.height; y++) {
+      for (int x = 0; x < src.width; x++) {
+        final l = img.getLuminance(src.getPixel(x, y));
+        if (l < threshold) {
+          found = true;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (!found) return src;
+
+    const pad = 8;
+    final cropX = (minX - pad).clamp(0, src.width - 1);
+    final cropY = (minY - pad).clamp(0, src.height - 1);
+    final cropW = (maxX - cropX + 1 + pad * 2).clamp(1, src.width - cropX);
+    final cropH = (maxY - cropY + 1 + pad * 2).clamp(1, src.height - cropY);
+
+    return img.copyCrop(
+      src,
+      x: cropX,
+      y: cropY,
+      width: cropW,
+      height: cropH,
+    );
   }
 
   Future<double> _estimateSharpness(File imageFile) async {
@@ -3138,24 +3177,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
           debugPrint("Error guardando ruta de CI: $e");
         }
 
-        // Si es anverso y aún no hay foto de perfil procesada, generar fondo plomo 4x4
-        if (isFront) {
-          try {
-            final processedProfile = await ProfileImageProcessorService.processProfileImage(
-              finalImage,
-              isFirstPhoto: true,
-            );
-            if (processedProfile != null) {
-              await LocalStorageService.saveProfileImage(processedProfile);
-              // Guardar también en documentos del participante para reuso
-              final current = await LocalStorageService.getParticipantDocumentsData() ?? <String, dynamic>{};
-              current['profile_photo_path'] = processedProfile.path;
-              await LocalStorageService.saveParticipantDocumentsData(current);
-            }
-          } catch (e) {
-            debugPrint("Error procesando foto de perfil 4x4: $e");
-          }
-        }
+        // Nota: la foto 4x4 ahora se genera desde el escaneo facial.
 
         // Mostrar animación de volteo si es frontal (después de actualizar el estado)
         if (isFront) {
@@ -3181,7 +3203,8 @@ class _IDUploadScreenState extends State<IDUploadScreen>
 
   void _showFlipAnimation() {
     // Animación de volteo del carnet
-    if (!mounted) return;
+    if (!mounted || _isFlipDialogOpen) return;
+    _isFlipDialogOpen = true;
 
     showDialog(
       context: context,
@@ -3193,7 +3216,8 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     // Cerrar después de la animación y abrir la cámara para el reverso
     Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) {
-        Navigator.of(context).pop(); // Cerrar animación
+        Navigator.of(context, rootNavigator: true).pop(); // Cerrar animación
+        _isFlipDialogOpen = false;
 
         // Esperar un poco y abrir la cámara para tomar el reverso
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -3201,6 +3225,8 @@ class _IDUploadScreenState extends State<IDUploadScreen>
             _showPickerOptions(false); // Abrir opciones para tomar el reverso
           }
         });
+      } else {
+        _isFlipDialogOpen = false;
       }
     });
   }
@@ -3363,7 +3389,25 @@ class _IDUploadScreenState extends State<IDUploadScreen>
                     elevation: 0,
                   ),
                   child: _isProcessing
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            LinearProgressIndicator(
+                              value: _progress,
+                              backgroundColor: Colors.white24,
+                              color: Colors.white,
+                              minHeight: 6,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Procesando... ${(_progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        )
                       : const Text(
                           'Subir y Continuar',
                           style: TextStyle(
