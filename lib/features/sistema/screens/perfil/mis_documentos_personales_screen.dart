@@ -1282,7 +1282,7 @@ C.I. $ci""";
         title: "Carta de Prórroga",
         content: body,
         onConfirm: () {
-          Navigator.pop(context);
+          Navigator.of(context).pop();
           _generateSignedProrroga();
         },
         confirmText: "Firmar y Guardar",
@@ -1642,25 +1642,42 @@ C.I. $ci""";
             : 0);
     final progress = requiredTotal == 0 ? 0.0 : (requiredDone / requiredTotal);
 
-    return Scaffold(
-      backgroundColor: kSurfaceColor,
-      appBar: AppBar(
-        title: const Text(
-          'Documentos',
-          style: TextStyle(
-            fontFamily: fontHeading,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
+    return WillPopScope(
+      onWillPop: () async {
+        final canPop = context.canPop();
+        if (canPop) {
+          context.pop();
+        } else {
+          context.go('/sistema/pantalla_principal');
+        }
+        return false;
+      },
+      child: Scaffold(
         backgroundColor: kSurfaceColor,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
+        appBar: AppBar(
+          title: const Text(
+            'Documentos',
+            style: TextStyle(
+              fontFamily: fontHeading,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: kSurfaceColor,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                // Fallback para cuando se entra sin historial (ir a la pantalla principal)
+                context.go('/sistema/pantalla_principal');
+              }
+            },
+          ),
+          actions: [
           // Botón de estadísticas
           IconButton(
             icon: const Icon(Icons.analytics_outlined),
@@ -2002,6 +2019,17 @@ C.I. $ci""";
                       },
                     ),
                   ),
+                if ((_ciFrontPath ?? '').isNotEmpty && (_ciBackPath ?? '').isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _busyKey == 'ci_photocopy_pdf_path'
+                          ? null
+                          : _generatePhotocopyFromPaths,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Regenerar PDF'),
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 FadeInUp(
                   delay: const Duration(milliseconds: 500),
@@ -2027,6 +2055,7 @@ C.I. $ci""";
                 const SizedBox(height: 40),
               ],
             ),
+      ),
     );
   }
 

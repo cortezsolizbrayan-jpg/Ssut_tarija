@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carta de Solicitud de Inscripción - Doctorado</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 2.5cm 3cm;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #000;
+            max-width: 21.59cm;
+            margin: 0 auto;
+            padding: 2.5cm 3cm;
+            background: white;
+        }
+
+        .header {
+            text-align: right;
+            margin-bottom: 30px;
+        }
+
+        .header .tipo-programa {
+            font-weight: bold;
+            font-size: 14pt;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .header .lugar-fecha {
+            margin-bottom: 30px;
+        }
+
+        .destinatario {
+            margin-bottom: 20px;
+        }
+
+        .destinatario .cargo {
+            font-weight: bold;
+        }
+
+        .presente {
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .referencia {
+            margin: 20px 0;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .saludo {
+            margin: 20px 0;
+            text-align: justify;
+        }
+
+        .cuerpo {
+            margin: 20px 0;
+            text-align: justify;
+        }
+
+        .cuerpo p {
+            margin-bottom: 15px;
+        }
+
+        .compromisos {
+            margin: 20px 0 20px 40px;
+        }
+
+        .compromisos li {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+
+        .despedida {
+            margin: 30px 0;
+            text-align: justify;
+        }
+
+        .firma {
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        .firma .linea {
+            border-top: 1px solid #000;
+            width: 200px;
+            margin: 0 auto 5px;
+        }
+
+        .firma .nombre {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .firma .ci {
+            margin-bottom: 20px;
+        }
+
+        .nota-pie {
+            margin-top: 40px;
+            font-size: 9pt;
+            font-style: italic;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .watermark {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            opacity: 0.1;
+            font-size: 8pt;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="tipo-programa">DOCTORADO</div>
+        <div class="lugar-fecha">La Paz, {{FECHA_ACTUAL}}</div>
+    </div>
+
+    <div class="destinatario">
+        <div>Señor:</div>
+        <div class="cargo">Dr. Richard Jorge Torrez Juaniquina Ph. D.</div>
+        <div class="cargo">DIRECTOR DE POSGRADO - UPEA</div>
+    </div>
+
+    <div class="presente">Presente.-</div>
+
+    <div class="referencia">REF.: SOLICITUD DE INSCRIPCIÓN</div>
+
+    <div class="saludo">
+        <p>Distinguido Director:</p>
+        <p>Me es grato hacerle llegar un saludo cordial y fraterno a nombre mío, deseándole mis mejores deseos de éxitos
+            en las labores que desempeña.</p>
+    </div>
+
+    <div class="cuerpo">
+        <p>El motivo de la presente es para solicitar a su autoridad la <strong>INSCRIPCIÓN AL PROGRAMA: "Doctorado en:
+                {{NOMBRE_PROGRAMA}}"</strong> MODALIDAD: {{MODALIDAD}}; al mismo, me comprometo:</p>
+
+        <ul class="compromisos">
+            <li>✓ Cumplir con todas las actividades académicas hasta culminar las clases del posgrado en la Universidad
+                Pública de El Alto.</li>
+            <li>✓ Realizar los pagos de colegiatura y matrícula y presentar mis comprobantes de depósito en un máximo de
+                48 horas después de realizar el depósito.</li>
+            <li>✓ Completar mis documentos en un máximo de 18 meses después de concluir el último módulo del Doctorado.
+            </li>
+            <li>✓ Cumplir con los requisitos de tesis doctoral establecidos por el programa de Doctorado.</li>
+            <li>✓ Participar activamente en las actividades de investigación científica y desarrollo académico del
+                programa.</li>
+            <li>✓ Publicar artículos científicos en revistas indexadas según los requisitos del programa doctoral.</li>
+        </ul>
+
+        <p>Adjunto los requisitos exigidos por la Unidad de Posgrado.</p>
+    </div>
+
+    <div class="despedida">
+        <p>Sin más que decir, me despido con las consideraciones más distinguidas.</p>
+        <p>Atentamente,</p>
+    </div>
+
+    <div class="firma">
+        <div class="linea"></div>
+        <div class="nombre">{{NOMBRE_COMPLETO}}</div>
+        <div class="ci">C.I. {{NUMERO_CI}}</div>
+    </div>
+
+    <div class="nota-pie">
+        <p>c/Dirección de Posgrado – UPEA</p>
+        <p>c/Archivo personal</p>
+        <p><strong>NOTA:</strong> EL COMPROBANTE DE DEPÓSITO BANCARIO DE Bs.{{MONTO_DEPOSITO}} SER REPORTADO EN LA
+            GESTIÓN CORRESPONDIENTE, NO TENDRÁ VALIDEZ EN LA SIGUIENTE.</p>
+    </div>
+
+    <div class="watermark">Sistema de Posgrado - UPEA</div>
+</body>
+
+</html>

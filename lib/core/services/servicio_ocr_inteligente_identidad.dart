@@ -100,7 +100,7 @@ class ServicioOcrInteligenteIdentidad {
 
   static Map<String, String> splitFullName(String fullName) {
     final cleaned = _stripNoise(fullName)
-        .replaceAll(RegExp(r'[^A-Za-z\s]'), ' ')
+        .replaceAll(RegExp(r'[^\p{L}\s]', unicode: true), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     if (cleaned.isEmpty) {
@@ -297,6 +297,7 @@ class ServicioOcrInteligenteIdentidad {
         }
       }
     }
+    
     if (candidates.isEmpty) return '';
     candidates.sort((a, b) => b.length.compareTo(a.length));
     return candidates.first;
@@ -413,7 +414,9 @@ class ServicioOcrInteligenteIdentidad {
       return false;
     }
     if (cleaned.length < 5) return false;
-    if (!RegExp(r'^[A-Za-z\s\.\-]+$').hasMatch(cleaned)) return false;
+    if (!RegExp(r'^[\p{L}\s\.\-]+$', unicode: true).hasMatch(cleaned)) {
+      return false;
+    }
     final words = cleaned.split(RegExp(r'\s+')).where((w) => w.length > 1).toList();
     return words.length >= 2 && words.length <= 6;
   }

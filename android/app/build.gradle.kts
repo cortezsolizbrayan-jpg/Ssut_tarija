@@ -24,7 +24,7 @@ android {
         applicationId = "com.example.refactor_template"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -32,7 +32,7 @@ android {
             cmake {
                 cppFlags += "-std=c++11 -frtti -fexceptions -Wno-format"
                 arguments += listOf(
-                    "-DANDROID_PLATFORM=android-23",
+                    "-DANDROID_PLATFORM=android-24",
                     "-DANDROID_STL=c++_shared",
                     "-DANDROID_ARM_NEON=TRUE",
                 )

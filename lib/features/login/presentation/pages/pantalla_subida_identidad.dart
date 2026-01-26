@@ -1,11 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image/image.dart' as img;
@@ -14,9 +10,9 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:refactor_template/core/services/cloud_vision_ocr_service.dart';
 import 'package:refactor_template/core/services/carnet_photocopy_service.dart';
+import 'package:refactor_template/core/services/blinkid_ocr_service.dart';
 import 'package:refactor_template/core/services/gemini_structured_ocr_service.dart';
 import 'package:refactor_template/core/services/local_storage_service.dart';
-import 'package:refactor_template/core/services/profile_image_processor_service.dart';
 import 'package:refactor_template/core/services/servicio_ocr_inteligente_identidad.dart';
 
 class IDUploadScreen extends StatefulWidget {
@@ -29,39 +25,21 @@ class IDUploadScreen extends StatefulWidget {
   State<IDUploadScreen> createState() => _IDUploadScreenState();
 }
 
-class _IDUploadScreenState extends State<IDUploadScreen>
-    with SingleTickerProviderStateMixin {
+class _IDUploadScreenState extends State<IDUploadScreen> {
   File? _frontImage;
   File? _backImage;
   final ImagePicker _picker = ImagePicker();
   bool _isProcessing = false;
   double _progress = 0.0;
   DateTime? _processStart;
-  bool _isFlipDialogOpen = false;
-  late final AnimationController _hintController;
-  late final Animation<double> _hintOpacity;
-  late final Animation<Offset> _hintSlide;
 
   @override
   void initState() {
     super.initState();
-    _hintController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-    _hintOpacity = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _hintController, curve: Curves.easeInOut),
-    );
-    _hintSlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: const Offset(0, -0.05),
-    ).animate(
-      CurvedAnimation(parent: _hintController, curve: Curves.easeInOut),
-    );
   }
 
   void _setProgress(double value) {
-    if (!mounted) return;
+    if (!mounted) return false;
     setState(() {
       _progress = value.clamp(0.0, 1.0);
     });
@@ -72,6 +50,184 @@ class _IDUploadScreenState extends State<IDUploadScreen>
         ? DateTime.now().difference(_processStart!).inMilliseconds
         : 0;
     debugPrint("[OCR ${elapsed}ms] $message");
+  }
+
+  Future<bool> _scanWithBlinkIdUx() async {
+    if (!BlinkIdOcrService.isEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Configura las licencias del escáner en el .env.'),
+            backgroundColor: Colors.orangeAccent,
+          ),
+        );
+      }
+      return false;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _progress = 0.05;
+      _processStart = DateTime.now();
+    });
+    _logStep("Iniciando BlinkID UX");
+
+    try {
+      final blinkidData = await BlinkIdOcrService.scanWithUi();
+      if (blinkidData == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Escaneo cancelado o sin datos. Intenta otra vez.'),
+              backgroundColor: Colors.orangeAccent,
+            ),
+          );
+        }
+        return false;
+      }
+
+      _setProgress(0.6);
+      final finalized = await _finalizeOcrResult(
+        extractedCI: blinkidData['ci'] ?? '',
+        extractedNombres: blinkidData['nombres'] ?? '',
+        extractedApellidos: blinkidData['apellidos'] ?? '',
+        extractedFechaNacimiento: blinkidData['fechaNacimiento'] ?? '',
+        extractedFechaEmision: blinkidData['fechaEmision'] ?? '',
+        extractedFechaExpiracion: blinkidData['fechaExpiracion'] ?? '',
+        extractedLugarNacimiento: blinkidData['lugarNacimiento'] ?? '',
+        extractedProfesion: blinkidData['profesion'] ?? '',
+        extractedEstadoCivil: blinkidData['estadoCivil'] ?? '',
+        extractedDomicilio: blinkidData['domicilio'] ?? '',
+        extractedGrupoSanguineo: blinkidData['grupoSanguineo'] ?? '',
+        detectedModel: 'blinkid',
+      );
+      return finalized;
+    } catch (e) {
+      debugPrint("Error BlinkID UX: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al escanear el documento: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+      _logStep("BlinkID UX finalizado");
+    }
+  }
+
+  Future<bool> _finalizeOcrResult({
+    required String extractedCI,
+    required String extractedNombres,
+    required String extractedApellidos,
+    required String extractedFechaNacimiento,
+    required String extractedFechaEmision,
+    required String extractedFechaExpiracion,
+    required String extractedLugarNacimiento,
+    required String extractedProfesion,
+    required String extractedEstadoCivil,
+    required String extractedDomicilio,
+    required String extractedGrupoSanguineo,
+    required String detectedModel,
+  }) async {
+    if (!mounted) return false;
+
+    if (extractedCI.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se detecto un CI en el documento. Por favor intenta nuevamente.',
+          ),
+          backgroundColor: Colors.orangeAccent,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return false;
+    }
+
+    if (extractedNombres.isEmpty) {
+      final modelMessage = detectedModel == "antiguo"
+          ? "Asegurate de que el reverso del carnet este bien visible y que aparezca 'PERTENECE A:' seguido del nombre completo."
+          : detectedModel == "blinkid"
+              ? "Asegurate de que el documento este bien visible y sin reflejos."
+              : "Asegurate de que el frontal del carnet este bien visible y que aparezcan los campos 'NOMBRES' y 'APELLIDOS'.";
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'No se detecto el nombre completo.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(modelMessage, style: const TextStyle(fontSize: 12)),
+              const SizedBox(height: 4),
+              const Text(
+                'Por favor intenta nuevamente con mejor iluminacion.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orangeAccent,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      debugPrint("Validacion fallida: Nombre vacio");
+      debugPrint("Modelo detectado: $detectedModel");
+      debugPrint("CI extraido: $extractedCI");
+      return false;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Datos validados correctamente'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    _setProgress(1.0);
+    _logStep("Validacion completa, navegando a reconocimiento facial");
+
+    while (Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    final finalCI = extractedCI.isNotEmpty ? extractedCI : (widget.initialCI ?? '');
+    final ciFromInitial =
+        widget.initialCI != null && widget.initialCI == finalCI;
+
+    if (mounted) {
+      context.push(
+        '/face-recognition',
+        extra: {
+          'nombres': extractedNombres,
+          'apellidos': extractedApellidos,
+          'ci': finalCI,
+          'ciFromInitial': ciFromInitial.toString(),
+          'fechaEmision': extractedFechaEmision,
+          'fechaExpiracion': extractedFechaExpiracion,
+          'fechaNacimiento': extractedFechaNacimiento,
+          'lugarNacimiento': extractedLugarNacimiento,
+          'profesion': extractedProfesion,
+          'estadoCivil': extractedEstadoCivil,
+          'domicilio': extractedDomicilio,
+          'grupoSanguineo': extractedGrupoSanguineo,
+        },
+      );
+    }
+    return true;
   }
 
   String _pickBestCIFromTexts(String? front, String? back, String current) {
@@ -120,7 +276,6 @@ class _IDUploadScreenState extends State<IDUploadScreen>
 
   @override
   void dispose() {
-    _hintController.dispose();
     super.dispose();
   }
 
@@ -162,6 +317,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
       String extractedFechaExpiracion = "";
       bool usedRemote = false;
       bool usedVision = false;
+      bool usedBlinkId = false;
       String? rawVisionFrontText;
       String? rawVisionBackText;
 
@@ -170,6 +326,52 @@ class _IDUploadScreenState extends State<IDUploadScreen>
       final backOcrFile = await _prepareFileForOcr(_backImage!);
       _setProgress(0.15);
       _logStep("Archivos preparados para OCR");
+
+      if (BlinkIdOcrService.isEnabled) {
+        try {
+          _logStep("Llamando a BlinkID DirectAPI");
+          final blinkidData = await BlinkIdOcrService.scanImages(
+            frontFile: _frontImage!,
+            backFile: _backImage,
+          );
+          if (blinkidData != null) {
+            extractedCI = _pickFirstNonEmpty([blinkidData['ci'] ?? '', extractedCI]);
+            extractedNombres =
+                _pickFirstNonEmpty([blinkidData['nombres'] ?? '', extractedNombres]);
+            extractedApellidos =
+                _pickFirstNonEmpty([blinkidData['apellidos'] ?? '', extractedApellidos]);
+            extractedFechaNacimiento = _pickFirstNonEmpty(
+              [blinkidData['fechaNacimiento'] ?? '', extractedFechaNacimiento],
+            );
+            extractedFechaEmision = _pickFirstNonEmpty(
+              [blinkidData['fechaEmision'] ?? '', extractedFechaEmision],
+            );
+            extractedFechaExpiracion = _pickFirstNonEmpty(
+              [blinkidData['fechaExpiracion'] ?? '', extractedFechaExpiracion],
+            );
+            extractedLugarNacimiento = _pickFirstNonEmpty(
+              [blinkidData['lugarNacimiento'] ?? '', extractedLugarNacimiento],
+            );
+            extractedProfesion = _pickFirstNonEmpty(
+              [blinkidData['profesion'] ?? '', extractedProfesion],
+            );
+            extractedEstadoCivil = _pickFirstNonEmpty(
+              [blinkidData['estadoCivil'] ?? '', extractedEstadoCivil],
+            );
+            extractedDomicilio = _pickFirstNonEmpty(
+              [blinkidData['domicilio'] ?? '', extractedDomicilio],
+            );
+            extractedGrupoSanguineo = _pickFirstNonEmpty(
+              [blinkidData['grupoSanguineo'] ?? '', extractedGrupoSanguineo],
+            );
+            usedBlinkId = true;
+            _setProgress(0.32);
+            _logStep("BlinkID OK, extrayendo campos");
+          }
+        } catch (e) {
+          debugPrint("Error BlinkID: $e");
+        }
+      }
 
       // Intentar Google Vision primero si está habilitado
       if (CloudVisionOcrService.isEnabled) {
@@ -326,7 +528,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
           extractedFechaEmision.isEmpty ||
           extractedFechaExpiracion.isEmpty;
 
-      if ((!usedRemote && !usedVision) || needsLocalData) {
+      if ((!usedRemote && !usedVision && !usedBlinkId) || needsLocalData) {
         if (_frontImage != null) {
         debugPrint("=== PROCESANDO IMAGEN FRONTAL ===");
         debugPrint("Ruta de imagen: ${frontOcrFile.path}");
@@ -544,107 +746,20 @@ class _IDUploadScreenState extends State<IDUploadScreen>
       // Ajuste final de CI: priorizar números largos detectados en el OCR de Vision
       extractedCI = _pickBestCIFromTexts(rawVisionFrontText, rawVisionBackText, extractedCI);
 
-      if (mounted) {
-        // Validación menos estricta - solo verificar que haya algo
-        if (extractedCI.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'No se detectó un CI en el carnet frontal. Por favor intenta nuevamente.',
-              ),
-              backgroundColor: Colors.orangeAccent,
-              duration: Duration(seconds: 3),
-            ),
-          );
-          return;
-        }
-
-        // Validación básica del nombre (menos estricta)
-        if (extractedNombres.isEmpty) {
-          final modelMessage = detectedModel == "antiguo"
-              ? "Asegúrate de que el reverso del carnet esté bien visible y que aparezca 'PERTENECE A:' seguido del nombre completo."
-              : "Asegúrate de que el frontal del carnet esté bien visible y que aparezcan los campos 'NOMBRES' y 'APELLIDOS'.";
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'No se detectó el nombre completo.',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(modelMessage, style: const TextStyle(fontSize: 12)),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Por favor intenta nuevamente con mejor iluminación.',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.orangeAccent,
-              duration: const Duration(seconds: 5),
-            ),
-          );
-          debugPrint(" Validación fallida: Nombre vacío");
-          debugPrint("Modelo detectado: $detectedModel");
-          debugPrint("CI extraído: $extractedCI");
-          return;
-        }
-
-        // Si todo es válido, continuar al reconocimiento facial
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Datos validados correctamente'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        _setProgress(1.0);
-        _logStep("Validación completa, navegando a reconocimiento facial");
-
-        // Cerrar cualquier diálogo o modal abierto antes de navegar
-        if (mounted) {
-          // Cerrar todos los diálogos
-          while (Navigator.of(context, rootNavigator: true).canPop()) {
-            Navigator.of(context, rootNavigator: true).pop();
-          }
-
-          // Esperar un momento para que se cierren los diálogos
-          await Future.delayed(const Duration(milliseconds: 100));
-        }
-
-        // Usar siempre el CI detectado si existe; de lo contrario, el ingresado
-        final finalCI = extractedCI.isNotEmpty
-            ? extractedCI
-            : (widget.initialCI ?? '');
-        final ciFromInitial =
-            widget.initialCI != null && widget.initialCI == finalCI;
-
-        // Ir al siguiente paso: RECONOCIMIENTO FACIAL
-        if (mounted) {
-          context.push(
-            '/face-recognition',
-            extra: {
-              'nombres': extractedNombres,
-              'apellidos': extractedApellidos,
-              'ci': finalCI, // Usar el CI inicial si existe
-              'ciFromInitial': ciFromInitial
-                  .toString(), // Indicar si viene del flujo inicial
-              'fechaEmision': extractedFechaEmision,
-              'fechaExpiracion': extractedFechaExpiracion,
-              'fechaNacimiento': extractedFechaNacimiento,
-              'lugarNacimiento': extractedLugarNacimiento,
-              'profesion': extractedProfesion,
-              'estadoCivil': extractedEstadoCivil,
-              'domicilio': extractedDomicilio,
-              'grupoSanguineo': extractedGrupoSanguineo,
-            },
-          );
-        }
-      }
+      await _finalizeOcrResult(
+        extractedCI: extractedCI,
+        extractedNombres: extractedNombres,
+        extractedApellidos: extractedApellidos,
+        extractedFechaNacimiento: extractedFechaNacimiento,
+        extractedFechaEmision: extractedFechaEmision,
+        extractedFechaExpiracion: extractedFechaExpiracion,
+        extractedLugarNacimiento: extractedLugarNacimiento,
+        extractedProfesion: extractedProfesion,
+        extractedEstadoCivil: extractedEstadoCivil,
+        extractedDomicilio: extractedDomicilio,
+        extractedGrupoSanguineo: extractedGrupoSanguineo,
+        detectedModel: detectedModel,
+      );
     } catch (e) {
       debugPrint("Error en OCR: $e");
       if (mounted) {
@@ -3178,15 +3293,6 @@ class _IDUploadScreenState extends State<IDUploadScreen>
         }
 
         // Nota: la foto 4x4 ahora se genera desde el escaneo facial.
-
-        // Mostrar animación de volteo si es frontal (después de actualizar el estado)
-        if (isFront) {
-          // Esperar un poco para que el estado se actualice
-          await Future.delayed(const Duration(milliseconds: 300));
-          if (mounted) {
-            _showFlipAnimation();
-          }
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -3199,36 +3305,6 @@ class _IDUploadScreenState extends State<IDUploadScreen>
         );
       }
     }
-  }
-
-  void _showFlipAnimation() {
-    // Animación de volteo del carnet
-    if (!mounted || _isFlipDialogOpen) return;
-    _isFlipDialogOpen = true;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black54,
-      builder: (dialogContext) => const _FlipCardAnimation(),
-    );
-
-    // Cerrar después de la animación y abrir la cámara para el reverso
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Cerrar animación
-        _isFlipDialogOpen = false;
-
-        // Esperar un poco y abrir la cámara para tomar el reverso
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted && _backImage == null) {
-            _showPickerOptions(false); // Abrir opciones para tomar el reverso
-          }
-        });
-      } else {
-        _isFlipDialogOpen = false;
-      }
-    });
   }
 
   void _showPickerOptions(bool isFront) {
@@ -3263,11 +3339,21 @@ class _IDUploadScreenState extends State<IDUploadScreen>
     );
   }
 
+  Future<void> _handleFrontTap() async {
+    if (_isProcessing) return;
+    if (BlinkIdOcrService.isEnabled) {
+      final scanned = await _scanWithBlinkIdUx();
+      if (scanned) return;
+    }
+    _showPickerOptions(true);
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF305BA4);
     const Color textDark = Color(0xFF1A3A5C);
     const Color whiteBg = Color(0xFFF6F8FB);
+    final canScan = BlinkIdOcrService.isEnabled;
 
     return Scaffold(
       backgroundColor: whiteBg,
@@ -3293,34 +3379,30 @@ class _IDUploadScreenState extends State<IDUploadScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
-            FadeInDown(
-              child: const Text(
-                'Sube una foto de tu Carnet',
-                style: TextStyle(
-                  color: textDark,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+            const Text(
+              'Documento de identidad',
+              style: TextStyle(
+                color: textDark,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 12),
-            FadeInLeft(
-              child: Text(
-                'Para verificar tu cuenta, necesitamos una foto clara de tu documento de identidad (CI).',
-                style: TextStyle(color: Colors.grey[600], fontSize: 15),
-              ),
+            Text(
+              canScan
+                  ? 'Toca el anverso para escanear o subir una foto. Si no puedes escanear, sube fotos claras del CI.'
+                  : 'Sube fotos claras de tu documento de identidad (CI).',
+              style: TextStyle(color: Colors.grey[600], fontSize: 15),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
 
             _buildUploadCard(
               title: 'Lado Frontal',
               icon: Icons.credit_card,
-              delay: 200,
               imageFile: _frontImage,
-              isScanning: _isProcessing,
               isValidating: false,
               isFrontCard: true,
-              onTap: () => _showPickerOptions(true),
+              onTap: _handleFrontTap,
             ),
 
             const SizedBox(height: 20),
@@ -3328,9 +3410,7 @@ class _IDUploadScreenState extends State<IDUploadScreen>
             _buildUploadCard(
               title: 'Lado Posterior',
               icon: Icons.credit_card_off_outlined,
-              delay: 400,
               imageFile: _backImage,
-              isScanning: _isProcessing,
               isValidating: false,
               isFrontCard: false,
               onTap: () => _showPickerOptions(false),
@@ -3338,84 +3418,78 @@ class _IDUploadScreenState extends State<IDUploadScreen>
 
             const SizedBox(height: 40),
 
-            FadeInUp(
-              delay: const Duration(milliseconds: 600),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: primaryBlue.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryBlue.withOpacity(0.1)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: primaryBlue),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Asegúrate de que todos los datos sean legibles y la foto no tenga reflejos.',
-                        style: TextStyle(
-                          color: textDark.withOpacity(0.8),
-                          fontSize: 13,
-                        ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: primaryBlue.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: primaryBlue.withOpacity(0.1)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: primaryBlue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Asegúrate de que todos los datos sean legibles y la foto no tenga reflejos.',
+                      style: TextStyle(
+                        color: textDark.withOpacity(0.8),
+                        fontSize: 13,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
 
             const SizedBox(height: 48),
 
-            FadeInUp(
-              delay: const Duration(milliseconds: 800),
-              child: SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed:
-                      (_frontImage != null &&
-                          _backImage != null &&
-                          !_isProcessing)
-                      ? _processImageWithOCR
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey[300],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed:
+                    (_frontImage != null &&
+                            _backImage != null &&
+                            !_isProcessing)
+                        ? _processImageWithOCR
+                        : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey[300],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: _isProcessing
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            LinearProgressIndicator(
-                              value: _progress,
-                              backgroundColor: Colors.white24,
-                              color: Colors.white,
-                              minHeight: 6,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Procesando... ${(_progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        )
-                      : const Text(
-                          'Subir y Continuar',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  elevation: 0,
                 ),
+                child: _isProcessing
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          LinearProgressIndicator(
+                            value: _progress,
+                            backgroundColor: Colors.white24,
+                            color: Colors.white,
+                            minHeight: 6,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Procesando... ${(_progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const Text(
+                        'Subir fotos y continuar',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 40),
@@ -3428,186 +3502,161 @@ class _IDUploadScreenState extends State<IDUploadScreen>
   Widget _buildUploadCard({
     required String title,
     required IconData icon,
-    required int delay,
     File? imageFile,
     required VoidCallback onTap,
-    bool isScanning = false,
     bool isValidating = false,
     required bool isFrontCard,
   }) {
     const Color primaryBlue = Color(0xFF305BA4);
     const Color textDark = Color(0xFF1A3A5C);
 
-    return FadeInUp(
-      delay: Duration(milliseconds: delay),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          height: 180,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: imageFile != null ? primaryBlue : const Color(0xFFEEF2F6),
-              width: imageFile != null ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: textDark.withOpacity(0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 180,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: imageFile != null ? primaryBlue : const Color(0xFFEEF2F6),
+            width: imageFile != null ? 2 : 1,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (imageFile != null)
-                  Image.file(imageFile, fit: BoxFit.cover)
-                else
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          primaryBlue.withOpacity(0.08),
-                          primaryBlue.withOpacity(0.14),
+          boxShadow: [
+            BoxShadow(
+              color: textDark.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (imageFile != null)
+                Image.file(imageFile, fit: BoxFit.cover)
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        primaryBlue.withOpacity(0.08),
+                        primaryBlue.withOpacity(0.14),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+              if (imageFile != null) Container(color: Colors.black26),
+              if (imageFile != null)
+                const Center(
+                  child: Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+              if (imageFile != null)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white.withOpacity(0.8),
+                    radius: 16,
+                    child: const Icon(
+                      Icons.edit,
+                      size: 16,
+                      color: primaryBlue,
+                    ),
+                  ),
+                ),
+              if (imageFile == null)
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 40, color: primaryBlue.withOpacity(0.5)),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: textDark,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isFrontCard && BlinkIdOcrService.isEnabled
+                          ? 'Pulsa para escanear o subir'
+                          : 'Pulsa para tomar foto o subir',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                  ],
+                ),
+              if (isValidating)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: AnimatedOpacity(
+                    opacity: isValidating ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 6,
+                          ),
                         ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
                       ),
-                    ),
-                  ),
-                if (imageFile != null) Container(color: Colors.black26),
-                if (imageFile != null)
-                  const Center(
-                    child: Icon(
-                      Icons.check_circle,
-                      color: Colors.white,
-                      size: 48,
-                    ),
-                  ),
-                if (imageFile != null)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white.withOpacity(0.8),
-                      radius: 16,
-                      child: const Icon(
-                        Icons.edit,
-                        size: 16,
-                        color: primaryBlue,
-                      ),
-                    ),
-                  ),
-                if (imageFile == null)
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, size: 40, color: primaryBlue.withOpacity(0.5)),
-                      const SizedBox(height: 12),
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: textDark,
-                          fontWeight: FontWeight.bold,
+                      child: const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(primaryBlue),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                    ),
+                  ),
+                ),
+              if (imageFile == null)
+                Positioned(
+                  bottom: 14,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isFrontCard
+                            ? Icons.credit_card
+                            : Icons.flip_camera_android,
+                        color: primaryBlue.withOpacity(0.7),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
-                        'Pulsa para tomar foto o subir',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        isFrontCard
+                            ? (BlinkIdOcrService.isEnabled
+                                ? 'Toca para escanear o cargar el anverso'
+                                : 'Toca para cargar el anverso')
+                            : 'Toca para cargar el reverso',
+                        style: TextStyle(
+                          color: primaryBlue.withOpacity(0.8),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
-                if (isScanning)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: FadeTransition(
-                        opacity: _hintOpacity,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withOpacity(0.0),
-                                Colors.white.withOpacity(0.15),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (isValidating)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: AnimatedOpacity(
-                      opacity: isValidating ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
-                        child: const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(primaryBlue),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (imageFile == null)
-                  Positioned(
-                    bottom: 14,
-                    left: 0,
-                    right: 0,
-                    child: SlideTransition(
-                      position: _hintSlide,
-                      child: FadeTransition(
-                        opacity: _hintOpacity,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              isFrontCard ? Icons.credit_card : Icons.flip_camera_android,
-                              color: primaryBlue.withOpacity(0.7),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isFrontCard
-                                  ? 'Toca para cargar el anverso'
-                                  : 'Toca para cargar el reverso',
-                              style: TextStyle(
-                                color: primaryBlue.withOpacity(0.8),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
@@ -3700,126 +3749,3 @@ class _IDUploadScreenState extends State<IDUploadScreen>
 
 }
 
-// Animación de volteo del carnet
-
-class _FlipCardAnimation extends StatefulWidget {
-  const _FlipCardAnimation();
-
-  @override
-  State<_FlipCardAnimation> createState() => _FlipCardAnimationState();
-}
-
-class _FlipCardAnimationState extends State<_FlipCardAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _flipAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _flipAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _controller.forward();
-  }
-//AQUI SE AQUI ES LA ANIMACION DE VOLTEAR EL CARNET
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _flipAnimation,
-      builder: (context, child) {
-        // Corregir el ángulo para que gire correctamente (no al revés)
-        final angle = _flipAnimation.value * math.pi;
-        final scale = _flipAnimation.value < 0.5
-            ? 1.0 - _flipAnimation.value * 0.2
-            : 0.8 + (_flipAnimation.value - 0.5) * 0.2;
-
-        // Determinar qué mostrar según el progreso de la animación
-        final showFront = _flipAnimation.value < 0.5;
-
-        return Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..setEntry(3, 2, 0.001)
-            ..rotateY(angle)
-            ..scale(scale),
-          child: Container(
-            color: Colors.transparent,
-            child: Center(
-              child: Container(
-                width: 200,
-                height: 280,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(
-                        0xFF305BA4,
-                      ).withOpacity(showFront ? 1.0 : 0.7),
-                      const Color(0xFF305BA4).withOpacity(0.7),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF305BA4).withOpacity(0.5),
-                      blurRadius: 30,
-                      spreadRadius: 10,
-                    ),
-                  ],
-                ),
-                child: showFront
-                    ? const Center(
-                        child: Icon(
-                          Icons.credit_card,
-                          size: 80,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.credit_card_off_outlined,
-                              size: 80,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              "Voltea el carnet",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Icon(
-                              Icons.arrow_downward,
-                              color: Colors.white.withOpacity(0.8),
-                              size: 32,
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}

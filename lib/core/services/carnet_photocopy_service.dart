@@ -20,15 +20,23 @@ class CarnetPhotocopyService {
       final backImage = img.decodeImage(await backFile.readAsBytes());
       if (frontImage == null || backImage == null) return null;
 
-      // Convertir a escala de grises y normalizar contraste
-      final grayFront = _normalize(img.grayscale(frontImage));
-      final grayBack = _normalize(img.grayscale(backImage));
+      // Convertir a escala de grises, enderezar y recortar fondo sobrante
+      final grayFront = _autoCrop(
+        _normalize(
+          img.grayscale(_ensureLandscape(frontImage)),
+        ),
+      );
+      final grayBack = _autoCrop(
+        _normalize(
+          img.grayscale(_ensureLandscape(backImage)),
+        ),
+      );
 
       // Ajustar ancho para A4 (vertical)
       const pdfWidth = 595.28; // A4 points
       const margin = 24.0;
       final availableWidth = (pdfWidth - (margin * 2) - 8);
-      const maxDisplayHeight = 360; // limitar alto para que ambos lados quepan bien
+      const maxDisplayHeight = 280; // limitar para que quepan anverso y reverso en una sola hoja
 
       img.Image resizedFront = grayFront;
       if (grayFront.width > availableWidth) {
@@ -120,8 +128,14 @@ class CarnetPhotocopyService {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text('Anverso', style: pw.TextStyle(fontSize: 11, color: PdfColor.fromHex('#555555'))),
-                          pw.SizedBox(height: 4),
-                          pw.Image(front, fit: pw.BoxFit.contain),
+                          pw.SizedBox(height: 6),
+                          pw.Center(
+                            child: pw.Image(
+                              front,
+                              width: availableWidth,
+                              fit: pw.BoxFit.contain,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -135,8 +149,14 @@ class CarnetPhotocopyService {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text('Reverso', style: pw.TextStyle(fontSize: 11, color: PdfColor.fromHex('#555555'))),
-                          pw.SizedBox(height: 4),
-                          pw.Image(back, fit: pw.BoxFit.contain),
+                          pw.SizedBox(height: 6),
+                          pw.Center(
+                            child: pw.Image(
+                              back,
+                              width: availableWidth,
+                              fit: pw.BoxFit.contain,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -177,5 +197,53 @@ class CarnetPhotocopyService {
       interpolation: img.Interpolation.linear,
     );
     return out;
+  }
+
+  static img.Image _ensureLandscape(img.Image src) {
+    // Asegurar orientación correcta según EXIF y rotar a horizontal si viene vertical.
+    final baked = img.bakeOrientation(src);
+    if (baked.height > baked.width) {
+      // Rotar 90° a la derecha (clockwise) para mantener texto arriba.
+      return img.copyRotate(baked, angle: -90);
+    }
+    return baked;
+  }
+
+  /// Recorta el fondo blanco/gris dejando solo la tarjeta.
+  static img.Image _autoCrop(img.Image src) {
+    // Ajustar a fondo claro: detecta píxeles que no son casi blancos.
+    const int threshold = 220; // más agresivo para recortar fondos grisáceos
+    int minX = src.width;
+    int minY = src.height;
+    int maxX = 0;
+    int maxY = 0;
+
+    for (int y = 0; y < src.height; y++) {
+      for (int x = 0; x < src.width; x++) {
+        final p = src.getPixel(x, y);
+        final l = img.getLuminance(p);
+        if (l < threshold) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    // Si no encuentra nada, retorna original
+    if (maxX <= minX || maxY <= minY) return src;
+
+    // Añadir un pequeño padding
+    const pad = 2;
+    minX = (minX - pad).clamp(0, src.width - 1);
+    minY = (minY - pad).clamp(0, src.height - 1);
+    maxX = (maxX + pad).clamp(0, src.width - 1);
+    maxY = (maxY + pad).clamp(0, src.height - 1);
+
+    final w = (maxX - minX + 1).clamp(1, src.width);
+    final h = (maxY - minY + 1).clamp(1, src.height);
+
+    return img.copyCrop(src, x: minX, y: minY, width: w, height: h);
   }
 }
