@@ -53,7 +53,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       List<Usuario> pending = [];
       if (authProvider.role == UserRole.administradorSistema) {
           final allUsers = await usuarioService.getAll(incluirInactivos: true);
-          pending = allUsers.where((u) => !u.activo).toList();
+          // Solo pendientes: inactivos que no fueron rechazados (rechazados no vuelven a aparecer)
+          pending = allUsers.where((u) => !u.activo && !u.solicitudRechazada).toList();
       }
       
       if (mounted) {
@@ -188,7 +189,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final usuarioService = Provider.of<UsuarioService>(context, listen: false);
       await usuarioService.rechazarSolicitudRegistro(user.id);
-      if (mounted) await _loadData();
+      if (!mounted) return;
+      // Quitar al usuario y sus notificaciones de la lista al instante (sin recargar)
+      final referencia = '(UsuarioId: ${user.id})';
+      setState(() {
+        _pendingUsers.removeWhere((u) => u.id == user.id);
+        _alertas.removeWhere((a) {
+          final titulo = a['titulo']?.toString() ?? '';
+          final mensaje = a['mensaje']?.toString() ?? '';
+          return titulo == 'Nuevo Registro de Usuario' && mensaje.contains(referencia);
+        });
+      });
+      // Refresco silencioso para actualizar el contador del badge en el menú
+      _refreshSilently();
       if (mounted) {
         AppAlert.warning(
           context,
@@ -207,6 +220,34 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         );
       }
     }
+  }
+
+  /// Refresca alertas y pendientes sin mostrar pantalla de carga (para actualizar badge).
+  Future<void> _refreshSilently() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final usuarioService = Provider.of<UsuarioService>(context, listen: false);
+    try {
+      List<dynamic> alertsList = [];
+      try {
+        final alertsResponse = await apiService.get('/alertas');
+        if (alertsResponse.statusCode == 200 && alertsResponse.data != null) {
+          final data = alertsResponse.data;
+          alertsList = data is List ? data : [];
+        }
+      } catch (_) {}
+      List<Usuario> pending = [];
+      if (authProvider.role == UserRole.administradorSistema) {
+        final allUsers = await usuarioService.getAll(incluirInactivos: true);
+        pending = allUsers.where((u) => !u.activo && !u.solicitudRechazada).toList();
+      }
+      if (mounted) {
+        setState(() {
+          _alertas = alertsList;
+          _pendingUsers = pending;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _markAsRead(int id) async {
