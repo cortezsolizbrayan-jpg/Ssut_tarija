@@ -27,61 +27,71 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Capturar errores asíncronos no manejados
-  runZonedGuarded(() async {
-    debugPrint('[MAIN] Iniciando app...');
+  runZonedGuarded(
+    () async {
+      debugPrint('[MAIN] Iniciando app...');
 
-    FlutterError.onError = (details) {
-      debugPrint('[MAIN] FlutterError: ${details.exception}');
-      debugPrint('[MAIN] Stack: ${details.stack}');
-      FlutterError.presentError(details);
-    };
-    ErrorWidget.builder = (details) {
-      return Material(
-        child: Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error al cargar la aplicación',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
+      FlutterError.onError = (details) {
+        debugPrint('[MAIN] FlutterError: ${details.exception}');
+        debugPrint('[MAIN] Stack: ${details.stack}');
+        FlutterError.presentError(details);
+      };
+      ErrorWidget.builder = (details) {
+        return Material(
+          child: Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${details.exception}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error al cargar la aplicación',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${details.exception}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    };
+        );
+      };
 
-    try {
-      await initializeDateFormatting('es_BO', null);
-      debugPrint('[MAIN] runApp(MyApp)');
-      runApp(const MyApp());
-    } catch (e, st) {
-      debugPrint('[MAIN] Error en arranque: $e');
-      debugPrint('[MAIN] Stack: $st');
-      runApp(_ErrorApp('$e', st));
-    }
-  }, (error, stack) {
-    debugPrint('[MAIN] Error no capturado: $error');
-    debugPrint('[MAIN] Stack: $stack');
-  });
+      try {
+        await initializeDateFormatting('es_BO', null);
+        debugPrint('[MAIN] runApp(MyApp)');
+        runApp(const MyApp());
+      } catch (e, st) {
+        debugPrint('[MAIN] Error en arranque: $e');
+        debugPrint('[MAIN] Stack: $st');
+        runApp(_ErrorApp('$e', st));
+      }
+    },
+    (error, stack) {
+      debugPrint('[MAIN] Error no capturado: $error');
+      debugPrint('[MAIN] Stack: $stack');
+    },
+  );
 }
 
 // Navigator key global para los servicios
@@ -166,7 +176,11 @@ class _ErrorApp extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 72, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 72,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 24),
                     Text(
                       'Error al iniciar la aplicación',
@@ -180,14 +194,20 @@ class _ErrorApp extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       message,
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     if (stack != null) ...[
                       const SizedBox(height: 16),
                       Text(
                         '$stack',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
                         maxLines: 10,
                         overflow: TextOverflow.ellipsis,
                       ),
