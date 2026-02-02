@@ -2026,7 +2026,6 @@ class _IDUploadScreenState extends State<IDUploadScreen> {
       'FECHA EMISIÓN',
       'FECHA DE EMISION',
       'FECHA EMISION',
-      'EMISIÓN',
       'EMISION',
       'EMITIDO',
       'EXPEDIDO',
