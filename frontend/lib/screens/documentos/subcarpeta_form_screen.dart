@@ -7,14 +7,15 @@ import 'package:frontend/providers/data_provider.dart';
 import '../../services/carpeta_service.dart';
 
 class SubcarpetaFormScreen extends StatefulWidget {
-  final int carpetaPadreId;
+  /// null = carpeta principal (raíz); no null = carpeta hija
+  final int? carpetaPadreId;
   final String carpetaPadreNombre;
   final Carpeta? subcarpetaExistente; // Para edición futura si se requiere
 
   const SubcarpetaFormScreen({
     super.key, 
-    required this.carpetaPadreId,
-    required this.carpetaPadreNombre,
+    this.carpetaPadreId,
+    this.carpetaPadreNombre = 'Carpeta principal',
     this.subcarpetaExistente
   });
 
@@ -44,9 +45,10 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
   }
 
   Future<void> _cargarGestionPadre() async {
+    if (widget.carpetaPadreId == null) return;
     try {
       final service = Provider.of<CarpetaService>(context, listen: false);
-      final carpetaPadre = await service.getById(widget.carpetaPadreId);
+      final carpetaPadre = await service.getById(widget.carpetaPadreId!);
       if (mounted && _gestionController.text.isEmpty) {
         _gestionController.text = carpetaPadre.gestion;
         setState(() {});
@@ -71,7 +73,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
     if (await _verificarNombreDuplicado()) {
       _mostrarDialogoError(
         'Nombre Duplicado',
-        'Ya existe una subcarpeta con el nombre "${_nombreController.text}" en esta carpeta.\n\nPor favor, elija un nombre diferente.',
+        'Ya existe una carpeta con el nombre "${_nombreController.text}" en esta carpeta.\n\nPor favor, elija un nombre diferente.',
         Icons.folder_copy_outlined,
         Colors.orange,
       );
@@ -112,10 +114,18 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
         return;
       }
 
-      // Gestión: la del formulario (o heredar de carpeta padre si está vacía)
-      final gestion = _gestionController.text.trim().length == 4
-          ? _gestionController.text.trim()
-          : (await carpetaService.getById(widget.carpetaPadreId)).gestion;
+      // Gestión: la del formulario (o heredar de carpeta padre si está vacía y hay padre)
+      String gestion;
+      if (_gestionController.text.trim().length == 4) {
+        gestion = _gestionController.text.trim();
+      } else if (widget.carpetaPadreId != null) {
+        final carpetaPadre = await carpetaService.getById(widget.carpetaPadreId!);
+        gestion = carpetaPadre.gestion;
+      } else {
+        _mostrarDialogoError('Gestión requerida', 'Ingrese el año de gestión (4 dígitos).', Icons.calendar_today, Colors.orange);
+        setState(() => _isLoading = false);
+        return;
+      }
 
       final dto = CreateCarpetaDTO(
         nombre: _nombreController.text,
@@ -135,7 +145,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
         dataProvider.refresh();
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Subcarpeta creada exitosamente'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Carpeta creada exitosamente'), backgroundColor: Colors.green),
         );
         Navigator.pop(context, true); // Retornar true para recargar
       }
@@ -152,8 +162,8 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
             errorMessage.contains('unique constraint') ||
             errorMessage.contains('UNIQUE constraint failed')) {
           _mostrarDialogoError(
-            'Subcarpeta Duplicada',
-            'Ya existe una subcarpeta con el nombre "${_nombreController.text}" en esta carpeta.\n\nPor favor, elija un nombre diferente.',
+            'Carpeta Duplicada',
+            'Ya existe una carpeta con el nombre "${_nombreController.text}" en esta carpeta.\n\nPor favor, elija un nombre diferente.',
             Icons.folder_copy_outlined,
             Colors.orange,
           );
@@ -173,7 +183,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
           );
         } else {
           _mostrarDialogoError(
-            'No se pudo crear la subcarpeta',
+            'No se pudo crear la carpeta',
             'Revise los datos e intente de nuevo. Si el problema continúa, contacte al administrador.',
             Icons.error_outline_rounded,
             Colors.red,
@@ -235,7 +245,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
       final carpetaService = Provider.of<CarpetaService>(context, listen: false);
       final subcarpetas = await carpetaService.getAll();
       
-      // Filtrar subcarpetas de la misma carpeta padre
+      // Filtrar: mismas carpetas hermanas (mismo padre; null = raíz)
       final subcarpetasHermanas = subcarpetas
           .where((c) => c.carpetaPadreId == widget.carpetaPadreId)
           .toList();
@@ -255,7 +265,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
-          'Nueva Subcarpeta',
+          'Nueva Carpeta',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.white,
@@ -318,7 +328,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Subcarpeta de Archivo',
+                                'Carpeta de Archivo',
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.blue.shade900,
@@ -389,7 +399,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              'Información de la Subcarpeta',
+                              'Información de la Carpeta',
                               style: GoogleFonts.poppins(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -401,22 +411,38 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                         
                         const SizedBox(height: 24),
 
-                        // Nombre de la subcarpeta
+                        // Gestión (año) destacada al inicio
                         _buildFormField(
-                          label: 'Nombre de la Subcarpeta',
+                          label: 'Gestión',
+                          controller: _gestionController,
+                          icon: Icons.calendar_today,
+                          hint: 'Ej: 2024, 2025',
+                          keyboardType: TextInputType.number,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            if (v.trim().length != 4) return '4 dígitos (ej: 2024)';
+                            return null;
+                          },
+                        ),
+                        
+                        const SizedBox(height: 24),
+
+                        // Nombre de la carpeta (pantalla principal)
+                        _buildFormField(
+                          label: 'Nombre de la Carpeta',
                           controller: _nombreController,
                           icon: Icons.folder,
-                          hint: 'Ej: Rango 1-50, Subcarpeta A, Documentos Enero',
+                          hint: 'Ej: Rango 1-50, Carpeta A, Documentos Enero',
                           validator: (v) => v == null || v.trim().isEmpty ? FormValidators.requerido : null,
                         ),
                         
                         const SizedBox(height: 24),
 
-                        // Sección Rango de Documentos y Gestión (referencia: Comprobantes de Egreso/Ingreso)
-                        _buildSectionHeader('Rango de Documentos y Gestión', Icons.format_list_numbered, Colors.green),
+                        // Sección Rango de Documentos (Gestión ya está arriba)
+                        _buildSectionHeader('Rango de Documentos', Icons.format_list_numbered, Colors.green),
                         const SizedBox(height: 16),
                         Text(
-                          'Define el rango numérico y la gestión (año). Referencia: Comprobantes de Egreso / Comprobantes de Ingreso.',
+                          'Define el rango numérico. Referencia: Comprobantes de Egreso / Comprobantes de Ingreso.',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -444,21 +470,6 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                                 keyboardType: TextInputType.number,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildFormField(
-                                label: 'Gestión',
-                                controller: _gestionController,
-                                icon: Icons.calendar_today,
-                                hint: '2024',
-                                keyboardType: TextInputType.number,
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return null; // Opcional: hereda de carpeta padre
-                                  if (v.trim().length != 4) return '4 dígitos (ej: 2024)';
-                                  return null;
-                                },
-                              ),
-                            ),
                           ],
                         ),
                         
@@ -469,7 +480,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                           label: 'Descripción / Observaciones',
                           controller: _descripcionController,
                           icon: Icons.notes,
-                          hint: 'Información adicional sobre esta subcarpeta...',
+                          hint: 'Información adicional sobre esta carpeta...',
                           maxLines: 3,
                         ),
                       ],
@@ -507,7 +518,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                               const Icon(Icons.save_rounded, color: Colors.white, size: 24),
                               const SizedBox(width: 12),
                               Text(
-                                'Crear Subcarpeta',
+                                'Crear Carpeta',
                                 style: GoogleFonts.poppins(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
