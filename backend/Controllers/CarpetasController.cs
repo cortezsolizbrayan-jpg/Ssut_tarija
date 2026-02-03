@@ -362,18 +362,20 @@ public class CarpetasController : ControllerBase
         if (carpeta == null)
             return NotFound(new { message = "Carpeta no encontrada" });
 
-        // Soft delete: mantener las restricciones para evitar "dejar huérfanos" en UI.
+        // Borrado normal: eliminar de la BD. Solo bloqueamos si tiene subcarpetas o documentos ACTIVOS.
+        // Las inactivas no bloquean; al borrar la carpeta, la BD hace CASCADE en hijas (carpeta_padre_id).
         if (!hard)
         {
-            if (carpeta.Subcarpetas.Any())
-                return BadRequest(new { message = "No se puede eliminar una carpeta con subcarpetas" });
+            var tieneSubcarpetasActivas = carpeta.Subcarpetas.Any(s => s.Activo);
+            var tieneDocumentosActivos = carpeta.Documentos.Any(d => d.Activo);
+            if (tieneSubcarpetasActivas)
+                return BadRequest(new { message = "No se puede eliminar una carpeta con subcarpetas activas. Elimine primero las subcarpetas o use borrado en cascada." });
+            if (tieneDocumentosActivos)
+                return BadRequest(new { message = "No se puede eliminar una carpeta con documentos activos. Mueva o elimine los documentos primero." });
 
-            if (carpeta.Documentos.Any())
-                return BadRequest(new { message = "No se puede eliminar una carpeta con documentos" });
-
-            carpeta.Activo = false;
+            _context.Carpetas.Remove(carpeta);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Carpeta desactivada" });
+            return Ok(new { message = "Carpeta eliminada" });
         }
 
         // Hard delete (cascada): eliminar subcarpetas y documentos asociados.
