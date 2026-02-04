@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:frontend/providers/data_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -61,6 +62,9 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
   String? _gestionFilterCarpetas;
   static const List<String> _gestionesCarpetas = ['2024', '2025', '2026'];
 
+  /// Debounce para recargar documentos al escribir en la búsqueda dentro de una carpeta.
+  Timer? _debounceBusquedaCarpeta;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -116,6 +120,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
 
   @override
   void dispose() {
+    _debounceBusquedaCarpeta?.cancel();
     _searchController.dispose();
     _codigoQrFilterController.dispose();
     _numeroComprobanteFilterController.dispose();
@@ -127,6 +132,15 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     setState(() {
       _consultaBusqueda = _searchController.text;
     });
+    // Dentro de una carpeta: recargar documentos con el texto de búsqueda en el API (debounce).
+    if (_carpetaSeleccionada != null) {
+      _debounceBusquedaCarpeta?.cancel();
+      _debounceBusquedaCarpeta = Timer(const Duration(milliseconds: 400), () {
+        if (mounted && _carpetaSeleccionada != null) {
+          _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+        }
+      });
+    }
   }
 
   Future<void> cargarDocumentos() async {
@@ -176,6 +190,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     try {
       final service = Provider.of<DocumentoService>(context, listen: false);
       final n = _numeroComprobanteFilter.trim();
+      final textoBusqueda = _consultaBusqueda.trim().isEmpty ? null : _consultaBusqueda.trim();
       final dto = BusquedaDocumentoDTO(
         carpetaId: carpetaId,
         numeroCorrelativo: n.isEmpty ? null : n,
@@ -183,6 +198,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         fechaHasta: _fechaHastaFilter,
         responsableId: _responsableIdFilter,
         codigoQR: _codigoQrFilter.trim().isEmpty ? null : _codigoQrFilter.trim(),
+        textoBusqueda: textoBusqueda,
         page: 1,
         pageSize: 100,
         orderBy: 'fechaDocumento',
@@ -434,12 +450,11 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       await _cargarDocumentosCarpeta(subcarpetaId);
       if (!mounted) return;
       await _cargarCarpetas(todasLasGestiones: true);
-
       if (!mounted) return;
       final dataProvider = Provider.of<DataProvider>(context, listen: false);
       dataProvider.refresh();
-      setState(() {});
-      _mostrarSnackBarExito('Documento agregado correctamente.');
+      if (mounted) setState(() {});
+      if (mounted) _mostrarSnackBarExito('Documento agregado correctamente.');
     }
   }
 
@@ -543,6 +558,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       );
     }
     if (carpetas.isEmpty) {
+      final numDocsEncontrados = _carpetaSeleccionada == null
+          ? _documentosFiltrados.length
+          : _documentosCarpetaFiltrados.length;
+      final hayDocumentosConBusqueda = _consultaBusqueda.trim().isNotEmpty && numDocsEncontrados > 0;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -556,15 +575,17 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.search_off_rounded,
+                      hayDocumentosConBusqueda ? Icons.description_outlined : Icons.search_off_rounded,
                       size: 56,
-                      color: Colors.grey.shade400,
+                      color: hayDocumentosConBusqueda ? Colors.green.shade600 : Colors.grey.shade400,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      _consultaBusqueda.trim().isEmpty
-                          ? 'Ninguna carpeta con el filtro actual'
-                          : 'Ninguna carpeta coincide con "$_consultaBusqueda"',
+                      hayDocumentosConBusqueda
+                          ? 'La búsqueda encontró $numDocsEncontrados documento(s)'
+                          : _consultaBusqueda.trim().isEmpty
+                              ? 'Ninguna carpeta con el filtro actual'
+                              : 'Ninguna carpeta coincide con "$_consultaBusqueda"',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: Colors.grey.shade700,
@@ -572,7 +593,9 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Pruebe otro filtro o búsqueda, o agregue una carpeta.',
+                      hayDocumentosConBusqueda
+                          ? 'Véalos en el contenido principal (derecha).'
+                          : 'Pruebe otro filtro o búsqueda, o agregue una carpeta.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.grey.shade600,
@@ -986,6 +1009,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         ),
       );
     } else if (carpetas.isEmpty) {
+      final numDocsEncontrados = _carpetaSeleccionada == null
+          ? _documentosFiltrados.length
+          : _documentosCarpetaFiltrados.length;
+      final hayDocumentosConBusqueda = _consultaBusqueda.trim().isNotEmpty && numDocsEncontrados > 0;
       listContent = Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -993,15 +1020,19 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                noHayNinguna ? Icons.folder_open_outlined : Icons.search_off_rounded,
+                noHayNinguna
+                    ? Icons.folder_open_outlined
+                    : hayDocumentosConBusqueda ? Icons.description_outlined : Icons.search_off_rounded,
                 size: 56,
-                color: Colors.grey.shade400,
+                color: hayDocumentosConBusqueda ? Colors.green.shade600 : Colors.grey.shade400,
               ),
               const SizedBox(height: 16),
               Text(
                 noHayNinguna
                     ? 'No hay carpetas'
-                    : 'Sin resultados',
+                    : hayDocumentosConBusqueda
+                        ? 'La búsqueda encontró $numDocsEncontrados documento(s)'
+                        : 'Sin resultados',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
@@ -1012,7 +1043,9 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
               Text(
                 noHayNinguna
                     ? 'Cree la primera con el botón de abajo.'
-                    : 'Pruebe otro filtro o búsqueda, o agregue una carpeta.',
+                    : hayDocumentosConBusqueda
+                        ? 'Véalos en el contenido principal (derecha).'
+                        : 'Pruebe otro filtro o búsqueda, o agregue una carpeta.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
               ),
@@ -2146,7 +2179,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                 fechaHasta: _fechaHastaFilter,
                 responsableId: _responsableIdFilter,
                 codigoQrController: _codigoQrFilterController,
-                onAplicar: (numeroComprobante, fechaDesde, fechaHasta, responsableId, codigoQr) {
+                onAplicar: (numeroComprobante, fechaDesde, fechaHasta, responsableId, codigoQr) async {
                   setState(() {
                     _numeroComprobanteFilter = numeroComprobante;
                     _fechaDesdeFilter = fechaDesde;
@@ -2156,10 +2189,11 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   });
                   if (context.mounted) Navigator.pop(context);
                   if (context.mounted && _carpetaSeleccionada != null) {
-                    _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+                    await _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+                    if (context.mounted) setState(() {});
                   }
                 },
-                onLimpiar: () {
+                onLimpiar: () async {
                   setState(() {
                     _numeroComprobanteFilter = '';
                     _numeroComprobanteFilterController.clear();
@@ -2174,7 +2208,8 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   });
                   if (context.mounted) Navigator.pop(context);
                   if (context.mounted && _carpetaSeleccionada != null) {
-                    _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+                    await _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+                    if (context.mounted) setState(() {});
                   }
                 },
               ),
@@ -2800,7 +2835,14 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     );
 
     if (result == true && mounted) {
-      await _cargarCarpetas();
+      await _cargarCarpetas(todasLasGestiones: true);
+      if (!mounted) return;
+      await cargarDocumentos();
+      if (!mounted) return;
+      if (_carpetaSeleccionada != null) {
+        await _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+      }
+      if (!mounted) return;
       final dataProvider = Provider.of<DataProvider>(context, listen: false);
       dataProvider.refresh();
       if (mounted) {
