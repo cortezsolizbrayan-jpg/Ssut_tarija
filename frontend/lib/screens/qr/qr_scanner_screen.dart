@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
-import 'package:image_picker/image_picker.dart';
+import 'package:pdfx/pdfx.dart';
 import 'package:provider/provider.dart';
 import 'package:zxing2/qrcode.dart';
 
@@ -47,6 +47,16 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     super.dispose();
   }
 
+  /// Quita el prefijo "QR_" o "QR " del código para buscar por IdDocumento (el backend no usa ese prefijo).
+  static String _quitarPrefijoQr(String codigo) {
+    final s = codigo.trim();
+    if (s.length >= 3) {
+      final inicio = s.toUpperCase().substring(0, 3);
+      if (inicio == 'QR_' || inicio == 'QR ') return s.substring(3).trim();
+    }
+    return s;
+  }
+
   Future<void> _buscarPorCodigo(String codigoQr) async {
     setState(() => _isSearching = true);
     try {
@@ -68,19 +78,22 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         // Formato: http://localhost:5286/documentos/ver/CI-CONT-2026-0001
         final partes = codigoLimpio.split('/');
         if (partes.isNotEmpty) {
-          codigoLimpio = partes.last;
+          codigoLimpio = partes.last.trim();
         }
       }
 
-      print('DEBUG: Código procesado: $codigoLimpio');
+      // Quitar prefijo "QR_" o "QR " siempre (el backend guarda IdDocumento sin ese prefijo)
+      codigoLimpio = _quitarPrefijoQr(codigoLimpio);
 
-      // Intentar buscar por IdDocumento (que es el código)
+      print('DEBUG: Código procesado (sin prefijo QR): $codigoLimpio');
+
+      // Buscar por IdDocumento (código del documento: CI-CONT-2026-4213)
       Documento? documento;
       try {
         documento = await service.getByIdDocumento(codigoLimpio);
       } catch (e) {
         print('DEBUG: Error buscando por IdDocumento: $e');
-        // Si falla, intentar buscar por QR
+        // Si falla, intentar por QR (por si el backend tiene endpoint por CodigoQR)
         try {
           documento = await service.getByQRCode(codigoLimpio);
         } catch (e2) {
@@ -283,15 +296,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     await _buscarPorCodigo(codigo);
   }
 
-  /// Selecciona foto (galería) o archivo (imagen/PDF). Foto o imagen → extrae QR. PDF → indica cómo usar captura.
-  Future<void> _buscarDesdeImagen() async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery);
-    if (file == null) return;
-    await _procesarBytesComoImagenOPdf(await file.readAsBytes());
-  }
-
-  /// Permite elegir cualquier archivo: imagen (jpg, png, etc.) o PDF. Reconoce foto, PDF y código.
+  /// Selecciona imagen o PDF. Imagen → extrae QR con _extraerQrDeBytes. PDF → extrae QR con _extraerQrDePdf (sin diálogo).
+  /// No se muestra ningún diálogo "Buscar por PDF": el PDF se procesa directamente y se busca el documento.
   Future<void> _buscarDesdeArchivo() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -326,9 +332,39 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           bytes[3] == 0x46;
 
       if (esPdf) {
-        if (mounted) {
-          _mostrarMensajePdf();
+        // Extraer QR de PDF: renderizar páginas y buscar QR en cada una
+        final codigo = await _extraerQrDePdf(bytes);
+        if (!mounted) return;
+        if (codigo != null && codigo.isNotEmpty) {
+          final codigoLimpio = _quitarPrefijoQr(codigo);
+          _qrCodeController.text = codigoLimpio;
+          await _buscarPorCodigo(codigoLimpio);
+          return;
         }
+        // Si no se encontró QR en el PDF, mostrar mensaje
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No se encontró código QR en las páginas del PDF. Verifique que el QR esté visible.',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
         return;
       }
 
@@ -363,8 +399,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         return;
       }
 
-      _qrCodeController.text = codigo;
-      await _buscarPorCodigo(codigo);
+      final codigoLimpio = _quitarPrefijoQr(codigo);
+      _qrCodeController.text = codigoLimpio;
+      await _buscarPorCodigo(codigoLimpio);
     } on NotFoundException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -392,44 +429,43 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     }
   }
 
-  void _mostrarMensajePdf() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.picture_as_pdf_rounded, color: Colors.blue.shade700),
-            const SizedBox(width: 12),
-            const Expanded(child: Text('Buscar por PDF')),
-          ],
-        ),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Para buscar un documento usando un PDF con código QR:\n\n'
-            '1. Abra el PDF en su visor.\n'
-            '2. Tome una captura de pantalla de la página donde está el código QR.\n'
-            '3. Pulse "Foto o archivo" y seleccione esa captura (imagen).\n\n'
-            'También puede escribir o pegar el código del documento en el cuadro de búsqueda.',
-            style: TextStyle(height: 1.4),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _buscarDesdeImagen();
-            },
-            icon: const Icon(Icons.photo_library_rounded, size: 20),
-            label: const Text('Seleccionar imagen'),
-          ),
-        ],
-      ),
-    );
+  /// Extrae código QR de un PDF: renderiza las primeras páginas como imágenes y busca QR en cada una.
+  Future<String?> _extraerQrDePdf(Uint8List pdfBytes) async {
+    try {
+      final document = await PdfDocument.openData(pdfBytes);
+      final pageCount = document.pagesCount;
+      final maxPagesToScan = pageCount > 5 ? 5 : pageCount;
+
+      for (int i = 1; i <= maxPagesToScan; i++) {
+        try {
+          final page = await document.getPage(i);
+          // Renderizar a 300 DPI para buena calidad
+          final pageImage = await page.render(
+            width: page.width * 2,
+            height: page.height * 2,
+            format: PdfPageImageFormat.png,
+          );
+          await page.close();
+
+          if (pageImage == null || pageImage.bytes.isEmpty) continue;
+
+          // Intentar extraer QR de esta página
+          final codigo = _extraerQrDeBytes(pageImage.bytes);
+          if (codigo != null && codigo.isNotEmpty) {
+            await document.close();
+            return codigo;
+          }
+        } catch (e) {
+          print('Error procesando página $i del PDF: $e');
+          continue;
+        }
+      }
+      await document.close();
+      return null;
+    } catch (e) {
+      print('Error abriendo PDF: $e');
+      return null;
+    }
   }
 
   String? _extraerQrDeBytes(Uint8List bytes) {
@@ -550,6 +586,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
   @override
   Widget build(BuildContext context) {
+    // UI optimizada: campo de código → un solo botón "Buscar Documento" → fila "Subir imagen o PDF" + "Escanear".
+    // No hay "Solo imagen (galería)" ni "Foto, PDF o archivo" por separado. Si ves la versión antigua, haz flutter clean y vuelve a ejecutar.
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -624,68 +662,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _showScanInfo,
-                              icon: const Icon(Icons.qr_code_scanner_rounded),
-                              label: const Text('Escanear QR'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isSearching ? null : _buscarPorQR,
-                              icon: const Icon(Icons.search_rounded),
-                              label: const Text('Buscar'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _isSearching ? null : _buscarDesdeArchivo,
-                          icon: const Icon(Icons.photo_library_rounded),
-                          label: const Text('Foto, PDF o archivo'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton.icon(
-                          onPressed: _isSearching ? null : _buscarDesdeImagen,
-                          icon: const Icon(Icons.image_rounded, size: 20),
-                          label: const Text('Solo imagen (galería)'),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
                       // Campo de entrada
                       TextField(
                         controller: _qrCodeController,
@@ -741,8 +717,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                         },
                         onSubmitted: (_) => _buscarPorQR(),
                       ),
-                      const SizedBox(height: 24),
-                      // Botón de búsqueda
+                      const SizedBox(height: 20),
+                      // Botón de búsqueda principal
                       SizedBox(
                         width: double.infinity,
                         height: 56,
@@ -775,52 +751,64 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 16),
                       const Divider(),
+                      const SizedBox(height: 16),
+                      // Opciones alternativas
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isSearching ? null : _buscarDesdeArchivo,
+                              icon: const Icon(Icons.photo_library_rounded, size: 20),
+                              label: const Text('Subir imagen o PDF'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _showScanInfo,
+                              icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                              label: const Text('Escanear'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 24),
-                      // Información adicional
+                      // Información simplificada
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.blue.shade200,
-                            width: 1,
-                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  color: Colors.blue.shade700,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    'Reconocimiento: código, foto o PDF',
-                                    style: TextStyle(
-                                      color: Colors.blue.shade900,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: Colors.blue.shade700,
+                              size: 20,
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              '• Código: escriba o pegue el código del documento o un link (DOC-SHARE:...)\n'
-                              '• Foto: seleccione una imagen (PNG/JPG) que contenga el código QR\n'
-                              '• PDF: use "Foto, PDF o archivo"; si elige un PDF, se le indicará cómo usar una captura del QR',
-                              style: TextStyle(
-                                color: Colors.blue.shade800,
-                                fontSize: 13,
-                                height: 1.4,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Escriba el código, pegue un link o suba una imagen/PDF con QR para buscar el documento',
+                                style: TextStyle(
+                                  color: Colors.blue.shade800,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ],
