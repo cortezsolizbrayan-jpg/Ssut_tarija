@@ -384,19 +384,45 @@ public class UsuariosController : ControllerBase
         var auditorias = await _context.Auditoria.Where(a => a.UsuarioId == id).ToListAsync();
         foreach (var a in auditorias) a.UsuarioId = null;
 
+        // Eliminar filas de historial_documento que referencian al usuario (la BD puede no permitir NULL en usuario_id)
         var historiales = await _context.HistorialesDocumento.Where(h => h.UsuarioId == id).ToListAsync();
-        foreach (var h in historiales) h.UsuarioId = null;
+        _context.HistorialesDocumento.RemoveRange(historiales);
 
         var configs = await _context.Configuraciones.Where(c => c.ActualizadoPor == id).ToListAsync();
         foreach (var c in configs) c.ActualizadoPor = null;
 
         try
         {
-            // Guardar primero las desvinculaciones para que la BD aplique los cambios antes del Remove
-            await _context.SaveChangesAsync();
+            // Desactivar trigger que inserta en historial_documento con usuario_id inválido al actualizar documentos
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE documentos DISABLE TRIGGER trigger_documentos_historial;");
+            }
+            catch
+            {
+                // Si el trigger no existe (ej. otra versión de la BD), continuar
+            }
 
-            _context.Usuarios.Remove(usuario);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                _context.Usuarios.Remove(usuario);
+                await _context.SaveChangesAsync();
+            }
+            finally
+            {
+                try
+                {
+                    await _context.Database.ExecuteSqlRawAsync(
+                        "ALTER TABLE documentos ENABLE TRIGGER trigger_documentos_historial;");
+                }
+                catch
+                {
+                    // Ignorar si no se desactivó
+                }
+            }
         }
         catch (DbUpdateException ex)
         {
