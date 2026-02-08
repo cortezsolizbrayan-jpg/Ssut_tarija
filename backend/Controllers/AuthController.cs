@@ -27,6 +27,29 @@ public class AuthController : ControllerBase
         _emailSender = emailSender;
     }
 
+    /// <summary>Lista de preguntas de seguridad para registro y recuperación de contraseña.</summary>
+    private static readonly IReadOnlyList<(int Id, string Texto)> PreguntasSecretas = new List<(int, string)>
+    {
+        (1, "¿Cuál es el nombre de tu madre?"),
+        (2, "¿Cuál es el nombre de tu primera mascota?"),
+        (3, "¿En qué ciudad naciste?"),
+        (4, "¿Cuál es tu color favorito?"),
+        (5, "¿Nombre de tu mejor amigo de la infancia?"),
+        (6, "¿Cuál fue tu primer trabajo?"),
+        (7, "¿Cuál es el segundo nombre de tu padre?"),
+        (8, "¿En qué colegio estudiaste la primaria?"),
+        (9, "¿Cuál es tu película favorita?"),
+        (10, "¿Cuál es tu comida favorita?"),
+    };
+
+    /// <summary>Devuelve la lista de preguntas de seguridad (para registro y recuperación).</summary>
+    [HttpGet("preguntas-secretas")]
+    public ActionResult PreguntasSecretasList()
+    {
+        var list = PreguntasSecretas.Select(p => new { id = p.Id, texto = p.Texto }).ToList();
+        return Ok(list);
+    }
+
     [HttpPost("register")]
     public async Task<ActionResult> Register([FromBody] RegisterRequest dto)
     {
@@ -35,6 +58,11 @@ public class AuthController : ControllerBase
             string.IsNullOrWhiteSpace(dto.NombreCompleto) ||
             string.IsNullOrWhiteSpace(dto.Email))
             return BadRequest(new { message = "Todos los campos son obligatorios" });
+
+        if (dto.PreguntaSecretaId <= 0 || dto.PreguntaSecretaId > PreguntasSecretas.Count)
+            return BadRequest(new { message = "Elige una pregunta de seguridad válida." });
+        if (string.IsNullOrWhiteSpace(dto.RespuestaSecreta))
+            return BadRequest(new { message = "La respuesta de seguridad es obligatoria." });
 
         var username = dto.Username.Trim();
         var email = dto.Email.Trim();
@@ -58,6 +86,8 @@ public class AuthController : ControllerBase
             PasswordHash = HashPassword(dto.Password),
             Rol = rolEnum,
             Activo = false,
+            PreguntaSecretaId = dto.PreguntaSecretaId,
+            RespuestaSecretaHash = HashPassword(dto.RespuestaSecreta!.Trim()),
             FechaRegistro = DateTime.UtcNow,
             FechaActualizacion = DateTime.UtcNow
         };
@@ -270,8 +300,8 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Restablece la contraseña usando nombre de usuario + código de 6 dígitos (sin correo).
-    /// El código lo genera un administrador desde Gestión de Usuarios.
+    /// Restablece la contraseña usando nombre de usuario + pin de 4 dígitos (sin correo).
+    /// El pin lo genera un administrador desde Gestión de Usuarios.
     /// </summary>
     [HttpPost("reset-password-by-code")]
     public async Task<ActionResult> ResetPasswordByCode([FromBody] ResetPasswordByCodeRequest dto)
@@ -298,6 +328,104 @@ public class AuthController : ControllerBase
         {
             return StatusCode(500, new { message = "Error al guardar. Intenta de nuevo.", error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Restablece la contraseña usando usuario + pregunta de seguridad + respuesta. No requiere autenticación.
+    /// </summary>
+    [HttpPost("reset-password-by-pregunta")]
+    public async Task<ActionResult> ResetPasswordByPregunta([FromBody] ResetPasswordByPreguntaRequest dto)
+    {
+        var now = DateTime.Now;
+        if (now.Hour < 8 || now.Hour > 18)
+            return BadRequest(new { message = "La recuperación de contraseña solo está disponible de 8:00 a 18:00." });
+
+        if (string.IsNullOrWhiteSpace(dto?.Username) || dto.PreguntaSecretaId <= 0 ||
+            string.IsNullOrWhiteSpace(dto?.Respuesta) || string.IsNullOrWhiteSpace(dto?.NewPassword))
+            return BadRequest(new { message = "Usuario, pregunta, respuesta y nueva contraseña son obligatorios." });
+        if (dto.NewPassword!.Length < 6)
+            return BadRequest(new { message = "La nueva contraseña debe tener al menos 6 caracteres." });
+
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.NombreUsuario == dto.Username!.Trim());
+        if (usuario == null)
+            return BadRequest(new { message = "Usuario o respuesta incorrectos. Vuelve a intentar." });
+
+        if (usuario.PreguntaSecretaId != dto.PreguntaSecretaId || string.IsNullOrEmpty(usuario.RespuestaSecretaHash))
+            return BadRequest(new { message = "Usuario o respuesta incorrectos. Vuelve a intentar." });
+
+        if (!VerifyPassword(dto.Respuesta!.Trim(), usuario.RespuestaSecretaHash!))
+            return BadRequest(new { message = "Usuario o respuesta incorrectos. Vuelve a intentar." });
+
+        try
+        {
+            await ApplyPasswordReset(usuario, dto.NewPassword);
+            return Ok(new { message = "Contraseña actualizada. Ya puedes iniciar sesión." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error al guardar. Intenta de nuevo.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Crea una solicitud de recuperación y notifica a los administradores (para que generen un código o contacten al usuario).
+    /// No requiere autenticación. No revela si el email/usuario existe.
+    /// </summary>
+    [HttpPost("solicitud-recuperacion")]
+    public async Task<ActionResult> SolicitudRecuperacion([FromBody] SolicitudRecuperacionRequest dto)
+    {
+        var tipo = (dto?.Tipo ?? "").Trim().ToLowerInvariant();
+        if (tipo != "password" && tipo != "username")
+            return BadRequest(new { message = "Tipo debe ser 'password' o 'username'." });
+
+        var email = dto?.Email?.Trim();
+        var username = dto?.Username?.Trim();
+        if (tipo == "username" && string.IsNullOrWhiteSpace(email))
+            return BadRequest(new { message = "Para recuperar usuario se requiere el correo." });
+        if (tipo == "password" && string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(username))
+            return BadRequest(new { message = "Indica tu correo o tu usuario para que el administrador pueda ayudarte." });
+
+        Usuario? usuario = null;
+        if (!string.IsNullOrWhiteSpace(email))
+            usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+        else if (!string.IsNullOrWhiteSpace(username))
+            usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.NombreUsuario == username);
+
+        var admins = await _context.Usuarios
+            .Where(u => u.Activo && (u.Rol == UsuarioRol.Administrador || u.Rol == UsuarioRol.AdministradorDocumentos))
+            .ToListAsync();
+
+        if (admins.Count > 0 && usuario != null)
+        {
+            var titulo = tipo == "username"
+                ? "Solicitud: recuperar usuario (olvidó su usuario)"
+                : "Solicitud: recuperación de contraseña";
+            var mensaje = tipo == "username"
+                ? $"Alguien solicitó recordar su usuario. Email: {usuario.Email}. Usuario: {usuario.NombreCompleto} ({usuario.NombreUsuario}). Genera un código de recuperación desde Gestión de Usuarios si lo consideras. (UsuarioId: {usuario.Id})"
+                : $"Solicitud de recuperación de contraseña. Usuario: {usuario.NombreCompleto} ({usuario.NombreUsuario}), Email: {usuario.Email}. Genera un código desde Gestión de Usuarios → menú del usuario → 'Generar código recuperación'. (UsuarioId: {usuario.Id})";
+
+            foreach (var admin in admins)
+            {
+                _context.Alertas.Add(new Alerta
+                {
+                    UsuarioId = admin.Id,
+                    Titulo = titulo,
+                    Mensaje = mensaje,
+                    TipoAlerta = "warning",
+                    FechaCreacion = DateTime.UtcNow,
+                    Leida = false
+                });
+            }
+            try { await _context.SaveChangesAsync(); } catch { /* no revelar error */ }
+        }
+
+        return Ok(new
+        {
+            message = tipo == "username"
+                ? "Si tu correo está registrado, un administrador recibirá la solicitud y te contactará o generará un código de recuperación."
+                : "Tu solicitud ha sido registrada. Un administrador la revisará y podrá generarte un código de recuperación desde Gestión de Usuarios."
+        });
     }
 
     private async Task ApplyPasswordReset(Usuario usuario, string newPassword)
@@ -619,6 +747,18 @@ public class RegisterRequest
     public string NombreCompleto { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Rol { get; set; } = "Contador";
+    /// <summary>ID de la pregunta de seguridad (1-10). Obligatorio.</summary>
+    public int PreguntaSecretaId { get; set; }
+    /// <summary>Respuesta de seguridad. Obligatoria.</summary>
+    public string? RespuestaSecreta { get; set; }
+}
+
+public class ResetPasswordByPreguntaRequest
+{
+    public string? Username { get; set; }
+    public int PreguntaSecretaId { get; set; }
+    public string? Respuesta { get; set; }
+    public string? NewPassword { get; set; }
 }
 
 public class LoginRequest
@@ -655,4 +795,12 @@ public class ResetPasswordByCodeRequest
     public string? Username { get; set; }
     public string? Code { get; set; }
     public string? NewPassword { get; set; }
+}
+
+public class SolicitudRecuperacionRequest
+{
+    /// <summary>"password" = solicitud de recuperación de contraseña; "username" = solicitud porque olvidó su usuario.</summary>
+    public string? Tipo { get; set; }
+    public string? Email { get; set; }
+    public string? Username { get; set; }
 }
