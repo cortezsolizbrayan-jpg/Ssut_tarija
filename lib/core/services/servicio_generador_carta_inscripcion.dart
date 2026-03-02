@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
@@ -14,6 +15,19 @@ enum TipoPrograma {
 
 /// Servicio para generar cartas de solicitud de inscripción
 class ServicioGeneradorCartaInscripcion {
+  /// Abreviaturas de departamento para CI (ej. C.I. 8167727 Sc)
+  static const Map<String, String> _abrevExpedido = {
+    'LA PAZ': 'Lp',
+    'ORURO': 'Or',
+    'POTOSÍ': 'Po',
+    'SANTA CRUZ': 'Sc',
+    'BENI': 'Be',
+    'PANDO': 'Pa',
+    'COCHABAMBA': 'Cb',
+    'CHUQUISACA': 'Ch',
+    'TARIJA': 'Tj',
+  };
+
   /// Genera una carta de solicitud de inscripción según el tipo de programa
   /// 
   /// Parámetros:
@@ -22,7 +36,10 @@ class ServicioGeneradorCartaInscripcion {
   /// - [modalidad]: Modalidad del programa (Virtual, Presencial, Semipresencial)
   /// - [nombreCompleto]: Nombre completo del solicitante
   /// - [numeroCI]: Número de cédula de identidad
+  /// - [expedidoEn]: Departamento de expedición del CI (opcional, ej. SANTA CRUZ → "Sc")
   /// - [montoDeposito]: Monto del depósito bancario
+  /// - [numeroRef]: Número de referencia de la carta (opcional, ej. " - - 8285")
+  /// - [signatureImagePath]: Ruta de la imagen de la firma digital (opcional)
   /// - [guardarEnPreferencias]: Si es true, guarda la ruta en SharedPreferences (default: true)
   /// 
   /// Retorna: Ruta del archivo HTML generado
@@ -32,7 +49,10 @@ class ServicioGeneradorCartaInscripcion {
     required String modalidad,
     required String nombreCompleto,
     required String numeroCI,
+    String? expedidoEn,
     required String montoDeposito,
+    String? numeroRef,
+    String? signatureImagePath,
     bool guardarEnPreferencias = true,
   }) async {
     try {
@@ -45,6 +65,31 @@ class ServicioGeneradorCartaInscripcion {
       // Obtener la fecha actual en formato español
       final String fechaActual = _obtenerFechaActual();
 
+      // Expedido para CI: abreviatura con espacio (ej. " Sc") o vacío
+      final String expedidoCi = expedidoEn != null && expedidoEn.isNotEmpty
+          ? ' ${_abrevExpedido[expedidoEn.toUpperCase()] ?? expedidoEn}'
+          : '';
+
+      // Número de referencia (ej. " - - 8285") o vacío
+      final String refStr = (numeroRef != null && numeroRef.trim().isNotEmpty)
+          ? ' - - $numeroRef'
+          : '';
+
+      // Convertir firma a base64 si existe
+      String firmaBase64 = '';
+      if (signatureImagePath != null && signatureImagePath.isNotEmpty) {
+        try {
+          final File firmaFile = File(signatureImagePath);
+          if (await firmaFile.exists()) {
+            final bytes = await firmaFile.readAsBytes();
+            firmaBase64 = base64Encode(bytes);
+          }
+        } catch (e) {
+          // Si hay error al cargar la firma, continuar sin ella
+          print('⚠️ Error al cargar firma: $e');
+        }
+      }
+
       // Reemplazar los marcadores de posición con los datos reales
       String cartaGenerada = plantillaHTML
           .replaceAll('{{FECHA_ACTUAL}}', fechaActual)
@@ -52,7 +97,10 @@ class ServicioGeneradorCartaInscripcion {
           .replaceAll('{{MODALIDAD}}', modalidad)
           .replaceAll('{{NOMBRE_COMPLETO}}', nombreCompleto)
           .replaceAll('{{NUMERO_CI}}', numeroCI)
-          .replaceAll('{{MONTO_DEPOSITO}}', montoDeposito);
+          .replaceAll('{{EXPEDIDO_CI}}', expedidoCi)
+          .replaceAll('{{NUMERO_REF}}', refStr)
+          .replaceAll('{{MONTO_DEPOSITO}}', montoDeposito)
+          .replaceAll('{{FIRMA_BASE64}}', firmaBase64);
 
       // Guardar el archivo generado
       final String rutaArchivo = await _guardarArchivo(

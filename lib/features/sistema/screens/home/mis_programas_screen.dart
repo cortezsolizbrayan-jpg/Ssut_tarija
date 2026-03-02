@@ -2,8 +2,11 @@ import 'dart:math' as math;
 
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/features/sistema/domain/entities/programa_posgrado.dart';
 import 'package:refactor_template/features/sistema/presentation/providers/programa_posgrado_provider.dart';
 import 'package:refactor_template/features/sistema/screens/diplomados/detalle_programa_screen.dart';
 import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
@@ -25,6 +28,10 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
   bool _isGridView = false; // Vista de lista o grilla
   final Set<String> _favorites = {}; // IDs de programas favoritos
   bool _showOnlyFavorites = false;
+  String _username = 'anon';
+  bool _loadingUserPrograms = true;
+  bool _seededUserPrograms = false;
+  Set<String> _enrolledProgramIds = {};
 
   final List<String> _filters = [
     'Todos',
@@ -51,9 +58,176 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserPrograms();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Widget que muestra el estado vacío cuando el usuario no tiene programas inscritos
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icono de medalla en plomo (gris oscuro)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey.shade200,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade400,
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.workspace_premium,
+                size: 80,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            // Título
+            Text(
+              '¡Aún no tienes programas!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            
+            // Descripción
+            Text(
+              'Todas tus medallas están en plomo.\nInscríbete a un programa para comenzar a ganar medallas y avanzar en tu carrera profesional.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            
+            // Fila de medallas en plomo
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildMedalIcon(Icons.military_tech, Colors.grey.shade400, 'Bronce'),
+                const SizedBox(width: 16),
+                _buildMedalIcon(Icons.stars, Colors.grey.shade400, 'Plata'),
+                const SizedBox(width: 16),
+                _buildMedalIcon(Icons.emoji_events, Colors.grey.shade400, 'Oro'),
+              ],
+            ),
+            const SizedBox(height: 40),
+            
+            // Botón de acción
+            ElevatedButton.icon(
+              onPressed: () {
+                // Navegar a la pantalla de programas vigentes
+                context.go('/sistema/programas-vigentes');
+              },
+              icon: const Icon(Icons.add_circle_outline, size: 24),
+              label: const Text(
+                'Explorar Programas',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A3A5C),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Texto secundario
+            Text(
+              'Descubre maestrías, especialidades y diplomados\nque impulsarán tu crecimiento profesional',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade500,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget individual de medalla (para el estado vacío)
+  Widget _buildMedalIcon(IconData icon, Color color, String label) {
+    return Column(
+      children: [
+        Icon(icon, size: 48, color: color),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _loadUserPrograms() async {
+    final session = await LocalStorageService.getSessionData();
+    final nombreUsuario = (session?['nombreUsuario'] as String?)?.trim();
+    final username = (nombreUsuario != null && nombreUsuario.isNotEmpty)
+        ? nombreUsuario
+        : 'anon';
+    final enrolled = await LocalStorageService.getUserPrograms(username);
+    if (!mounted) return;
+    setState(() {
+      _username = username;
+      _enrolledProgramIds = enrolled;
+      _loadingUserPrograms = false;
+    });
+  }
+
+  Future<void> _ensureProgramSeed(List<ProgramaPosgrado> programas) async {
+    if (_seededUserPrograms || _loadingUserPrograms) return;
+
+    if (_enrolledProgramIds.isEmpty &&
+        _username != '12865214' &&
+        programas.isNotEmpty) {
+      final seeded = {programas.first.id};
+      await LocalStorageService.setUserPrograms(_username, seeded);
+      if (!mounted) return;
+      setState(() {
+        _enrolledProgramIds = seeded;
+        _seededUserPrograms = true;
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _seededUserPrograms = true;
+    });
   }
 
   @override
@@ -134,7 +308,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                 const SizedBox(width: 12),
                 // Logo Posgrado con animación
                 Image.asset(
-                  'assets/images/logposgrado.png',
+                  'assets/images/logoposgrado.jpg',
                   height: 80,
                   fit: BoxFit.contain,
                 ),
@@ -392,6 +566,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                     children: [
                       GestureDetector(
                         onTap: () {
+                          HapticFeedback.lightImpact();
                           setState(() {
                             _selectedCategory = index;
                           });
@@ -512,6 +687,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                     padding: EdgeInsets.only(right: spacing),
                     child: GestureDetector(
                       onTap: () {
+                        HapticFeedback.selectionClick();
                         setState(() {
                           _selectedFilter = filter;
                         });
@@ -803,8 +979,29 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
 
     return programasAsync.when(
       data: (programas) {
+        if (!_seededUserPrograms && !_loadingUserPrograms) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _ensureProgramSeed(programas);
+          });
+        }
+
+        if (_loadingUserPrograms) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF1A3A5C)),
+          );
+        }
+
+        final visiblePrograms = programas
+            .where((programa) => _enrolledProgramIds.contains(programa.id))
+            .toList();
+        
+        // Si no hay programas inscritos, mostrar estado vacío
+        if (visiblePrograms.isEmpty) {
+          return _buildEmptyState(context);
+        }
+        
         // Filtrar por búsqueda
-        var filteredPrograms = programas.where((programa) {
+        var filteredPrograms = visiblePrograms.where((programa) {
           if (_searchController.text.isNotEmpty) {
             final searchLower = _searchController.text.toLowerCase();
             return programa.titulo.toLowerCase().contains(searchLower) ||
@@ -958,7 +1155,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                               mainAxisSpacing: 16,
                             ),
                         itemCount: filteredPrograms.length,
-                        cacheExtent: 500, // Cache más items fuera de vista
+                        cacheExtent: 100, // Menor caché para reducir uso de memoria
                         itemBuilder: (context, index) {
                           final programa = filteredPrograms[index];
                           return RepaintBoundary(
@@ -998,7 +1195,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                         ),
                         itemCount: filteredPrograms.length,
                         itemExtent: 280, // Altura fija para mejor rendimiento
-                        cacheExtent: 500, // Cache más items fuera de vista
+                        cacheExtent: 100, // Menor caché para reducir uso de memoria
                         itemBuilder: (context, index) {
                           final programa = filteredPrograms[index];
                           return RepaintBoundary(

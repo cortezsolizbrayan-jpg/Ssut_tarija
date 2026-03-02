@@ -33,8 +33,9 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
   // Sección seleccionada: 'Colegiatura', 'Matrículas', 'Monografía / Tesis'
   String _selectedSection = 'Colegiatura';
 
-  // Item del menú inferior seleccionado
-  String _selectedNavItem = 'Mi Seguimiento de Pagos';
+  // Controlador de páginas para navegación con swipe
+  late PageController _pageController;
+  int _currentPage = 2; // Empezamos en "Mi Seguimiento de Pagos" (índice 2)
 
   late AnimationController _animationController;
   late Animation<double> scalAnimation;
@@ -51,6 +52,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentPage);
     _initializeAnimations();
     // Retrasar las animaciones iniciales para mejor hot reload
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -124,6 +126,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
     _animationController.dispose();
     _sectionTransitionController.dispose();
     _paymentCardsController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -174,9 +177,13 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                   offset: Offset(animation.value * 265, 0),
                   child: Transform.scale(
                     scale: scalAnimation.value,
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.all(Radius.circular(24)),
-                      child: _buildContent(),
+                    child: ExcludeSemantics(
+                      excluding: animation.value > 0.01,
+                      child: ClipRRect(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(24)),
+                        child: _buildContent(),
+                      ),
                     ),
                   ),
                 ),
@@ -192,30 +199,36 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
   //se define el contenido de la pantalla
   Widget _buildContent() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFEEF1F8), // Fondo institucional
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
             // Header azul (degradé + iconos) que se desplaza junto con el contenido
             _buildHeader(),
-            // Información del programa, tarjetas y pagos que se mueven junto al header
+            // Indicadores de página (dots) - estilo WhatsApp
+            _buildPageIndicators(),
+            // PageView con swipe para navegar entre secciones
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildProgramInfo(),
-                    _buildProgressCards(),
-                    _buildColegiaturaSection(),
-                    _buildPaymentsList(),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                children: [
+                  // Página 0: Mis Notas
+                  _MisNotasSheet(tituloPrograma: widget.titulo),
+                  // Página 1: Mis Matrículas
+                  _MisMatriculasSheet(tituloPrograma: widget.titulo),
+                  // Página 2: Mi Seguimiento de Pagos (página principal)
+                  _buildSeguimientoPagosPage(),
+                  // Página 3: Mis Documentos
+                  _MisDocumentosSheet(tituloPrograma: widget.titulo),
+                ],
               ),
             ),
-            // Barra de navegación inferior
-            _buildBottomNavBar(),
           ],
         ),
       ),
@@ -225,21 +238,20 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
   Widget _buildHeader() {
     return Container(
       decoration: const BoxDecoration(
-        // Degradé celeste-azul igual que en AppHeader
+        // Degradé azul institucional
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF00448A), // Azul muy oscuro
+            Color(0xFF005BAC), // Azul institucional
             Color(0xFF0F7BD7), // Azul brillante
-            Color(0xFF0B5FB4), // Azul medio-oscuro
           ],
-          stops: [0.0, 0.5, 1.0],
+          stops: [0.0, 1.0],
         ),
         borderRadius: BorderRadius.only(
-          // Curva más pronunciada en la parte inferior del header
-          bottomLeft: Radius.circular(50),
-          bottomRight: Radius.circular(50),
+          // Curva más sutil
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
         ),
       ),
       // Padding interno: separa los iconos del borde superior
@@ -296,7 +308,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                       return Align(
                         alignment: Alignment.centerLeft,
                         child: Image.asset(
-                          'assets/images/logposgrado.png',
+                          'assets/images/logoposgrado.jpg',
                           height: logoHeight,
                           fit: BoxFit.contain,
                         ),
@@ -323,7 +335,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF1E293B), Color(0xFF64748B)],
+                          colors: [Color(0xFF005BAC), Color(0xFF0F7BD7)],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -412,6 +424,48 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
     );
   }
 
+  /// Construye los indicadores de página (dots) estilo WhatsApp
+  Widget _buildPageIndicators() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(4, (index) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            height: 8,
+            width: _currentPage == index ? 24 : 8,
+            decoration: BoxDecoration(
+              color: _currentPage == index
+                  ? const Color(0xFF005BAC)
+                  : const Color(0xFF005BAC).withOpacity(0.3),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+
+  /// Página 2: Mi Seguimiento de Pagos (página principal)
+  Widget _buildSeguimientoPagosPage() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildProgramInfo(),
+          _buildProgressCards(),
+          _buildColegiaturaSection(),
+          _buildPaymentsList(),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+
   /// Construye la sección de información del programa.
   Widget _buildProgramInfo() {
     return Padding(
@@ -434,11 +488,11 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A3A5C),
+                    color: const Color(0xFF005BAC),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF1A3A5C).withOpacity(0.3 * value),
+                        color: const Color(0xFF005BAC).withOpacity(0.3 * value),
                         blurRadius: 8 * value,
                         spreadRadius: 1 * value,
                       ),
@@ -616,7 +670,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                             shadows: [
                               Shadow(
                                 color: const Color(
-                                  0xFF1A3A5C,
+                                  0xFF005BAC,
                                 ).withOpacity(0.2 * value),
                                 blurRadius: 8 * value,
                               ),
@@ -701,8 +755,8 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
                                     ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(
-                                        0xFFFF9800,
-                                      ), // Naranja
+                                        0xFF005BAC,
+                                      ), // Azul institucional
                                       foregroundColor: Colors.white,
                                       padding: EdgeInsets.symmetric(
                                         horizontal: paddingH,
@@ -909,6 +963,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
     }
   }
 
+  /* ELIMINADO: Barra de navegación inferior - ahora usamos PageView con swipe
   /// Construye la barra de navegación inferior minimalista con Rive.
   Widget _buildBottomNavBar() {
     return Container(
@@ -918,8 +973,8 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF1A3A5C), // Azul oscuro
-            Color(0xFF2C5F8D), // Azul medio
+            Color(0xFF005BAC), // Azul institucional
+            Color(0xFF004A8F), // Azul más oscuro
           ],
         ),
         boxShadow: [
@@ -964,7 +1019,8 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
       ),
     );
   }
-
+  FIN DEL BLOQUE COMENTADO */
+  /* ELIMINADO: Métodos de navegación del menú inferior - ahora usamos PageView
   /// Maneja la navegación a diferentes items del menú inferior.
   void _navigateToNavItem(String item) {
     if (_selectedNavItem == item) return;
@@ -1019,6 +1075,7 @@ class _DetalleProgramaScreenState extends State<DetalleProgramaScreen>
       builder: (context) => _MisDocumentosSheet(tituloPrograma: widget.titulo),
     );
   }
+  */
 }
 
 /// Tarjeta animada que muestra el progreso de pagos con efectos de interacción.
@@ -1200,7 +1257,7 @@ class _ProgressCardState extends State<_ProgressCard>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: widget.isHighlighted
-                ? const Color(0xFF1A3A5C)
+                ? const Color(0xFF005BAC)
                 : Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
@@ -1214,7 +1271,7 @@ class _ProgressCardState extends State<_ProgressCard>
                 ),
               BoxShadow(
                 color: widget.isHighlighted
-                    ? const Color(0xFF1A3A5C).withOpacity(0.4)
+                    ? const Color(0xFF005BAC).withOpacity(0.4)
                     : Colors.black.withOpacity(0.05),
                 blurRadius: widget.isHighlighted ? 12 : 6,
                 offset: const Offset(0, 2),
@@ -1277,7 +1334,7 @@ class _ProgressCardState extends State<_ProgressCard>
                         valueColor: AlwaysStoppedAnimation<Color>(
                           widget.isHighlighted
                               ? Colors.white
-                              : const Color(0xFF1A3A5C),
+                              : const Color(0xFF005BAC),
                         ),
                       ),
                     ),
@@ -1364,8 +1421,8 @@ class _PaymentCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: const Color(
-                    0xFF1A3A5C,
-                  ).withOpacity(0.25), // Borde azul suave
+                    0xFF005BAC,
+                  ).withOpacity(0.25), // Borde azul institucional suave
                   width: 1.2,
                 ),
                 boxShadow: [
@@ -1542,8 +1599,8 @@ class _PaymentCard extends StatelessWidget {
                               icon: const Icon(Icons.payments, size: 16),
                               label: const Text('Pagar'),
                               backgroundColor: const Color(
-                                0xFFFF9800,
-                              ), // Naranja
+                                0xFF005BAC,
+                              ), // Azul institucional
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -1563,7 +1620,7 @@ class _PaymentCard extends StatelessWidget {
                               },
                               icon: const Icon(Icons.payments, size: 16),
                               label: const Text('Pagar'),
-                              backgroundColor: const Color(0xFF1A3A5C),
+                              backgroundColor: const Color(0xFF005BAC),
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -1579,8 +1636,8 @@ class _PaymentCard extends StatelessWidget {
                             icon: const Icon(Icons.description, size: 16),
                             label: const Text('Factura'),
                             backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF1A3A5C),
-                            borderColor: const Color(0xFF1A3A5C),
+                            foregroundColor: const Color(0xFF005BAC),
+                            borderColor: const Color(0xFF005BAC),
                           ),
                         ),
                       ],
@@ -1830,98 +1887,74 @@ class _MisNotasSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.grade_rounded, color: Color(0xFF005BAC)),
+                const SizedBox(width: 12),
+                const Text(
+                  'Mis Notas',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+          // Content
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(
+                  'Programa: $tituloPrograma',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Mis Notas',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 24),
+                _buildNotaCard(
+                  'Matemáticas Avanzadas',
+                  'Primer Semestre',
+                  '85',
+                  'Aprobado',
+                  Colors.green,
                 ),
-              ),
-              // Content
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    Text(
-                      'Programa: $tituloPrograma',
-                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildNotaCard(
-                      'Matemáticas Avanzadas',
-                      'Primer Semestre',
-                      '85',
-                      'Aprobado',
-                      Colors.green,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildNotaCard(
-                      'Programación Orientada a Objetos',
-                      'Primer Semestre',
-                      '92',
-                      'Aprobado',
-                      Colors.green,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildNotaCard(
-                      'Base de Datos',
-                      'Segundo Semestre',
-                      '78',
-                      'Aprobado',
-                      Colors.orange,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildNotaCard(
-                      'Arquitectura de Software',
-                      'Segundo Semestre',
-                      '88',
-                      'Aprobado',
-                      Colors.green,
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                _buildNotaCard(
+                  'Programación Orientada a Objetos',
+                  'Primer Semestre',
+                  '92',
+                  'Aprobado',
+                  Colors.green,
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                _buildNotaCard(
+                  'Base de Datos',
+                  'Segundo Semestre',
+                  '78',
+                  'Aprobado',
+                  Colors.orange,
+                ),
+                const SizedBox(height: 16),
+                _buildNotaCard(
+                  'Arquitectura de Software',
+                  'Segundo Semestre',
+                  '88',
+                  'Aprobado',
+                  Colors.green,
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -2016,90 +2049,66 @@ class _MisMatriculasSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.event_note_rounded, color: Color(0xFF005BAC)),
+                const SizedBox(width: 12),
+                const Text(
+                  'Mis Matrículas',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+          // Content
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(
+                  'Programa: $tituloPrograma',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Mis Matrículas',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 24),
+                _buildMatriculaCard(
+                  '2025-1',
+                  'Primer Semestre 2025',
+                  '15/01/2025',
+                  'Activa',
+                  Colors.green,
                 ),
-              ),
-              // Content
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    Text(
-                      'Programa: $tituloPrograma',
-                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildMatriculaCard(
-                      '2025-1',
-                      'Primer Semestre 2025',
-                      '15/01/2025',
-                      'Activa',
-                      Colors.green,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildMatriculaCard(
-                      '2024-2',
-                      'Segundo Semestre 2024',
-                      '15/08/2024',
-                      'Completada',
-                      Colors.blue,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildMatriculaCard(
-                      '2024-1',
-                      'Primer Semestre 2024',
-                      '15/01/2024',
-                      'Completada',
-                      Colors.blue,
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                _buildMatriculaCard(
+                  '2024-2',
+                  'Segundo Semestre 2024',
+                  '15/08/2024',
+                  'Completada',
+                  Colors.blue,
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                _buildMatriculaCard(
+                  '2024-1',
+                  'Primer Semestre 2024',
+                  '15/01/2024',
+                  'Completada',
+                  Colors.blue,
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -2194,98 +2203,77 @@ class _MisDocumentosSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.folder_shared_rounded,
+                  color: Color(0xFF005BAC),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Mis Documentos',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+          // Content
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(
+                  'Programa: $tituloPrograma',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Mis Documentos del Programa',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 24),
+                _buildDocumentoCard(
+                  'Carta de Aceptación',
+                  'PDF',
+                  '15/01/2025',
+                  Icons.description,
+                  Colors.red,
                 ),
-              ),
-              // Content
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    Text(
-                      'Programa: $tituloPrograma',
-                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildDocumentoCard(
-                      'Carta de Aceptación',
-                      'PDF',
-                      '15/01/2025',
-                      Icons.description,
-                      Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDocumentoCard(
-                      'Plan de Estudios',
-                      'PDF',
-                      '20/01/2025',
-                      Icons.description,
-                      Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDocumentoCard(
-                      'Certificado de Notas',
-                      'PDF',
-                      '15/06/2025',
-                      Icons.school,
-                      Colors.blue,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDocumentoCard(
-                      'Constancia de Matrícula',
-                      'PDF',
-                      '15/01/2025',
-                      Icons.assignment,
-                      Colors.green,
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                _buildDocumentoCard(
+                  'Plan de Estudios',
+                  'PDF',
+                  '20/01/2025',
+                  Icons.description,
+                  Colors.red,
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                _buildDocumentoCard(
+                  'Certificado de Notas',
+                  'PDF',
+                  '15/06/2025',
+                  Icons.school,
+                  Colors.blue,
+                ),
+                const SizedBox(height: 16),
+                _buildDocumentoCard(
+                  'Constancia de Matrícula',
+                  'PDF',
+                  '15/01/2025',
+                  Icons.assignment,
+                  Colors.green,
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -2354,7 +2342,7 @@ class _MisDocumentosSheet extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.download, color: Color(0xFF1A3A5C)),
+            icon: const Icon(Icons.download, color: Color(0xFF005BAC)),
             onPressed: () {
               // TODO: Implementar descarga de documento
             },

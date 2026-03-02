@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/config/constants/constants.dart';
-import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/widgets/ios_date_picker.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/menu_btn.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
 import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
@@ -210,294 +212,146 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
 
   Widget _buildHeader(BuildContext context, double width, double height) {
     return Container(
+      padding: EdgeInsets.only(
+        top: height * 0.02,
+        bottom: height * 0.03,
+        left: width * 0.05,
+        right: width * 0.05,
+      ),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1A3A5C), // Azul oscuro
-            Color(0xFF2C5F8D), // Azul medio
+            Color(0xFF005BAC), // Azul institucional
+            Color(0xFF0F7BD7),
           ],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(175),
-          bottomRight: Radius.circular(175),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1A3A5C).withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-            spreadRadius: 2,
-          ),
-          BoxShadow(
-            color: const Color(0xFF2C5F8D).withOpacity(0.2),
+            color: const Color(0xFF005BAC).withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Barra superior con navegación
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: width * 0.05,
-              vertical: height * 0.015,
-            ),
-            child: Row(
-              children: [
-                // Espacio para el botón de menú (que está fuera del Stack)
-                SizedBox(width: isSideBarOpen ? 220 : 52),
-                const SizedBox(width: 6),
-                // Logo Posgrado
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Posgrado',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: math.min(18, width * 0.045),
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.school, color: Colors.amber, size: 16),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Banco Union - Flexible y más compacto
-                Flexible(
-                  flex: 0,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'BANCO UNION',
-                          style: TextStyle(
-                            fontSize: math.max(7, math.min(8, width * 0.02)),
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF1A3A5C),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'Número de cuenta único',
+          // Barra superior con iconos
+          Row(
+            children: [
+              // Espacio para el botón de menú
+              SizedBox(width: isSideBarOpen ? 220 : 52),
+              SizedBox(width: math.max(6, width * 0.015)),
+              // Logo Posgrado
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Posgrado',
                         style: TextStyle(
-                          fontSize: math.max(5, math.min(6, width * 0.015)),
-                          color: Colors.white70,
+                          color: Colors.white,
+                          fontSize: math.min(18, width * 0.045),
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Notificaciones
-                const NotificationIconWidget(size: 36, iconSize: 20),
-                const SizedBox(width: 4),
-                // Configuración
-                GestureDetector(
-                  onTap: () {
-                    context.push('/configuracion');
-                  },
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1E293B), Color(0xFF64748B)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                          spreadRadius: 1,
-                        ),
-                      ],
                     ),
-                    child: const Icon(
-                      Icons.settings,
-                      color: Colors.white,
-                      size: 20,
+                    SizedBox(width: math.max(4, width * 0.01)),
+                    Icon(
+                      Icons.school,
+                      color: Colors.amber,
+                      size: math.min(18, width * 0.045),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                // Avatar
-                ProfileAvatarWidget(
-                  radius: 14,
-                  showShadow: false,
-                  onTap: () {
-                    context.push('/mis-datos-personales');
-                  },
-                ),
-              ],
-            ),
-          ),
-          // Título e instrucciones
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: width * 0.05,
-              vertical: height * 0.02,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Mi Curriculum',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: height * 0.015),
-                const Text(
-                  'Ingrese únicamente la información que corresponda a su perfil. Los campos como idiomas, cursos o habilidades técnicas no son obligatorios si no aplican.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Personaje animado
-          SizedBox(
-            height: height * 0.12,
-            child: Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                // Onda azul
-                CustomPaint(
-                  size: Size(width, height * 0.12),
-                  painter: _WavePainter(),
-                ),
-                // Personaje
-                Positioned(
-                  bottom: 10,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Lápiz
-                      Transform.rotate(
-                        angle: -0.3,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFC900),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Personaje con birrete
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF87CEEB),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Cuerpo
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF4A90E2),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            // Birrete
-                            Positioned(
-                              top: 5,
-                              child: Container(
-                                width: 50,
-                                height: 15,
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                            // Ojos
-                            Positioned(
-                              top: 20,
-                              left: 15,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 20,
-                              right: 15,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Libro
-                      Container(
-                        width: 40,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: const Icon(
-                          Icons.menu_book,
-                          color: Color(0xFF1A3A5C),
-                          size: 20,
-                        ),
+              ),
+              SizedBox(width: math.max(6, width * 0.015)),
+              // Notificaciones
+              NotificationIconWidget(
+                size: math.min(40, width * 0.1),
+                iconSize: math.min(22, width * 0.055),
+              ),
+              SizedBox(width: math.max(6, width * 0.015)),
+              // Configuración
+              GestureDetector(
+                onTap: () => context.push('/configuracion'),
+                child: Container(
+                  width: math.min(40, width * 0.1),
+                  height: math.min(40, width * 0.1),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E293B), Color(0xFF64748B)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(102),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                        spreadRadius: 1,
                       ),
                     ],
                   ),
+                  child: Icon(
+                    Icons.settings,
+                    color: Colors.white,
+                    size: math.min(22, width * 0.055),
+                  ),
                 ),
-              ],
-            ),
+              ),
+              SizedBox(width: math.max(6, width * 0.015)),
+              // Avatar
+              ProfileAvatarWidget(
+                radius: math.min(18, width * 0.045),
+                showShadow: true,
+                onTap: () => context.push('/mis-datos-personales'),
+              ),
+            ],
+          ),
+          SizedBox(height: height * 0.025),
+          // Título
+          Row(
+            children: [
+              Icon(
+                Icons.description_outlined,
+                color: Colors.white,
+                size: math.min(32, width * 0.08),
+              ),
+              SizedBox(width: math.max(12, width * 0.03)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mi Curriculum',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: math.min(26, width * 0.065),
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        height: 1.2,
+                      ),
+                    ),
+                    SizedBox(height: math.max(4, height * 0.005)),
+                    Text(
+                      'Gestiona tu formación académica y complementaria',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: math.min(13, width * 0.0325),
+                        fontFamily: 'Intel',
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -978,9 +832,12 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isEmpty ? Colors.white : const Color(0xFFF0F7FF),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(
+                color: isEmpty ? Colors.grey.shade300 : const Color(0xFF005BAC).withOpacity(0.3),
+                width: isEmpty ? 1 : 1.5,
+              ),
             ),
             child: Row(
               children: [
@@ -989,12 +846,17 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                     isEmpty ? '...' : value,
                     style: TextStyle(
                       fontSize: 14,
-                      color: isEmpty ? Colors.grey.shade400 : Colors.black87,
+                      fontWeight: isEmpty ? FontWeight.normal : FontWeight.bold,
+                      color: isEmpty ? Colors.grey.shade400 : const Color(0xFF003D73),
                     ),
                   ),
                 ),
                 if (onTap != null)
-                  Icon(Icons.edit, size: 16, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.edit,
+                    size: 16,
+                    color: isEmpty ? Colors.grey.shade400 : const Color(0xFF005BAC),
+                  ),
               ],
             ),
           ),
@@ -1064,15 +926,18 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                     ),
                     readOnly: true,
                     onTap: () async {
-                      final date = await showDatePicker(
+                      final DateTime now = DateTime.now();
+                      final DateTime? picked = await mostrarIosFechaPicker(
                         context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(1950),
-                        lastDate: DateTime.now(),
+                        initialDate: now,
+                        titulo: 'Fecha de Emisión',
+                        esFechaNacimiento: false,
+                        minimumYear: 1950,
+                        maximumYear: now.year,
                       );
-                      if (date != null) {
+                      if (picked != null) {
                         fechaController.text =
-                            '${date.day}/${date.month}/${date.year}';
+                            '${picked.day}/${picked.month}/${picked.year}';
                       }
                     },
                   ),
@@ -1192,15 +1057,19 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                     ),
                     readOnly: true,
                     onTap: () async {
-                      final date = await showDatePicker(
+                      final DateTime now = DateTime.now();
+                      final DateTime initial = _parseDate(fechaController.text) ?? now;
+                      final DateTime? picked = await mostrarIosFechaPicker(
                         context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(1950),
-                        lastDate: DateTime.now(),
+                        initialDate: initial,
+                        titulo: 'Fecha de Emisión',
+                        esFechaNacimiento: false,
+                        minimumYear: 1950,
+                        maximumYear: now.year,
                       );
-                      if (date != null) {
+                      if (picked != null) {
                         fechaController.text =
-                            '${date.day}/${date.month}/${date.year}';
+                            '${picked.day}/${picked.month}/${picked.year}';
                       }
                     },
                   ),
@@ -1416,6 +1285,17 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
         ],
       ),
     );
+  }
+
+  DateTime? _parseDate(String text) {
+    if (text.isEmpty || text == '...') return null;
+    try {
+      final parts = text.split('/');
+      if (parts.length != 3) return null;
+      return DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+    } catch (e) {
+      return null;
+    }
   }
 }
 

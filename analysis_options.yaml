@@ -5,3 +5,5 @@ analyzer:
     deprecated_member_use: ignore
   exclude:
     - lib/core/animations/SNIPPETS.dart
+    - vendor/**
+    - vendor/**/example/**

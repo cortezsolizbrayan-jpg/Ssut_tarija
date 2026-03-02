@@ -10,8 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:refactor_template/core/services/local_storage_service.dart';
-import 'package:refactor_template/core/services/profile_image_processor_service.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/servicio_procesador_imagen_perfil.dart';
+import 'package:refactor_template/core/services/servicio_validacion_facial_gemini.dart';
 import 'package:rive/rive.dart' hide LinearGradient, RadialGradient;
 
 enum FaceStep { center, completed }
@@ -32,6 +33,7 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
   FaceDetector? _faceDetector;
   bool _isBusy = false;
   int _frameCount = 0;
+  DateTime? _lastProcessTime; // Para throttle de procesamiento
   // _ocrData removido - se usa widget.ocrData directamente
   FaceStep _currentStep = FaceStep.center;
   double _progress = 0.0;
@@ -73,8 +75,11 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         enableLandmarks: false,
-        enableClassification: true, // Para mejor detección de rostro
+        enableClassification: false, // Deshabilitado para mejor rendimiento
+        enableContours: false, // Deshabilitado para mejor rendimiento
+        enableTracking: false,
         performanceMode: FaceDetectorMode.fast,
+        minFaceSize: 0.2, // Aumentado para detectar solo rostros más grandes
       ),
     );
   }
@@ -200,9 +205,17 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
     if (_isBusy) return;
     if (!_isInitialDelayComplete) return;
 
-    // OPTIMIZACIÓN: Procesar solo cada 8vo frame para reducir carga
+    // OPTIMIZACIÓN MEJORADA: Procesar solo cada 20 frames Y con throttle de tiempo
     _frameCount++;
-    if (_frameCount % 8 != 0) return;
+    if (_frameCount % 20 != 0) return;
+    
+    // Throttle adicional: mínimo 500ms entre procesamiento
+    final now = DateTime.now();
+    if (_lastProcessTime != null && 
+        now.difference(_lastProcessTime!).inMilliseconds < 500) {
+      return;
+    }
+    _lastProcessTime = now;
 
     // OPTIMIZACIÓN: Pausar procesamiento si hay demasiados timeouts consecutivos
     if (_isProcessingPaused) {
@@ -711,6 +724,116 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
       final file = File(_capturedPhotos.first.path);
       if (!await file.exists()) return;
 
+      // VALIDACIÓN CON GEMINI AI antes de procesar
+      debugPrint("🤖 Validando foto con Gemini AI...");
+      final validacion = await ServicioValidacionFacialGemini.validarFotoFacial(file);
+      
+      if (validacion != null && !validacion.esValida) {
+        // La foto NO cumple los requisitos
+        debugPrint("❌ Foto rechazada por Gemini: ${validacion.mensaje}");
+        
+        if (!mounted) return;
+        
+        // Mostrar diálogo con los problemas detectados
+        final retry = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 28),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Foto no válida',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'La foto capturada no cumple con los requisitos:',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!validacion.esDeFrente)
+                        _buildValidationItem(Icons.face, 'Rostro debe estar de frente', false),
+                      if (!validacion.fondoPlomo)
+                        _buildValidationItem(Icons.wallpaper, 'Fondo debe ser gris/plomo', false),
+                      if (!validacion.esNitida)
+                        _buildValidationItem(Icons.hd, 'Imagen debe ser nítida', false),
+                      if (!validacion.soloUnaPersona)
+                        _buildValidationItem(Icons.person, 'Solo una persona en la foto', false),
+                    ],
+                  ),
+                ),
+                if (validacion.mensaje.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    validacion.mensaje,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700], fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF305BA4),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.camera_alt, size: 20),
+                label: const Text('Tomar otra foto', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        
+        if (retry == true && mounted) {
+          // Limpiar foto capturada y reiniciar
+          _capturedPhotos.clear();
+          setState(() {
+            _currentStep = FaceStep.center;
+            _progress = 0.0;
+            _instruction = "Centra tu rostro en el círculo";
+            _isConditionMet = false;
+            _stepProgress = 0.0;
+          });
+          return;
+        } else {
+          // Usuario canceló, volver atrás
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+          return;
+        }
+      }
+      
+      // Foto válida, continuar con el procesamiento
+      debugPrint("✅ Foto validada por Gemini AI");
+
       final processed = await ProfileImageProcessorService.processProfileImage(
         file,
         isFirstPhoto: true,
@@ -727,6 +850,32 @@ class _FaceRecognitionScreenState extends State<FaceRecognitionScreen>
     } catch (e) {
       debugPrint("Error guardando foto 4x4 desde rostro: $e");
     }
+  }
+
+  Widget _buildValidationItem(IconData icon, String text, bool isValid) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            isValid ? Icons.check_circle : Icons.cancel,
+            color: isValid ? Colors.green : Colors.red[700],
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: isValid ? Colors.green[800] : Colors.red[800],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

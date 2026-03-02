@@ -14,6 +14,10 @@ class ProgramaPosgrado {
   final String? universidad;
   final String? fechaInicio;
   final String? urlFichaTecnica;
+  /// Responsable del programa (ej. docente coordinador).
+  final String? responsable;
+  /// Fecha límite de inscripción (ej. "09-01-2026").
+  final String? inscripcionHasta;
 
   ProgramaPosgrado({
     required this.id,
@@ -30,5 +34,7 @@ class ProgramaPosgrado {
     this.universidad,
     this.fechaInicio,
     this.urlFichaTecnica,
+    this.responsable,
+    this.inscripcionHasta,
   });
 }

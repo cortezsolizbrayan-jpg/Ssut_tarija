@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/features/sistema/providers/notificaciones_provider.dart';
@@ -47,8 +47,8 @@ class _NotificationIconWidgetState
               gradient: hasNotifications
                   ? const LinearGradient(
                       colors: [
-                        Color(0xFFFFC900), // Amarillo dorado
-                        Color(0xFFFF9800), // Naranja
+                        Color(0xFFFFC107), // Amarillo dorado
+                        Color(0xFF005BAC), // Naranja
                       ],
                     )
                   : null,
@@ -56,7 +56,7 @@ class _NotificationIconWidgetState
               boxShadow: hasNotifications
                   ? [
                       BoxShadow(
-                        color: const Color(0xFFFFC900).withOpacity(0.5),
+                        color: const Color(0xFFFFC107).withOpacity(0.5),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                         spreadRadius: 2,

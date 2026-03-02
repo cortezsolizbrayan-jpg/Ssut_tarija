@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:refactor_template/core/services/biometric_service.dart';
+import 'package:refactor_template/core/services/servicio_biometrico.dart';
 
 class BotonPrimario extends StatelessWidget {
   const BotonPrimario({super.key, required this.width});

@@ -17,28 +17,102 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
     super.universidad,
     super.fechaInicio,
     super.urlFichaTecnica,
+    super.responsable,
+    super.inscripcionHasta,
   });
 
-  /// Crea un modelo desde un mapa JSON (útil para APIs).
+  /// Crea un modelo desde un mapa JSON (útil para APIs genéricas).
   factory ProgramaPosgradoModel.fromJson(Map<String, dynamic> json) {
     return ProgramaPosgradoModel(
-      id: json['id'] ?? '',
-      titulo: json['titulo'] ?? '',
-      tipo: json['tipo'] ?? '',
-      modalidad: json['modalidad'] ?? '',
-      duracion: json['duracion'] ?? '',
-      cargaHoraria: json['cargaHoraria'] ?? '',
-      creditos: json['creditos'] ?? 0,
-      estado: json['estado'] ?? '',
+      id: json['id']?.toString() ?? '',
+      titulo: json['titulo']?.toString() ?? '',
+      tipo: json['tipo']?.toString() ?? '',
+      modalidad: json['modalidad']?.toString() ?? '',
+      duracion: json['duracion']?.toString() ?? '',
+      cargaHoraria: json['cargaHoraria']?.toString() ?? '',
+      creditos: _parseInt(json['creditos'], 0),
+      estado: json['estado']?.toString() ?? '',
       descuento: json['descuento'] != null
           ? double.tryParse(json['descuento'].toString())
           : null,
-      area: json['area'] ?? '',
-      descripcion: json['descripcion'],
-      universidad: json['universidad'],
-      fechaInicio: json['fechaInicio'],
-      urlFichaTecnica: json['urlFichaTecnica'],
+      area: json['area']?.toString() ?? '',
+      descripcion: json['descripcion']?.toString(),
+      universidad: json['universidad']?.toString(),
+      fechaInicio: json['fechaInicio']?.toString(),
+      urlFichaTecnica: json['urlFichaTecnica']?.toString(),
+      responsable: json['responsable']?.toString(),
+      inscripcionHasta: json['inscripcionHasta']?.toString(),
     );
+  }
+
+  /// Crea un modelo desde la API de oferta (publicaciones/oferta).
+  /// Campos: id, grado, nombre, modalidad, fechafininscripcion, responsableInterno, portada, estado, etc.
+  factory ProgramaPosgradoModel.fromOfertaApi(Map<String, dynamic> json) {
+    final id = json['id']?.toString() ?? '';
+    final nombre = json['nombre']?.toString() ?? '';
+    final grado = json['grado']?.toString() ?? '';
+    final modalidad = json['modalidad']?.toString() ?? '';
+    final estado = json['estado']?.toString() ?? 'PUBLICADO';
+    final duracion = json['duracion']?.toString();
+    final cargahoraria = json['cargahoraria']?.toString();
+    // Imagen: probar varios campos que la API puede enviar
+    final portada = json['portada']?.toString() ??
+        json['imagen']?.toString() ??
+        json['imagenPortada']?.toString() ??
+        json['cover']?.toString() ??
+        json['foto']?.toString() ??
+        json['url_imagen']?.toString();
+
+    String? inscripcionHasta;
+    final fechafin = json['fechafininscripcion']?.toString();
+    if (fechafin != null && fechafin.isNotEmpty) {
+      inscripcionHasta = _formatOfertaDate(fechafin);
+    }
+
+    String? responsable;
+    final resp = json['responsableInterno'];
+    if (resp is Map<String, dynamic>) {
+      final n = (resp['nombre']?.toString() ?? '').trim();
+      final p = (resp['paterno']?.toString() ?? '').trim();
+      final m = (resp['materno']?.toString() ?? '').trim();
+      final c = (resp['celular']?.toString() ?? '').trim();
+      final parts = [n, p, m].where((e) => e.isNotEmpty);
+      responsable = parts.join(' ');
+      if (c.isNotEmpty) {
+        responsable = '$responsable · $c';
+      }
+    }
+
+    return ProgramaPosgradoModel(
+      id: id,
+      titulo: nombre,
+      tipo: grado.toUpperCase().replaceAll('Í', 'I'),
+      modalidad: modalidad.isNotEmpty ? modalidad : '—',
+      duracion: duracion?.trim().isNotEmpty == true ? duracion! : '—',
+      cargaHoraria: cargahoraria?.trim().isNotEmpty == true ? cargahoraria! : '—',
+      creditos: 0,
+      estado: estado,
+      area: grado.isNotEmpty ? grado : '—',
+      urlFichaTecnica: portada?.trim().isNotEmpty == true ? portada : null,
+      responsable: responsable,
+      inscripcionHasta: inscripcionHasta,
+    );
+  }
+
+  static String _formatOfertaDate(String isoDate) {
+    try {
+      final d = DateTime.tryParse(isoDate);
+      if (d == null) return isoDate;
+      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    } catch (_) {
+      return isoDate;
+    }
+  }
+
+  static int _parseInt(dynamic v, int def) {
+    if (v == null) return def;
+    if (v is int) return v;
+    return int.tryParse(v.toString()) ?? def;
   }
 
   /// Crea un modelo desde datos extraídos del HTML del sitio web.
@@ -57,6 +131,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
     String? universidad,
     String? fechaInicio,
     String? urlFichaTecnica,
+    String? responsable,
+    String? inscripcionHasta,
   }) {
     return ProgramaPosgradoModel(
       id: id,
@@ -73,6 +149,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
       universidad: universidad ?? 'Universidad Amazónica de Pando',
       fechaInicio: fechaInicio,
       urlFichaTecnica: urlFichaTecnica,
+      responsable: responsable,
+      inscripcionHasta: inscripcionHasta,
     );
   }
 
@@ -93,6 +171,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
       'universidad': universidad,
       'fechaInicio': fechaInicio,
       'urlFichaTecnica': urlFichaTecnica,
+      'responsable': responsable,
+      'inscripcionHasta': inscripcionHasta,
     };
   }
 }

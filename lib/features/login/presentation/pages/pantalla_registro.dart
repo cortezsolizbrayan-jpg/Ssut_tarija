@@ -2,7 +2,8 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/core/services/ci_verification_service.dart';
+import 'package:refactor_template/core/services/servicio_base_datos_local.dart';
+import 'package:refactor_template/core/services/servicio_verificacion_ci.dart';
 
 class RegisterScreen extends StatefulWidget {
   static const name = 'register-screen';
@@ -42,6 +43,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    // Usuarios que ya están registrados: van directo al login (no a verificación de identidad)
+    if (LocalDatabaseService.skipIdentityVerificationCIs.contains(cleanCI)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ya estás registrado. Redirigiendo al inicio de sesión...'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      if (!mounted) return;
+      context.go('/login');
+      return;
+    }
+
     setState(() {
       _isVerifying = true;
     });
@@ -68,7 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final exists = result['exists'] ?? false;
 
     if (exists) {
-      // Si el CI existe, mostrar mensaje y no permitir registro
+      // Si el CI existe, mostrar mensaje y redirigir al login
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Este CI ya está registrado. Por favor inicia sesión.'),
@@ -76,11 +91,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           duration: Duration(seconds: 3),
         ),
       );
-      // Opcional: redirigir al login
-      // context.push('/login');
+      if (!mounted) return;
+      context.go('/login');
     } else {
       // Si NO existe, continuar con el flujo de registro
-      // Pasar el CI al siguiente paso
       context.push('/upload-ci', extra: {'ci': cleanCI});
     }
   }

@@ -79,7 +79,7 @@ class _AppHeaderState extends State<AppHeader> {
                   // Logo Posgrado (centrado)
                   Expanded(
                     child: Image.asset(
-                      'assets/images/logposgrado.png',
+                      'assets/images/logoposgrado.jpg',
                       height: 36,
                       fit: BoxFit.contain,
                     ),
@@ -398,6 +398,7 @@ class _ProgramTypeSelector extends StatelessWidget {
     }
   }
 
+  //Comentario para prueba de commit
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;

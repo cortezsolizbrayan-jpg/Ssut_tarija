@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:refactor_template/config/constants/environment.dart';
 import 'package:refactor_template/core/dio_error_handler.dart';
+import 'package:refactor_template/core/services/servicio_base_datos_local.dart';
 import 'package:refactor_template/features/login/domain/entities/login.dart';
 import 'package:refactor_template/features/login/infrastructure/datasources/login_datasource.dart';
 import 'package:refactor_template/features/login/infrastructure/models/login_model.dart';
@@ -35,6 +36,40 @@ class LoginDatasourceImpl implements LoginDatasource {
     required String nombreUsuario,
     required String claveUsuario,
   }) async {
+    // ESTRATEGIA 1: Intentar autenticar con BD local primero
+    try {
+      final localUser = await LocalDatabaseService.authenticateUser(
+        nombreUsuario,
+        claveUsuario,
+      );
+      
+      if (localUser != null) {
+        if (kDebugMode) {
+          print('✅ Login exitoso con BD local para CI: $nombreUsuario');
+        }
+        
+        // Convertir usuario local al formato Login
+        return LoginModel.fromJson({
+          'success': true,
+          'message': 'Login exitoso (BD Local)',
+          'token': 'local_token_${nombreUsuario}_${DateTime.now().millisecondsSinceEpoch}',
+          'user': {
+            'ci': localUser['ci'],
+            'nombres': localUser['nombres'],
+            'apellidos': localUser['apellidos'],
+            'email': localUser['email'] ?? '',
+            'telefono': localUser['telefono'] ?? '',
+          },
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Error en autenticación local: $e');
+      }
+      // Continuar con API si falla la BD local
+    }
+
+    // ESTRATEGIA 2: Si no está en BD local, intentar con el API
     try {
       final response = await dio.post(
         '/auth/login',

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/core/animations/custom_animations.dart';
-import 'package:refactor_template/core/services/biometric_service.dart';
-import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/servicio_biometrico.dart';
+import 'package:refactor_template/features/login/presentation/pages/pantalla_autenticacion_rapida.dart';
 import 'package:refactor_template/features/login/presentation/widgets/widgets.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
 import 'package:rive/rive.dart' hide Image, Animation, PaintingStyle;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../widgets/widgets.dart';
 
@@ -27,10 +29,47 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
   bool isShowLoading = false;
   bool isShowConfetti = false;
 
+  String? _lastLoginUser;
+
   SMITrigger? _successTrigger;
   SMITrigger? _confettiTrigger;
 
   final _biometricService = BiometricService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Verificar si hay sesión guardada y mostrar autenticación rápida
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkQuickAuth();
+    });
+  }
+
+  /// Verifica si hay sesión guardada y muestra autenticación rápida
+  Future<void> _checkQuickAuth() async {
+    final sessionData = await LocalStorageService.getSessionData();
+    
+    // Si hay sesión guardada, verificar si tiene PIN configurado
+    if (sessionData != null && mounted) {
+      final prefs = await SharedPreferences.getInstance();
+      final hasPin = prefs.getString('security_pin') != null;
+      
+      if (hasPin) {
+        // Mostrar pantalla de autenticación rápida
+        final authenticated = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (context) => const PantallaAutenticacionRapida(),
+            fullscreenDialog: true,
+          ),
+        );
+        
+        if (authenticated == true && mounted) {
+          // Autenticación exitosa, ir a pantalla principal
+          context.go('/sistema/pantalla_principal');
+        }
+      }
+    }
+  }
 
   // Inicialización del Rive para el check/error
   void _onCheckRiveInit(Artboard artboard) {
@@ -94,7 +133,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
 
   void _onLoginPressed({String? username, String? password}) {
     // Usar credenciales de biometría si se proporcionan, sino usar las del formulario
-    final loginUsername = username ?? usuario;
+    final loginUsername = (username ?? usuario).trim();
     final loginPassword = password ?? contra;
 
     // ============================================
@@ -104,6 +143,7 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
     setState(() {
       isShowLoading = true;
       isShowConfetti = false;
+      _lastLoginUser = loginUsername.isNotEmpty ? loginUsername : null;
     });
 
     // Secuencia de animaciones y luego navegación
@@ -676,6 +716,22 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        if (_lastLoginUser != null)
+                          SlideInAnimation(
+                            duration: const Duration(milliseconds: 500),
+                            begin: const Offset(0, 0.3),
+                            curve: Curves.easeOutCubic,
+                            child: Text(
+                              '¡Bienvenido/a, $_lastLoginUser!',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                         const Spacer(flex: 2),
                       ],
                     ),

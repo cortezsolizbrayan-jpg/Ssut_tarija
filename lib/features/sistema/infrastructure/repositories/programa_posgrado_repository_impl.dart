@@ -14,10 +14,13 @@ class ProgramaPosgradoRepositoryImpl implements ProgramaPosgradoRepository {
     String? tipo,
   }) async {
     try {
-      return await datasource.obtenerProgramasDesdeWeb(area: area, tipo: tipo);
-    } catch (e) {
-      // Si falla, retornar lista vacía o lanzar excepción según necesidad
-      rethrow;
+      return await datasource.obtenerProgramasDesdeApi(area: area, tipo: tipo);
+    } catch (_) {
+      try {
+        return await datasource.obtenerProgramasDesdeWeb(area: area, tipo: tipo);
+      } catch (e) {
+        rethrow;
+      }
     }
   }
 

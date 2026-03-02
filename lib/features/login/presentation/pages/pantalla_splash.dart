@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/services/servicio_biometrico.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Pantalla de splash simple con icono animado.
 class SplashScreen extends StatefulWidget {
@@ -63,39 +65,48 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  void _navigateToLogin() {
+  void _navigateToLogin() async {
     if (!mounted || _hasNavigated) return;
     _hasNavigated = true;
 
-    // Navegar de forma asíncrona sin bloquear
-    Future.microtask(() {
+    // Decidir a dónde navegar según si tiene seguridad configurada
+    try {
+      final biometricService = BiometricService();
+      final hasSecurityConfigured = await biometricService.hasSecurityConfigured();
+      
+      // 🔍 DEBUG: Logs para verificar el estado
+      debugPrint('🔐 === VERIFICACIÓN DE SEGURIDAD ===');
+      debugPrint('🔐 hasSecurityConfigured: $hasSecurityConfigured');
+      
+      // Verificar detalles adicionales
+      final prefs = await SharedPreferences.getInstance();
+      final pinConfigured = prefs.getBool('pin_configured') ?? false;
+      final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+      final savedPin = prefs.getString('saved_pin');
+      
+      debugPrint('🔐 PIN configurado: $pinConfigured');
+      debugPrint('🔐 Biometría habilitada: $biometricEnabled');
+      debugPrint('🔐 PIN guardado existe: ${savedPin != null}');
+      debugPrint('🔐 ================================');
+      
       if (!mounted) return;
-
-      try {
-        // Usar unisolate para no bloquear el hilo principal
-        context.go('/login');
-      } catch (e) {
-        // Si hay error, intentar con un delay mínimo
-        Future.delayed(const Duration(milliseconds: 50), () {
-          if (mounted) {
-            try {
-              context.go('/login');
-            } catch (_) {
-              // Último recurso
-              if (mounted) {
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  if (mounted) {
-                    try {
-                      context.go('/login');
-                    } catch (_) {}
-                  }
-                });
-              }
-            }
-          }
-        });
+      
+      if (hasSecurityConfigured) {
+        // Si ya tiene PIN/huella configurados, ir directo a autenticación rápida
+        debugPrint('✅ Navegando a pantalla de PIN');
+        context.go('/autenticacion-rapida');
+      } else {
+        // Si no tiene seguridad configurada, ir a la pantalla de bienvenida
+        debugPrint('ℹ️ Navegando a pantalla de bienvenida');
+        context.go('/start-screen');
       }
-    });
+    } catch (e) {
+      debugPrint('❌ Error verificando seguridad: $e');
+      // Si hay error, ir a la pantalla de bienvenida por defecto
+      if (mounted) {
+        context.go('/start-screen');
+      }
+    }
   }
 
   @override

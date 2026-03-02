@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:refactor_template/core/services/servicio_inscripcion.dart';
 import 'package:refactor_template/core/services/servicio_validacion_requisitos.dart';
+import 'package:refactor_template/core/services/servicio_notificaciones.dart';
 import 'package:refactor_template/features/sistema/screens/inscripcion/pantalla_validacion_requisitos.dart';
 
 /// Helper para validar requisitos antes de permitir inscripción
 class HelperValidacionInscripcion {
   /// Valida los requisitos y muestra la pantalla correspondiente
   /// 
-  /// Si todos los requisitos están completos, ejecuta [onRequisitosCompletos]
+  /// Si todos los requisitos están completos, ejecuta la inscripción
   /// Si faltan requisitos, muestra la pantalla de validación
   /// 
   /// Retorna true si se puede continuar con la inscripción
@@ -14,6 +17,8 @@ class HelperValidacionInscripcion {
     required BuildContext context,
     required String tipoPrograma,
     required String nombrePrograma,
+    required String idPrograma,
+    String modalidad = 'Virtual',
     VoidCallback? onRequisitosCompletos,
   }) async {
     final servicio = ServicioValidacionRequisitos();
@@ -39,7 +44,14 @@ class HelperValidacionInscripcion {
       }
 
       if (puedeInscribirse) {
-        // Todos los requisitos están completos
+        // Todos los requisitos están completos - proceder con inscripción
+        if (context.mounted) {
+          await _ejecutarInscripcion(
+            context: context,
+            idPrograma: idPrograma,
+            nombrePrograma: nombrePrograma,
+          );
+        }
         onRequisitosCompletos?.call();
         return true;
       } else {
@@ -51,6 +63,8 @@ class HelperValidacionInscripcion {
               builder: (context) => PantallaValidacionRequisitos(
                 tipoPrograma: tipoPrograma,
                 nombrePrograma: nombrePrograma,
+                modalidad: modalidad,
+                idPrograma: idPrograma,
                 onRequisitosCompletos: onRequisitosCompletos,
               ),
             ),
@@ -81,6 +95,8 @@ class HelperValidacionInscripcion {
   static Future<void> mostrarDocumentosFaltantes({
     required BuildContext context,
     required String tipoPrograma,
+    required String idPrograma,
+    String modalidad = 'Virtual',
   }) async {
     final servicio = ServicioValidacionRequisitos();
     
@@ -196,7 +212,7 @@ class HelperValidacionInscripcion {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
@@ -218,6 +234,8 @@ class HelperValidacionInscripcion {
                       builder: (context) => PantallaValidacionRequisitos(
                         tipoPrograma: tipoPrograma,
                         nombrePrograma: 'Programa de Posgrado',
+                        idPrograma: idPrograma,
+                        modalidad: modalidad,
                       ),
                     ),
                   );
@@ -285,5 +303,153 @@ class HelperValidacionInscripcion {
         ],
       ),
     );
+  }
+
+  /// Ejecuta la inscripción y navega a la pantalla de confirmación
+  static Future<void> _ejecutarInscripcion({
+    required BuildContext context,
+    required String idPrograma,
+    required String nombrePrograma,
+  }) async {
+    // Mostrar loader
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF005BAC)),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Enviando inscripción...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Por favor espera',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF666666),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final servicioInscripcion = ServicioInscripcion();
+      
+      // Convertir ID de String a int
+      final idProgramaInt = int.tryParse(idPrograma) ?? 0;
+      
+      if (idProgramaInt == 0) {
+        throw Exception('ID de programa inválido');
+      }
+      
+      // Enviar inscripción
+      final resultado = await servicioInscripcion.enviarInscripcionCompleta(
+        idPrograma: idProgramaInt,
+      );
+
+      // Cerrar loader
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      // Extraer datos del resultado
+      final numeroInscripcion = resultado['id']?.toString() ?? 
+                                resultado['inscripcionId']?.toString() ?? 
+                                DateTime.now().millisecondsSinceEpoch.toString();
+      
+      final mensaje = resultado['mensaje']?.toString() ?? 
+                      resultado['message']?.toString();
+
+      // 🔔 ENVIAR NOTIFICACIONES
+      final servicioNotificaciones = ServicioNotificaciones();
+      
+      // Notificación inmediata de éxito
+      await servicioNotificaciones.notificarInscripcionExitosa(
+        nombrePrograma: nombrePrograma,
+        numeroInscripcion: numeroInscripcion,
+      );
+      
+      // Recordatorio para subir comprobante (24 horas después)
+      await servicioNotificaciones.recordatorioSubirComprobante(
+        nombrePrograma: nombrePrograma,
+      );
+
+      // Navegar a pantalla de confirmación
+      if (context.mounted) {
+        context.push(
+          '/confirmacion-inscripcion',
+          extra: {
+            'nombrePrograma': nombrePrograma,
+            'numeroInscripcion': numeroInscripcion,
+            'mensaje': mensaje,
+          },
+        );
+      }
+    } catch (e) {
+      // Cerrar loader
+      if (context.mounted) {
+        Navigator.pop(context);
+        
+        // Mostrar error
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: const [
+                Icon(Icons.error_outline, color: Colors.red, size: 28),
+                SizedBox(width: 12),
+                Text('Error en Inscripción'),
+              ],
+            ),
+            content: Text(
+              e.toString().replaceFirst('Exception: ', ''),
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Ir a completar datos
+                  context.push('/mis-datos-personales');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF005BAC),
+                ),
+                child: const Text('Completar Datos'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 }

@@ -28,6 +28,14 @@ List<Menu> sidebarMenus = [
       stateMachineName: "SEARCH_Interactivity",
     ),
   ),
+  Menu(
+    title: "Programas Vigentes",
+    rive: RiveModel(
+      src: "assets/RiveAssets/icons.riv",
+      artboard: "SEARCH",
+      stateMachineName: "SEARCH_Interactivity",
+    ),
+  ),
 
   /// Menu para curriculum
   Menu(

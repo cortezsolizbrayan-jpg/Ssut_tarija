@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -11,13 +12,15 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:refactor_template/core/services/carnet_photocopy_service.dart';
-import 'package:refactor_template/core/services/local_storage_service.dart';
-import 'package:refactor_template/core/services/profile_image_processor_service.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/servicio_fotocopia_carnet.dart';
+import 'package:refactor_template/core/services/servicio_procesador_imagen_perfil.dart';
 import 'package:refactor_template/core/services/servicio_compositor_cartas_ci.dart';
+import 'package:refactor_template/core/services/servicio_generador_carta_inscripcion.dart';
 import 'package:refactor_template/core/services/servicio_ocr_ia_avanzado.dart';
 import 'package:refactor_template/features/sistema/screens/perfil/pantalla_escaneo_inteligente.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 enum _SourceType { camera, gallery, file }
 
@@ -34,16 +37,17 @@ class MisDocumentosPersonalesScreen extends StatefulWidget {
 class _MisDocumentosPersonalesScreenState
     extends State<MisDocumentosPersonalesScreen> {
   // --- Modern Color Palette ---
-  static const Color kPrimaryColor = Color(0xFF2563EB); // Vivid Blue
-  static const Color kPrimaryDark = Color(0xFF1E3A8A); // Navy Blue
-  static const Color kSurfaceColor = Color(0xFFF8FAFC); // Cool Gray 50
+  // --- Modern Color Palette (Alineado con Requisitos) ---
+  static const Color kPrimaryColor = Color(0xFF005BAC); // Official Blue
+  static const Color kPrimaryDark = Color(0xFF003F7A); 
+  static const Color kSurfaceColor = Color(0xFFF0F4F8); 
   static const Color kCardColor = Colors.white;
-  static const Color kTextColor = Color(0xFF0F172A); // Slate 900
-  static const Color kTextSecondary = Color(0xFF64748B); // Slate 500
-  static const Color kSuccessColor = Color(0xFF10B981); // Emerald 500
-  static const Color kErrorColor = Color(0xFFEF4444); // Red 500
-  static const Color kWarningBg = Color(0xFFFFF7ED); // Orange 50
-  static const Color kWarningText = Color(0xFFC2410C); // Orange 700
+  static const Color kTextColor = Color(0xFF333333); 
+  static const Color kTextSecondary = Color(0xFF666666); 
+  static const Color kSuccessColor = Color(0xFF4CAF50);
+  static const Color kErrorColor = Color(0xFFD32F2F);
+  static const Color kWarningBg = Color(0xFFFFF7ED); 
+  static const Color kWarningText = Color(0xFF005BAC); 
 
   // --- Typography ---
   static const String fontHeading = 'Poppins';
@@ -56,6 +60,11 @@ class _MisDocumentosPersonalesScreenState
   String? _ciLetterPath;
   String? _tituloPath;
   String? _prorrogaPath;
+  String? _cartaInscripcionPath;
+  String? _comprobanteMatriculaPath;
+  String? _comprobanteColegiaturaPath;
+  String? _fichaInscripcionPath;
+  String? _hojaVidaPath;
   File? _profilePhoto;
   Uint8List? _signaturePng;
   Map<String, dynamic>? _participantDocs;
@@ -63,7 +72,7 @@ class _MisDocumentosPersonalesScreenState
 
   bool _hasTitle = true; // Default assumption
 
-  // Track busy state per action for granular feedback
+  // Seguir estado ocupado por acción para feedback detallado
   bool _busyGlobal = false;
   String? _busyKey; // Which specific doc key is currently processing
 
@@ -85,6 +94,11 @@ class _MisDocumentosPersonalesScreenState
       _ciLetterPath = data?['ci_letter_path'] as String?;
       _tituloPath = data?['titulo_path'] as String?;
       _prorrogaPath = data?['prorroga_path'] as String?;
+      _cartaInscripcionPath = data?['carta_inscripcion_path'] as String?;
+      _comprobanteMatriculaPath = data?['comprobante_matricula_path'] as String?;
+      _comprobanteColegiaturaPath = data?['comprobante_colegiatura_path'] as String?;
+      _fichaInscripcionPath = data?['ficha_inscripcion_path'] as String?;
+      _hojaVidaPath = data?['hoja_vida_path'] as String?;
       _deferDocuments = (data?['defer_documents'] as bool?) ?? false;
       _profilePhoto = profilePhoto;
 
@@ -98,6 +112,42 @@ class _MisDocumentosPersonalesScreenState
 
       _busyGlobal = false;
     });
+    // Auto-generar fotocopia de carnet si existen anverso y reverso y aún no hay PDF
+    _maybeAutoGenerateCarnetPdf();
+  }
+
+  /// Genera automáticamente el PDF del carnet cuando existen anverso y reverso
+  /// y aún no se ha generado (p. ej. tras escanear en pantalla de identidad).
+  Future<void> _maybeAutoGenerateCarnetPdf() async {
+    final front = _ciFrontPath;
+    final back = _ciBackPath;
+    final existingPdf = _participantDocs?['ci_photocopy_pdf_path'] as String?;
+    if (front == null || back == null || front.isEmpty || back.isEmpty) return;
+    if (existingPdf != null && existingPdf.isNotEmpty) return;
+    if (!mounted) return;
+    try {
+      final pdfPath = await CarnetPhotocopyService.generatePdf(
+        frontFile: File(front),
+        backFile: File(back),
+      );
+      if (pdfPath != null && mounted) {
+        await _saveDocPath('ci_photocopy_pdf_path', pdfPath);
+        if (!mounted) return;
+        setState(() {
+          _participantDocs ??= <String, dynamic>{};
+          _participantDocs!['ci_photocopy_pdf_path'] = pdfPath;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fotocopia de carnet generada automáticamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error auto-generando fotocopia PDF: $e");
+    }
   }
 
   Future<void> _setDeferDocuments(bool value) async {
@@ -273,7 +323,7 @@ class _MisDocumentosPersonalesScreenState
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [kPrimaryColor, Colors.purple],
+                            colors: [kPrimaryColor, kPrimaryDark],
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -289,9 +339,13 @@ class _MisDocumentosPersonalesScreenState
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      subtitle: const Text(
+                      subtitle: Text(
                         'Detecta y extrae información automáticamente',
-                        style: TextStyle(fontSize: 11),
+                        style: TextStyle(
+                  fontSize: MediaQuery.of(context).size.width < 360 ? 14 : 15,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF005BAC),
+                ),
                       ),
                       onTap: () {
                         Navigator.pop(ctx);
@@ -333,12 +387,12 @@ class _MisDocumentosPersonalesScreenState
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.1),
+                        color: kPrimaryColor.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.photo_library_rounded,
-                        color: Colors.purple,
+                        color: kPrimaryColor,
                       ),
                     ),
                     title: const Text(
@@ -359,12 +413,12 @@ class _MisDocumentosPersonalesScreenState
                       leading: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: kPrimaryColor.withOpacity(0.06),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.insert_drive_file_rounded,
-                          color: Colors.orange,
+                          color: kPrimaryColor,
                         ),
                       ),
                       title: const Text(
@@ -390,7 +444,7 @@ class _MisDocumentosPersonalesScreenState
   }
 
   // ============================================================================
-  // NUEVAS FUNCIONALIDADES CON IA
+  // Nuevas funcionalidades con IA
   // ============================================================================
 
   /// Abre la pantalla de escaneo inteligente con IA
@@ -501,7 +555,7 @@ class _MisDocumentosPersonalesScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: const [
-            Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B)),
+            Icon(Icons.warning_amber_rounded, color: kPrimaryColor),
             SizedBox(width: 12),
             Text('Advertencias'),
           ],
@@ -600,10 +654,9 @@ class _MisDocumentosPersonalesScreenState
                     child: Text(
                       '$porcentaje%',
                       style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: kPrimaryColor,
-                      ),
+                      color: Color(0xFF005BAC),
+                      fontWeight: FontWeight.w700,
+                    ),
                     ),
                   ),
                 ],
@@ -878,20 +931,56 @@ class _MisDocumentosPersonalesScreenState
   }
 
   Future<void> _previewDoc(String path) async {
-    if (path.toLowerCase().endsWith('.pdf')) {
+    try {
+      final file = File(path);
+      if (!await file.exists()) {
+        _mostrarMensaje('El archivo no existe', esError: true);
+        return;
+      }
+
+      final lower = path.toLowerCase();
+      
+      // PDFs se muestran en WebView
+      if (lower.endsWith('.pdf')) {
+        await _showPdfPreview(path);
+        return;
+      }
+      
+      // HTML se abre con la app del sistema (navegador para HTML)
+      if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+        final result = await OpenFilex.open(path);
+        if (result.type != ResultType.done) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No existe una aplicación para abrir este archivo.'),
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Imágenes (jpg, png, jpeg, etc.)
+      if (lower.endsWith('.jpg') || 
+          lower.endsWith('.jpeg') || 
+          lower.endsWith('.png')) {
+        await _previewImage(path);
+        return;
+      }
+
+      // Para otros tipos de archivo, intentar abrir con app externa
       final result = await OpenFilex.open(path);
       if (result.type != ResultType.done) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No existe una aplicación para abrir este archivo.'),
-          ),
+        _mostrarMensaje(
+          'No se pudo abrir el archivo. Tipo: ${result.type}',
+          esError: true,
         );
       }
-      return;
+    } catch (e) {
+      debugPrint('Error previewing document: $e');
+      _mostrarMensaje('Error al abrir el documento: $e', esError: true);
     }
-    // Is Image
-    await _previewImage(path);
   }
 
   Future<void> _previewImage(String path) async {
@@ -940,8 +1029,227 @@ class _MisDocumentosPersonalesScreenState
     );
   }
 
+  /// Muestra vista previa de PDFs en WebView con PDF.js
+  Future<void> _showPdfPreview(String path) async {
+    // Mostrar indicador de carga
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation(kPrimaryColor),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Cargando PDF...',
+                  style: TextStyle(
+                    fontFamily: fontBody,
+                    fontSize: 14,
+                    color: kTextColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    try {
+      final file = File(path);
+      if (!await file.exists()) {
+        if (mounted) Navigator.pop(context); // Cerrar loader
+        _mostrarMensaje('El PDF no existe en el dispositivo.', esError: true);
+        return;
+      }
+
+      // Convertir PDF a base64
+      final bytes = await file.readAsBytes();
+      final base64Pdf = base64Encode(bytes);
+      
+      if (mounted) Navigator.pop(context); // Cerrar loader
+      
+      if (!mounted) return;
+
+      // HTML mejorado con PDF.js para mejor compatibilidad
+      final htmlContent = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    #pdf-container {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      background: #f5f5f5;
+    }
+    .pdf-page {
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background: white;
+      max-width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%;
+      min-height: 100vh;
+      border: none;
+      background: white;
+    }
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #005BAC;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #005BAC;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="pdf-container">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>Cargando documento...</div>
+    </div>
+    <iframe id="pdf-frame" src="data:application/pdf;base64,$base64Pdf#toolbar=1&navpanes=0&scrollbar=1&view=FitH"></iframe>
+  </div>
+  <script>
+    // Ocultar loading cuando el iframe cargue
+    document.getElementById('pdf-frame').onload = function() {
+      document.querySelector('.loading').style.display = 'none';
+    };
+    
+    // Timeout de seguridad
+    setTimeout(function() {
+      document.querySelector('.loading').style.display = 'none';
+    }, 3000);
+  </script>
+</body>
+</html>
+''';
+
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(const Color(0xFFF5F5F5))
+        ..loadHtmlString(htmlContent);
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (ctx) {
+            return Scaffold(
+              backgroundColor: const Color(0xFFF5F5F5),
+              appBar: AppBar(
+                backgroundColor: kPrimaryColor,
+                elevation: 0,
+                title: const Text(
+                  'Fotocopia de Carnet',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: fontHeading,
+                    fontSize: 18,
+                  ),
+                ),
+                iconTheme: const IconThemeData(color: Colors.white),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.share_rounded, color: Colors.white),
+                    tooltip: 'Compartir',
+                    onPressed: () async {
+                      try {
+                        await _compartirDocumento(path);
+                      } catch (e) {
+                        _mostrarMensaje('Error al compartir: $e', esError: true);
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.open_in_new_rounded, color: Colors.white),
+                    tooltip: 'Abrir con otra app',
+                    onPressed: () async {
+                      try {
+                        final result = await OpenFilex.open(path);
+                        if (result.type != ResultType.done) {
+                          _mostrarMensaje(
+                            'No se pudo abrir con otra aplicación',
+                            esError: true,
+                          );
+                        }
+                      } catch (e) {
+                        _mostrarMensaje('Error al abrir: $e', esError: true);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              body: SafeArea(
+                child: WebViewWidget(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        // Intentar cerrar el loader si aún está abierto
+        try {
+          Navigator.pop(context);
+        } catch (_) {}
+      }
+      debugPrint('Error mostrando PDF: $e');
+      _mostrarMensaje('No se pudo mostrar el PDF: $e', esError: true);
+      
+      // Fallback: intentar abrir con app externa
+      try {
+        await OpenFilex.open(path);
+      } catch (e2) {
+        debugPrint('Error abriendo con app externa: $e2');
+      }
+    }
+  }
+
   Future<void> _onCiLetterAction() async {
-    // Check if we can generate (need front and back)
+    // Comprobar si podemos generar (se necesita anverso y reverso)
     final canGenerate =
         (_ciFrontPath ?? '').isNotEmpty && (_ciBackPath ?? '').isNotEmpty;
 
@@ -1171,12 +1479,12 @@ class _MisDocumentosPersonalesScreenState
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.1),
+                        color: kPrimaryColor.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.remove_red_eye_rounded,
-                        color: Colors.purple,
+                        color: kPrimaryColor,
                       ),
                     ),
                     title: const Text(
@@ -1203,12 +1511,12 @@ class _MisDocumentosPersonalesScreenState
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.blueGrey.withOpacity(0.1),
+                        color: kPrimaryColor.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.upload_file,
-                        color: Colors.blueGrey,
+                        color: kPrimaryColor,
                       ),
                     ),
                     title: const Text(
@@ -1278,17 +1586,280 @@ C.I. $ci""";
 
       if (mounted) setState(() => _busyGlobal = false);
 
-      _showLegalDocumentReader(
-        title: "Carta de Prórroga",
-        content: body,
-        onConfirm: () {
-          Navigator.of(context).pop();
-          _generateSignedProrroga();
-        },
-        confirmText: "Firmar y Guardar",
+      // Generate responsive HTML for WebView preview
+      final String htmlContent = '''
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carta de Prórroga</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      background-color: #f5f5f5;
+      padding: 20px 10px;
+    }
+    
+    .page {
+      width: 100%;
+      max-width: 612px;
+      margin: 0 auto;
+      background: white;
+      padding: 60px 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      line-height: 1.6;
+    }
+    
+    .date {
+      text-align: right;
+      margin-bottom: 40px;
+      font-size: 11pt;
+    }
+    
+    .recipient {
+      margin-bottom: 30px;
+      font-size: 11pt;
+    }
+    
+    .recipient p {
+      margin: 2px 0;
+    }
+    
+    .reference {
+      margin-bottom: 30px;
+      font-size: 11pt;
+      font-weight: bold;
+    }
+    
+    .salutation {
+      margin-bottom: 20px;
+      font-size: 11pt;
+    }
+    
+    .body-text {
+      text-align: justify;
+      margin-bottom: 30px;
+      font-size: 11pt;
+    }
+    
+    .closing {
+      margin-top: 40px;
+      margin-bottom: 80px;
+      font-size: 11pt;
+    }
+    
+    .signature-area {
+      text-align: center;
+      margin-top: 60px;
+    }
+    
+    .signature-line {
+      border-top: 1px solid #333;
+      width: 250px;
+      margin: 0 auto 10px;
+    }
+    
+    .signature-info {
+      font-size: 11pt;
+      line-height: 1.4;
+    }
+    
+    /* Responsive adjustments for mobile */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px 5px;
+      }
+      
+      .page {
+        width: 95%;
+        padding: 40px 20px;
+        font-size: 10.5pt;
+      }
+      
+      .date,
+      .recipient,
+      .reference,
+      .salutation,
+      .body-text,
+      .closing,
+      .signature-info {
+        font-size: 10pt;
+      }
+      
+      .signature-line {
+        width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="date">$dateStr</div>
+    
+    <div class="recipient">
+      <p>Señor:</p>
+      <p><strong>Dr. Richard Jorge Torrez Juaniquina Ph. D.</strong></p>
+      <p><strong>DIRECTOR DE POSGRADO - UPEA</strong></p>
+      <p><strong>Presente.-</strong></p>
+    </div>
+    
+    <div class="reference">
+      Ref.: SOLICITUD DE PRÓRROGA PARA LA PRESENTACIÓN DE LA FOTOCOPIA LEGALIZADA DEL TÍTULO ACADÉMICO O TÍTULO EN PROVISIÓN NACIONAL
+    </div>
+    
+    <div class="salutation">
+      Distinguido Magister:
+    </div>
+    
+    <div class="body-text">
+      Me es grato hacerle llegar un saludo cordial y fraterno a nombre mío, deseándole mis mejores deseos de éxitos en las labores que desempeña.
+    </div>
+    
+    <div class="body-text">
+      El motivo de la presente es para solicitar a su autoridad una <strong>PRÓRROGA PARA LA PRESENTACIÓN DE LA FOTOCOPIA LEGALIZADA DEL TÍTULO ACADÉMICO O TÍTULO EN PROVISIÓN NACIONAL</strong>, para la inscripción al PROGRAMA: "Diplomado en: $career" MODALIDAD: Virtual; siendo que mi persona debe realizar solicitud en la Universidad de origen de estudios, por ese motivo es que le mando mi solicitud de prórroga. Por ese motivo es que le mando mi solicitud, esperando el visto bueno de su autoridad me despido.
+    </div>
+    
+    <div class="closing">
+      Atentamente,
+    </div>
+    
+    <div class="signature-area">
+      <div class="signature-line"></div>
+      <div class="signature-info">
+        <p><strong>$name</strong></p>
+        <p>C.I. $ci</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+''';
+
+      // Save HTML to temporary file for preview
+      final dir = await getApplicationDocumentsDirectory();
+      final tempDir = Directory('${dir.path}${Platform.pathSeparator}temp_previews');
+      if (!await tempDir.exists()) {
+        await tempDir.create(recursive: true);
+      }
+      
+      final tempFile = File('${tempDir.path}${Platform.pathSeparator}prorroga_preview_${DateTime.now().millisecondsSinceEpoch}.html');
+      await tempFile.writeAsString(htmlContent);
+
+      // Show HTML preview in WebView
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.85,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: kPrimaryColor.withOpacity(0.08),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.description_outlined, color: kPrimaryColor),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Vista Previa - Carta de Prórroga',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: kTextColor,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close, color: kTextSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                // WebView
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    child: WebViewWidget(
+                      controller: WebViewController()
+                        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                        ..setBackgroundColor(Colors.white)
+                        ..loadFile(tempFile.path),
+                    ),
+                  ),
+                ),
+                // Action buttons
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: kPrimaryColor),
+                          ),
+                          child: const Text('Cancelar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _generateSignedProrroga();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kPrimaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            'Firmar y Guardar',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
+
+      // Clean up temp file
+      try {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      } catch (_) {}
     } catch (e) {
       if (mounted) setState(() => _busyGlobal = false);
+      _mostrarMensaje('Error al generar vista previa: $e', esError: true);
     }
   }
 
@@ -1309,6 +1880,114 @@ C.I. $ci""";
     ];
     if (month < 1 || month > 12) return 'mes';
     return months[month - 1];
+  }
+
+  Future<void> _generarCartaInscripcion() async {
+    setState(() => _busyKey = 'carta_inscripcion_path');
+    try {
+      final personalData = await LocalStorageService.getPersonalData();
+      var nombreCompleto =
+          '${personalData?['nombre'] ?? ''} ${personalData?['apPaterno'] ?? ''} ${personalData?['apMaterno'] ?? ''}'
+              .trim();
+      if (nombreCompleto.isEmpty) {
+        final session = await LocalStorageService.getSessionData();
+        nombreCompleto = (session?['nombreUsuario'] as String?)?.trim() ?? '';
+      }
+      final numeroCI = (personalData?['numeroCI'] ?? '').toString().trim();
+      if (numeroCI.isEmpty || nombreCompleto.isEmpty) {
+        _mostrarMensaje(
+          'Complete nombre, apellidos y CI en Mi perfil personal para generar la carta.',
+          esError: true,
+        );
+        return;
+      }
+      final expedidoEn = (personalData?['expedidoEn'] ?? '').toString().trim();
+      final nombrePrograma =
+          (personalData?['nombreProgramaCarta'] ?? '').toString().trim();
+      final modalidad =
+          (personalData?['modalidadProgramaCarta'] ?? 'Virtual').toString().trim();
+      final numeroRef = DateTime.now().millisecondsSinceEpoch % 10000;
+      
+      // Obtener la ruta de la firma digital
+      final firmaPath = await LocalStorageService.getSignatureImagePath();
+      
+      final generador = ServicioGeneradorCartaInscripcion();
+      final ruta = await generador.generarCarta(
+        tipoPrograma: TipoPrograma.diplomado,
+        nombrePrograma: nombrePrograma.isEmpty
+            ? 'Formulación y Evaluación de Proyectos'
+            : nombrePrograma,
+        modalidad: modalidad,
+        nombreCompleto: nombreCompleto,
+        numeroCI: numeroCI,
+        expedidoEn: expedidoEn.isEmpty ? null : expedidoEn,
+        montoDeposito: '2400',
+        numeroRef: '$numeroRef',
+        signatureImagePath: firmaPath, // ✅ Pasar la firma
+        guardarEnPreferencias: false,
+      );
+      await _saveDocPath('carta_inscripcion_path', ruta);
+      if (!mounted) return;
+      setState(() => _cartaInscripcionPath = ruta);
+      _mostrarMensaje('Carta de inscripción generada');
+    } catch (e) {
+      _mostrarMensaje('Error al generar carta: $e', esError: true);
+    } finally {
+      if (mounted) setState(() => _busyKey = null);
+    }
+  }
+//Funcion que genera la ficha de inscripcion
+  Future<void> _generarFichaInscripcion() async {
+    setState(() => _busyKey = 'ficha_inscripcion_path');
+    try {
+      final personalData = await LocalStorageService.getPersonalData();
+      final nombreCompleto =
+          '${personalData?['nombre'] ?? ''} ${personalData?['apPaterno'] ?? ''} ${personalData?['apMaterno'] ?? ''}'
+              .trim();
+      final numeroCI = (personalData?['numeroCI'] ?? '').toString().trim();
+      final email = (personalData?['email'] ?? '').toString().trim();
+      final telefono = (personalData?['telefono'] ?? '').toString().trim();
+      final now = DateTime.now();
+      final fechaStr =
+          '${now.day}/${now.month}/${now.year} ${now.hour}:${now.minute.toString().padLeft(2, '0')}';
+      final html = '''
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Ficha de Inscripción</title>
+<style>body{font-family:Segoe UI,Arial;padding:24px;max-width:600px;margin:0 auto}
+h1{color:#1E3A8A;border-bottom:2px solid #2563EB;padding-bottom:8px}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th,td{border:1px solid #ddd;padding:10px;text-align:left}
+th{background:#F1F5F9;font-weight:600}
+.footer{margin-top:24px;font-size:12px;color:#64748B}</style></head>
+<body>
+<h1>Ficha de Inscripción - Posgrado UPEA</h1>
+<p>Generada el $fechaStr</p>
+<table>
+<tr><th>Apellidos y Nombres</th><td>$nombreCompleto</td></tr>
+<tr><th>C.I.</th><td>$numeroCI</td></tr>
+<tr><th>Correo</th><td>$email</td></tr>
+<tr><th>Teléfono</th><td>$telefono</td></tr>
+<tr><th>Programa</th><td>Diplomado</td></tr>
+<tr><th>Modalidad</th><td>Virtual</td></tr>
+</table>
+<p class="footer">Documento generado automáticamente por la aplicación de preinscripción.</p>
+</body></html>''';
+      final dir = await getApplicationDocumentsDirectory();
+      final fichaDir = Directory('${dir.path}/fichas_inscripcion');
+      if (!await fichaDir.exists()) await fichaDir.create(recursive: true);
+      final file = File(
+        '${fichaDir.path}/ficha_${numeroCI}_${now.millisecondsSinceEpoch}.html',
+      );
+      await file.writeAsString(html);
+      await _saveDocPath('ficha_inscripcion_path', file.path);
+      if (!mounted) return;
+      setState(() => _fichaInscripcionPath = file.path);
+      _mostrarMensaje('Ficha de inscripción generada');
+    } catch (e) {
+      _mostrarMensaje('Error al generar ficha: $e', esError: true);
+    } finally {
+      if (mounted) setState(() => _busyKey = null);
+    }
   }
 
   void _showLegalDocumentReader({
@@ -1631,7 +2310,7 @@ C.I. $ci""";
         (_ciFrontPath ?? '').isNotEmpty && (_ciBackPath ?? '').isNotEmpty;
     final tituloOk = _hasTitle ? (_tituloPath ?? '').isNotEmpty : true;
     final prorrogaOk = !_hasTitle ? (_prorrogaPath ?? '').isNotEmpty : true;
-    // If hasTitle is true, prorrogaOk is effectively true (ignored requirement) and vice versa.
+    // Si hasTitle es true, prorrogaOk se considera cumplido (requisito ignorado) y viceversa.
 
     final requiredTotal = 3;
     final requiredDone =
@@ -1654,136 +2333,475 @@ C.I. $ci""";
       },
       child: Scaffold(
         backgroundColor: kSurfaceColor,
-        appBar: AppBar(
-          title: const Text(
-            'Documentos',
-            style: TextStyle(
-              fontFamily: fontHeading,
-              fontWeight: FontWeight.bold,
+        extendBodyBehindAppBar: false,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(80),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF005BAC), // Primary Blue
+                  Color(0xFF0077CC), // Medium Blue
+                  Color(0xFF3D8FE0), // Light Blue
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF005BAC).withOpacity(0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: AppBar(
+                toolbarHeight: 80,
+                title: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      // Icono con animación de escala
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.folder_special_rounded,
+                                color: Colors.white,
+                                size: 26,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 14),
+                      // Título con animación de fade
+                      Expanded(
+                        child: FadeInLeft(
+                          duration: const Duration(milliseconds: 500),
+                          child: const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Mis Documentos',
+                                style: TextStyle(
+                                  fontFamily: fontHeading,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                  height: 1.2,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Gestiona tus archivos personales',
+                                style: TextStyle(
+                                  fontFamily: fontBody,
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                  letterSpacing: 0.2,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                centerTitle: false,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 8),
+                  child: FadeInLeft(
+                    duration: const Duration(milliseconds: 400),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/sistema/pantalla_principal');
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                actions: [
+                  // Botón de escaneo inteligente con efecto pulsante
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6, top: 8),
+                    child: FadeInRight(
+                      duration: const Duration(milliseconds: 500),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 1.0, end: 1.05),
+                        duration: const Duration(milliseconds: 1500),
+                        curve: Curves.easeInOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () {
+                                  HapticFeedback.mediumImpact();
+                                  _abrirEscaneoInteligente();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF4CAF50),
+                                        Color(0xFF66BB6A),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF4CAF50).withOpacity(0.4),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.document_scanner_rounded,
+                                    size: 22,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  // Botón de estadísticas
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6, top: 8),
+                    child: FadeInRight(
+                      duration: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 100),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _mostrarEstadisticas();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.analytics_outlined,
+                              size: 22,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Menú de opciones mejorado
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12, top: 8),
+                    child: FadeInRight(
+                      duration: const Duration(milliseconds: 700),
+                      delay: const Duration(milliseconds: 200),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: PopupMenuButton<String>(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          elevation: 12,
+                          offset: const Offset(0, 55),
+                          color: Colors.white,
+                          shadowColor: Colors.black.withOpacity(0.2),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.more_vert_rounded,
+                              size: 22,
+                              color: Colors.white,
+                            ),
+                          ),
+                          onSelected: (value) {
+                            HapticFeedback.selectionClick();
+                            switch (value) {
+                              case 'smart_scan':
+                                _abrirEscaneoInteligente();
+                                break;
+                              case 'stats':
+                                _mostrarEstadisticas();
+                                break;
+                              case 'help':
+                                _mostrarAyuda();
+                                break;
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'smart_scan',
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          const Color(0xFF4CAF50).withOpacity(0.15),
+                                          const Color(0xFF66BB6A).withOpacity(0.1),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.auto_awesome,
+                                      size: 22,
+                                      color: Color(0xFF4CAF50),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Escaneo Inteligente',
+                                          style: TextStyle(
+                                            fontFamily: fontHeading,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                            color: kTextColor,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'OCR avanzado con IA',
+                                          style: TextStyle(
+                                            fontFamily: fontBody,
+                                            fontSize: 12,
+                                            color: kTextSecondary,
+                                            letterSpacing: 0.1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 16,
+                                    color: kTextSecondary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuDivider(height: 1),
+                            PopupMenuItem(
+                              value: 'stats',
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: kPrimaryColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.analytics_outlined,
+                                      size: 22,
+                                      color: kPrimaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Estadísticas',
+                                          style: TextStyle(
+                                            fontFamily: fontHeading,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                            color: kTextColor,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'Ver tu progreso',
+                                          style: TextStyle(
+                                            fontFamily: fontBody,
+                                            fontSize: 12,
+                                            color: kTextSecondary,
+                                            letterSpacing: 0.1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 16,
+                                    color: kTextSecondary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuDivider(height: 1),
+                            PopupMenuItem(
+                              value: 'help',
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: kPrimaryColor.withOpacity(0.06),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.help_outline_rounded,
+                                      size: 22,
+                                      color: kPrimaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Ayuda',
+                                          style: TextStyle(
+                                            fontFamily: fontHeading,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                            color: kTextColor,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'Guía de uso completa',
+                                          style: TextStyle(
+                                            fontFamily: fontBody,
+                                            fontSize: 12,
+                                            color: kTextSecondary,
+                                            letterSpacing: 0.1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 16,
+                                    color: kTextSecondary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          centerTitle: true,
-          backgroundColor: kSurfaceColor,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                // Fallback para cuando se entra sin historial (ir a la pantalla principal)
-                context.go('/sistema/pantalla_principal');
-              }
-            },
-          ),
-          actions: [
-          // Botón de estadísticas
-          IconButton(
-            icon: const Icon(Icons.analytics_outlined),
-            tooltip: 'Estadísticas',
-            onPressed: _mostrarEstadisticas,
-          ),
-          // Menú de opciones
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            onSelected: (value) {
-              switch (value) {
-                case 'smart_scan':
-                  _abrirEscaneoInteligente();
-                  break;
-                case 'stats':
-                  _mostrarEstadisticas();
-                  break;
-                case 'help':
-                  _mostrarAyuda();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'smart_scan',
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome, size: 20, color: kPrimaryColor),
-                    SizedBox(width: 12),
-                    Text('Escaneo Inteligente'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'stats',
-                child: Row(
-                  children: [
-                    Icon(Icons.analytics_outlined, size: 20),
-                    SizedBox(width: 12),
-                    Text('Estadísticas'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'help',
-                child: Row(
-                  children: [
-                    Icon(Icons.help_outline, size: 20),
-                    SizedBox(width: 12),
-                    Text('Ayuda'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-        decoration: BoxDecoration(
-          color: kCardColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
         ),
-        child: SizedBox(
-          height: 56,
-          child: ElasticIn(
-            duration: const Duration(milliseconds: 1000),
-            child: ElevatedButton(
-              onPressed: (_busyGlobal || _busyKey != null)
-                  ? null
-                  : () {
-                      context.pop();
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
-                foregroundColor: Colors.white,
-                elevation: 4,
-                shadowColor: kPrimaryColor.withOpacity(0.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+        body: _busyGlobal
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
                 ),
-              ),
-              child: const Text(
-                'Guardar y Continuar',
-                style: TextStyle(
-                  fontFamily: fontHeading,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: _busyGlobal
-          ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
-          : ListView(
+              )
+            : ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               children: [
                 SlideInUp(
@@ -1812,14 +2830,10 @@ C.I. $ci""";
                 FadeInUp(
                   delay: const Duration(milliseconds: 220),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: kPrimaryColor.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(color: kPrimaryColor.withOpacity(0.1)),
                     ),
                     child: SwitchListTile(
                       value: _deferDocuments,
@@ -1828,8 +2842,9 @@ C.I. $ci""";
                         'Cargaré mis documentos después',
                         style: TextStyle(
                           fontFamily: fontBody,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           fontSize: 14,
+                          color: kPrimaryColor,
                         ),
                       ),
                       subtitle: const Text(
@@ -1877,8 +2892,8 @@ C.I. $ci""";
                           : (val) {
                           setState(() {
                             _hasTitle = val;
-                            // Clear the other path to avoid confusion? Optional.
-                            // For now we keep them but validation logic ignores the hidden one.
+                            // Opcional: limpiar la otra ruta para evitar confusión.
+                            // Por ahora se mantienen; la validación ignora la oculta.
                           });
                         },
                     ),
@@ -1936,6 +2951,128 @@ C.I. $ci""";
                       },
                     ),
                   ),
+                const SizedBox(height: 24),
+                FadeInLeft(
+                  delay: const Duration(milliseconds: 250),
+                  child: _buildSectionTitle('Preinscripción'),
+                ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 260),
+                  child: _DocUploadCard(
+                    title: 'Carta de solicitud (diplomado)',
+                    description: 'Se genera con sus datos',
+                    path: _cartaInscripcionPath,
+                    isLoading: _busyKey == 'carta_inscripcion_path',
+                    isRequired: true,
+                    enabled: !_deferDocuments,
+                    canGenerate: true,
+                    onUpload: _generarCartaInscripcion,
+                    onPreview: _cartaInscripcionPath != null ? () => _previewDoc(_cartaInscripcionPath!) : null,
+                    onDelete: () async {
+                      if (await _confirmDelete('Carta de inscripción')) {
+                        await _saveDocPath('carta_inscripcion_path', null);
+                        setState(() => _cartaInscripcionPath = null);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 270),
+                  child: _DocUploadCard(
+                    title: 'Comprobante de pago (matrícula)',
+                    description: 'Adjuntar comprobante de pago por matrícula',
+                    path: _comprobanteMatriculaPath,
+                    isLoading: _busyKey == 'comprobante_matricula_path',
+                    isRequired: false,
+                    enabled: true, // Siempre habilitado para subir comprobantes
+                    onUpload: () => _pickAndSave(
+                      key: 'comprobante_matricula_path',
+                      prefix: 'pago_matricula',
+                      onSet: (p) => _comprobanteMatriculaPath = p,
+                      allowFile: true,
+                    ),
+                    onPreview: _comprobanteMatriculaPath != null ? () => _previewDoc(_comprobanteMatriculaPath!) : null,
+                    onDelete: () async {
+                      if (await _confirmDelete('Comprobante matrícula')) {
+                        await _saveDocPath('comprobante_matricula_path', null);
+                        setState(() => _comprobanteMatriculaPath = null);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 280),
+                  child: _DocUploadCard(
+                    title: 'Comprobante de pago (colegiatura)',
+                    description: 'Adjuntar comprobante de pago por colegiatura (opción 2 de 2)',
+                    path: _comprobanteColegiaturaPath,
+                    isLoading: _busyKey == 'comprobante_colegiatura_path',
+                    isRequired: false,
+                    enabled: true, // Siempre habilitado para subir comprobantes
+                    onUpload: () => _pickAndSave(
+                      key: 'comprobante_colegiatura_path',
+                      prefix: 'pago_colegiatura',
+                      onSet: (p) => _comprobanteColegiaturaPath = p,
+                      allowFile: true,
+                    ),
+                    onPreview: _comprobanteColegiaturaPath != null ? () => _previewDoc(_comprobanteColegiaturaPath!) : null,
+                    onDelete: () async {
+                      if (await _confirmDelete('Comprobante colegiatura')) {
+                        await _saveDocPath('comprobante_colegiatura_path', null);
+                        setState(() => _comprobanteColegiaturaPath = null);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 290),
+                  child: _DocUploadCard(
+                    title: 'Ficha de inscripción',
+                    description: 'Se genera automáticamente con sus datos. Pulse Generar.',
+                    path: _fichaInscripcionPath,
+                    isLoading: _busyKey == 'ficha_inscripcion_path',
+                    isRequired: true,
+                    enabled: !_deferDocuments,
+                    canGenerate: true,
+                    onUpload: _generarFichaInscripcion,
+                    onPreview: _fichaInscripcionPath != null ? () => _previewDoc(_fichaInscripcionPath!) : null,
+                    onDelete: () async {
+                      if (await _confirmDelete('Ficha de inscripción')) {
+                        await _saveDocPath('ficha_inscripcion_path', null);
+                        setState(() => _fichaInscripcionPath = null);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FadeInUp(
+                  delay: const Duration(milliseconds: 300),
+                  child: _DocUploadCard(
+                    title: 'Hoja de vida (CV)',
+                    description: 'Adjuntar currículum o hoja de vida',
+                    path: _hojaVidaPath,
+                    isLoading: _busyKey == 'hoja_vida_path',
+                    isRequired: true,
+                    enabled: !_deferDocuments,
+                    onUpload: () => _pickAndSave(
+                      key: 'hoja_vida_path',
+                      prefix: 'hoja_vida',
+                      onSet: (p) => _hojaVidaPath = p,
+                      allowFile: true,
+                    ),
+                    onPreview: _hojaVidaPath != null ? () => _previewDoc(_hojaVidaPath!) : null,
+                    onDelete: () async {
+                      if (await _confirmDelete('Hoja de vida')) {
+                        await _saveDocPath('hoja_vida_path', null);
+                        setState(() => _hojaVidaPath = null);
+                      }
+                    },
+                  ),
+                ),
                 const SizedBox(height: 24),
                 FadeInLeft(
                   delay: const Duration(milliseconds: 200),
@@ -1996,7 +3133,7 @@ C.I. $ci""";
                     delay: const Duration(milliseconds: 450),
                     child: _DocUploadCard(
                       title: 'Fotocopia de C.I. (PDF)',
-                      description: 'Anverso y reverso fusionados en hoja carta, B/N',
+                      description: 'Se genera automáticamente desde anverso y reverso, o pulse Generar',
                       path: (_participantDocs?['ci_photocopy_pdf_path'] as String?) ?? '',
                       isLoading: _busyKey == 'ci_photocopy_pdf_path',
                       isRequired: false,
@@ -2055,6 +3192,49 @@ C.I. $ci""";
                 const SizedBox(height: 40),
               ],
             ),
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+          decoration: BoxDecoration(
+            color: kCardColor,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SizedBox(
+            height: 56,
+            child: ElasticIn(
+              duration: const Duration(milliseconds: 1000),
+              child: ElevatedButton(
+                onPressed: (_busyGlobal || _busyKey != null)
+                    ? null
+                    : () {
+                        context.pop();
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  shadowColor: kPrimaryColor.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Guardar y Continuar',
+                  style: TextStyle(
+                    fontFamily: fontHeading,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2118,7 +3298,7 @@ C.I. $ci""";
             child: Container(
               width: 96,
               height: 96,
-              color: const Color(0xFF808080),
+               color: const Color(0xFF808080),
               child: hasPhoto
                   ? Image.file(_profilePhoto!, fit: BoxFit.cover)
                   : const Icon(Icons.person, color: Colors.white70, size: 48),
@@ -2215,16 +3395,16 @@ C.I. $ci""";
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [kPrimaryDark, kPrimaryColor],
+          colors: [kPrimaryColor, kPrimaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: kPrimaryColor.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -2234,30 +3414,34 @@ C.I. $ci""";
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Tu Progreso',
-                style: TextStyle(
-                  fontFamily: fontHeading,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              const Expanded(
+                child: Text(
+                  'Progreso de Documentos',
+                  style: TextStyle(
+                    fontFamily: fontHeading,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+                  horizontal: 10,
+                  vertical: 4,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '$done / $total',
+                  '$done / $total Obligatorios',
                   style: const TextStyle(
                     fontFamily: fontBody,
                     color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -2268,8 +3452,8 @@ C.I. $ci""";
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: progress,
-              color: kSuccessColor,
-              backgroundColor: Colors.black.withOpacity(0.2),
+              color: Colors.white,
+              backgroundColor: Colors.white.withOpacity(0.15),
               minHeight: 8,
             ),
           ),
@@ -2340,7 +3524,7 @@ class _DocUploadCard extends StatelessWidget {
   final bool canGenerate;
   final bool enabled;
   final VoidCallback onUpload;
-  final VoidCallback onPreview;
+  final VoidCallback? onPreview;
   final VoidCallback onDelete;
 
   const _DocUploadCard({
@@ -2348,7 +3532,7 @@ class _DocUploadCard extends StatelessWidget {
     required this.description,
     required this.path,
     required this.onUpload,
-    required this.onPreview,
+    this.onPreview,
     required this.onDelete,
     this.isRequired = false,
     this.isLoading = false,
@@ -2362,267 +3546,317 @@ class _DocUploadCard extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final color = hasFile ? _MisDocumentosPersonalesScreenState.kSuccessColor : _MisDocumentosPersonalesScreenState.kPrimaryColor;
+    
     return Opacity(
       opacity: enabled ? 1.0 : 0.5,
       child: AbsorbPointer(
         absorbing: !enabled,
         child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: _MisDocumentosPersonalesScreenState.kCardColor,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.15), width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.05),
-                blurRadius: 15,
-                offset: const Offset(0, 4),
+                color: color.withOpacity(0.07),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
-            border: Border.all(color: const Color(0xFFF1F5F9)),
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: hasFile
-                  ? onPreview
-                  : (isAutoGenerated && !canGenerate ? null : onUpload),
-              borderRadius: BorderRadius.circular(20),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // Thumbnail or Icon
-                    Hero(
-                      tag: 'doc_$title',
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: hasFile
-                              ? Colors.transparent
-                              : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(16),
-                          image: (hasFile && !path!.toLowerCase().endsWith('.pdf'))
-                              ? DecorationImage(
-                                  image: FileImage(File(path!)),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                          border: hasFile
-                              ? Border.all(
-                                  color: _MisDocumentosPersonalesScreenState
-                                      .kPrimaryColor
-                                      .withOpacity(0.2),
-                                  width: 1,
-                                )
-                              : null,
-                        ),
-                        child: isLoading
-                            ? const Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                  ),
-                                ),
-                              )
-                            : (!hasFile
-                                ? Icon(
-                                    isAutoGenerated
-                                        ? Icons.auto_awesome
-                                        : Icons.upload_file_rounded,
-                                    color: _MisDocumentosPersonalesScreenState
-                                        .kPrimaryColor,
-                                    size: 28,
-                                  )
-                                : (path!.toLowerCase().endsWith('.pdf')
-                                    ? const Icon(
-                                        Icons.picture_as_pdf_rounded,
-                                        color: Colors.red,
-                                        size: 32,
-                                      )
-                                    : null)),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                // Línea de acento lateral
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 5,
+                    color: color,
+                  ),
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: hasFile
+                        ? onPreview
+                        : (isAutoGenerated && !canGenerate ? null : onUpload),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  style: const TextStyle(
-                                    fontFamily:
-                                        _MisDocumentosPersonalesScreenState
-                                            .fontHeading,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: _MisDocumentosPersonalesScreenState
-                                        .kTextColor,
-                                  ),
-                                ),
+                          // Thumbnail or Icon
+                          Hero(
+                            tag: 'doc_$title',
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: hasFile
+                                    ? Colors.transparent
+                                    : color.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(12),
+                                // Solo mostrar preview de imagen para archivos de imagen reales
+                                image: (hasFile &&
+                                        !path!.toLowerCase().endsWith('.pdf') &&
+                                        !path!.toLowerCase().endsWith('.html') &&
+                                        !path!.toLowerCase().endsWith('.htm'))
+                                    ? DecorationImage(
+                                        image: FileImage(File(path!)),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                                border: hasFile
+                                    ? Border.all(
+                                        color: color.withOpacity(0.2),
+                                        width: 1,
+                                      )
+                                    : null,
                               ),
-                              if (hasFile)
-                                const Icon(
-                                  Icons.check_circle_rounded,
-                                  color: _MisDocumentosPersonalesScreenState
-                                      .kSuccessColor,
-                                  size: 18,
-                                )
-                              else if (isRequired)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
+                              child: isLoading
+                                  ? Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: color,
+                                        ),
+                                      ),
+                                    )
+                                  : (!hasFile
+                                      ? Icon(
+                                          isAutoGenerated
+                                              ? Icons.auto_awesome_rounded
+                                              : Icons.cloud_upload_rounded,
+                                          color: color,
+                                          size: 26,
+                                        )
+                                      : (path!.toLowerCase().endsWith('.pdf')
+                                          ? const Icon(
+                                              Icons.picture_as_pdf_rounded,
+                                              color: Colors.red,
+                                              size: 28,
+                                            )
+                                          : null)),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          // Info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        style: const TextStyle(
+                                          fontFamily:
+                                              _MisDocumentosPersonalesScreenState
+                                                  .fontHeading,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14.5,
+                                          color: _MisDocumentosPersonalesScreenState
+                                              .kTextColor,
+                                        ),
+                                      ),
+                                    ),
+                                    if (hasFile)
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: _MisDocumentosPersonalesScreenState
+                                            .kSuccessColor,
+                                        size: 18,
+                                      )
+                                    else if (isRequired)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _MisDocumentosPersonalesScreenState
+                                              .kWarningBg,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: _MisDocumentosPersonalesScreenState.kWarningText.withOpacity(0.2)),
+                                        ),
+                                        child: const Text(
+                                          'REQ',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w900,
+                                            color:
+                                                _MisDocumentosPersonalesScreenState
+                                                    .kWarningText,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  hasFile ? 'Documento cargado correctamente' : description,
+                                  style: TextStyle(
+                                    fontFamily:
+                                        _MisDocumentosPersonalesScreenState.fontBody,
+                                    fontSize: 11.5,
                                     color: _MisDocumentosPersonalesScreenState
-                                        .kWarningBg,
-                                    borderRadius: BorderRadius.circular(6),
+                                        .kTextSecondary,
                                   ),
-                                  child: const Text(
-                                    'REQ',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          _MisDocumentosPersonalesScreenState
-                                              .kWarningText,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Actions
+                          const SizedBox(width: 8),
+                          if (hasFile)
+                            PopupMenuButton<String>(
+                              icon: const Icon(
+                                Icons.more_vert_rounded,
+                                color:
+                                    _MisDocumentosPersonalesScreenState.kTextSecondary,
+                                size: 20,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              onSelected: (value) {
+                                if (value == 'view') onPreview?.call();
+                                if (value == 'delete') onDelete();
+                                if (value == 'update' && !isAutoGenerated) onUpload();
+                                if (value == 'update' && isAutoGenerated) {
+                                  onUpload(); // Regenerate
+                                }
+                              },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    value: 'view',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.visibility_outlined, size: 20, color: _MisDocumentosPersonalesScreenState.kPrimaryColor),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          'Ver documento',
+                                          style: TextStyle(
+                                            color: _MisDocumentosPersonalesScreenState.kTextColor,
+                                            fontWeight: FontWeight.w700,
+                                            fontFamily: _MisDocumentosPersonalesScreenState.fontBody,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            hasFile ? 'Documento cargado' : description,
-                            style: TextStyle(
-                              fontFamily:
-                                  _MisDocumentosPersonalesScreenState.fontBody,
-                              fontSize: 12,
-                              color: _MisDocumentosPersonalesScreenState
-                                  .kTextSecondary,
+                                  if (!isAutoGenerated)
+                                    PopupMenuItem(
+                                      value: 'update',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 20, color: _MisDocumentosPersonalesScreenState.kPrimaryColor),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            'Actualizar',
+                                            style: TextStyle(
+                                              color: _MisDocumentosPersonalesScreenState.kTextColor,
+                                              fontWeight: FontWeight.w700,
+                                              fontFamily: _MisDocumentosPersonalesScreenState.fontBody,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (isAutoGenerated)
+                                    PopupMenuItem(
+                                      value: 'update',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.refresh_rounded, size: 20, color: _MisDocumentosPersonalesScreenState.kPrimaryColor),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            'Regenerar',
+                                            style: TextStyle(
+                                              color: _MisDocumentosPersonalesScreenState.kTextColor,
+                                              fontWeight: FontWeight.w700,
+                                              fontFamily: _MisDocumentosPersonalesScreenState.fontBody,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 20,
+                                          color: Colors.red,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          'Eliminar',
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w900,
+                                            fontFamily: _MisDocumentosPersonalesScreenState.fontBody,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          if (!hasFile)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: isAutoGenerated
+                                  ? IconButton(
+                                      onPressed: canGenerate ? onUpload : null,
+                                      icon: Icon(
+                                        Icons.auto_fix_high_rounded,
+                                        color: canGenerate
+                                            ? _MisDocumentosPersonalesScreenState
+                                                  .kPrimaryColor
+                                            : Colors.grey.withOpacity(0.3),
+                                      ),
+                                    )
+                                  : Container(
+                                      decoration: BoxDecoration(
+                                        color: _MisDocumentosPersonalesScreenState
+                                            .kPrimaryColor
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: const EdgeInsets.all(8),
+                                      child: const Icon(
+                                        Icons.add_rounded,
+                                        color: _MisDocumentosPersonalesScreenState
+                                            .kPrimaryColor,
+                                        size: 20,
+                                      ),
+                                    ),
+                            ),
                         ],
                       ),
                     ),
-                    // Actions
-                    if (hasFile)
-                      PopupMenuButton<String>(
-                        icon: const Icon(
-                          Icons.more_vert_rounded,
-                          color:
-                              _MisDocumentosPersonalesScreenState.kTextSecondary,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        onSelected: (value) {
-                          if (value == 'view') onPreview();
-                          if (value == 'delete') onDelete();
-                          if (value == 'update' && !isAutoGenerated) onUpload();
-                          if (value == 'update' && isAutoGenerated) {
-                            onUpload(); // Regenerate
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'view',
-                            child: Row(
-                              children: [
-                                Icon(Icons.visibility_outlined, size: 20),
-                                SizedBox(width: 8),
-                                Text('Ver'),
-                              ],
-                            ),
-                          ),
-                          if (!isAutoGenerated)
-                            const PopupMenuItem(
-                              value: 'update',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit_outlined, size: 20),
-                                  SizedBox(width: 8),
-                                  Text('Actualizar'),
-                                ],
-                              ),
-                            ),
-                          if (isAutoGenerated)
-                            const PopupMenuItem(
-                              value: 'update',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.refresh_rounded, size: 20),
-                                  SizedBox(width: 8),
-                                  Text('Regenerar'),
-                                ],
-                              ),
-                            ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.delete_outline,
-                                  size: 20,
-                                  color: Colors.red,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Eliminar',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    if (!hasFile)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: isAutoGenerated
-                            ? IconButton(
-                                onPressed: canGenerate ? onUpload : null,
-                                icon: Icon(
-                                  Icons.flash_on_rounded,
-                                  color: canGenerate
-                                      ? _MisDocumentosPersonalesScreenState
-                                            .kPrimaryColor
-                                      : Colors.grey.withOpacity(0.3),
-                                ),
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  color: _MisDocumentosPersonalesScreenState
-                                      .kPrimaryColor
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.all(8),
-                                child: const Icon(
-                                  Icons.add_rounded,
-                                  color: _MisDocumentosPersonalesScreenState
-                                      .kPrimaryColor,
-                                ),
-                              ),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
-
 }
 
 class _SignaturePainter extends CustomPainter {

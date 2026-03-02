@@ -1219,7 +1219,7 @@ class _SplashScreenAnimatedState extends State<SplashScreenAnimated>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
-                      'assets/images/logoposgrado.png',
+                      'assets/images/logoposgrado.jpg',
                       width: 150,
                       height: 150,
                     ),

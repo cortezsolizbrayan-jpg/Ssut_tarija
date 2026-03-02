@@ -27,6 +27,11 @@ class ProgramCard extends StatelessWidget {
     const primaryBlue = Color(0xFF005BAC);
     const lightBlue = Color(0xFF3D8FE0);
     
+    // Validar progress para evitar Infinity/NaN
+    final validProgress = progress.isFinite && !progress.isNaN 
+        ? progress.clamp(0.0, 1.0) 
+        : 0.0;
+    
     final bgColor = isSelected 
         ? (selectedColor ?? lightBlue)
         : (backgroundColor ?? Colors.white);
@@ -102,7 +107,7 @@ class ProgramCard extends StatelessWidget {
                       CustomPaint(
                         size: const Size(50, 50),
                         painter: _CircularProgressPainter(
-                          progress: progress,
+                          progress: validProgress,
                           color: isSelected 
                               ? Colors.white
                               : primaryBlue,
@@ -111,7 +116,7 @@ class ProgramCard extends StatelessWidget {
                       ),
                       // Porcentaje
                       Text(
-                        '${(progress * 100).toInt()}%',
+                        '${(validProgress * 100).toInt()}%',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,

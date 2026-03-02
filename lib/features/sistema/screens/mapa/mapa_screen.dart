@@ -11,19 +11,19 @@ class MapaScreen extends ConsumerStatefulWidget {
 }
 
 class _MapaScreenState extends ConsumerState<MapaScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   String _selectedLocation = 'Todas';
 
-  // Controladores de animación
-  late AnimationController _headerAnimationController;
-  late AnimationController _mapAnimationController;
-  late AnimationController _markersAnimationController;
-  late AnimationController _listAnimationController;
+  // Controller maestro para todas las animaciones
+  late AnimationController _masterController;
 
+  // Animaciones derivadas con intervalos
   late Animation<double> _headerFadeAnimation;
   late Animation<Offset> _headerSlideAnimation;
   late Animation<double> _mapScaleAnimation;
   late Animation<double> _mapFadeAnimation;
+  late Animation<double> _markersAnimation;
+  late Animation<double> _listAnimation;
 
   final List<Map<String, dynamic>> _locations = [
     {
@@ -77,65 +77,64 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
   void initState() {
     super.initState();
 
-    // Animación del header
-    _headerAnimationController = AnimationController(
+    // Un solo controller maestro para todas las animaciones
+    _masterController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 1200),
     );
+
+    // Header: 0% - 30% del tiempo total
     _headerFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _headerAnimationController,
-        curve: Curves.easeOut,
+        parent: _masterController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
       ),
     );
     _headerSlideAnimation =
         Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
           CurvedAnimation(
-            parent: _headerAnimationController,
-            curve: Curves.easeOutCubic,
+            parent: _masterController,
+            curve: const Interval(0.0, 0.3, curve: Curves.easeOutCubic),
           ),
         );
 
-    // Animación del mapa
-    _mapAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
+    // Mapa: 20% - 60% del tiempo total
     _mapScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
-        parent: _mapAnimationController,
-        curve: Curves.easeOutBack,
+        parent: _masterController,
+        curve: const Interval(0.2, 0.6, curve: Curves.easeOutBack),
       ),
     );
     _mapFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _mapAnimationController, curve: Curves.easeIn),
+      CurvedAnimation(
+        parent: _masterController,
+        curve: const Interval(0.2, 0.6, curve: Curves.easeIn),
+      ),
     );
 
-    // Animación de marcadores
-    _markersAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
+    // Marcadores: 40% - 80% del tiempo total
+    _markersAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _masterController,
+        curve: const Interval(0.4, 0.8, curve: Curves.easeOut),
+      ),
     );
 
-    // Animación de lista
-    _listAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
+    // Lista: 60% - 100% del tiempo total
+    _listAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _masterController,
+        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+      ),
     );
 
-    // Iniciar animaciones
-    _headerAnimationController.forward();
-    _mapAnimationController.forward();
-    _markersAnimationController.forward();
-    _listAnimationController.forward();
+    // Iniciar animación maestra
+    _masterController.forward();
   }
 
   @override
   void dispose() {
-    _headerAnimationController.dispose();
-    _mapAnimationController.dispose();
-    _markersAnimationController.dispose();
-    _listAnimationController.dispose();
+    _masterController.dispose();
     super.dispose();
   }
 
@@ -293,8 +292,8 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
                                   setState(() {
                                     _selectedLocation = tipo;
                                     // Reiniciar animación de marcadores
-                                    _markersAnimationController.reset();
-                                    _markersAnimationController.forward();
+                                    _masterController.reset();
+                                    _masterController.forward();
                                   });
                                 },
                                 child: AnimatedContainer(
@@ -700,7 +699,8 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      transitionAnimationController: _listAnimationController,
+      // Usar animación de lista del controller maestro
+      transitionAnimationController: _masterController,
       builder: (context) => _LocationDetailsSheet(
         location: location,
         getLocationColor: _getLocationColor,

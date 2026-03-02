@@ -1,81 +1,447 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/servicio_biometrico.dart';
 import 'package:refactor_template/features/login/presentation/pages/pages.dart';
 import 'package:refactor_template/features/sistema/screens/configuracion/configuracion_screen.dart';
 import 'package:refactor_template/features/sistema/screens/curriculum/mi_curriculum_screen.dart';
 import 'package:refactor_template/features/sistema/screens/diplomados/detalle_programa_screen.dart';
 import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
 import 'package:refactor_template/features/sistema/screens/diplomados/programas_disponibles_screen.dart';
+import 'package:refactor_template/features/sistema/screens/diplomados/programas_vigentes_screen.dart';
 import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
+import 'package:refactor_template/features/sistema/screens/inscripcion/confirmacion_inscripcion_screen.dart';
 import 'package:refactor_template/features/sistema/screens/notificaciones/notificaciones_screen.dart';
 import 'package:refactor_template/features/sistema/screens/pagos/deposito_matricula_screen.dart';
 import 'package:refactor_template/features/sistema/screens/perfil/mis_datos_personales_screen.dart';
 import 'package:refactor_template/features/sistema/screens/perfil/mis_documentos_personales_screen.dart';
+import 'package:refactor_template/features/sistema/screens/perfil/pantalla_firma.dart';
 import 'package:refactor_template/features/sistema/screens/program_payments_screen.dart';
 
 /// Configuración central de rutas de la aplicación.
 /// En desarrollo podemos arrancar directo a una pantalla específica
 /// (por ejemplo, Detalle de Programa) para trabajar más rápido.
 final goRouter = GoRouter(
-  // Flujo normal: iniciar en la pantalla de bienvenida
-  initialLocation: '/start-screen',
+  // Flujo normal: iniciar con splash screen animado
+  initialLocation: '/splash',
   debugLogDiagnostics: false, // Desactivar logs de debug para mejor rendimiento
   redirect: (context, state) async {
-    final session = await LocalStorageService.getSessionData();
-    final hasSession = session != null;
-
     final path = state.uri.path;
 
-    final isPublicRoute =
-        path == '/splash' ||
-        path == '/start-screen' ||
-        path == '/register' ||
-        path == '/verification' ||
-        path == '/upload-ci' ||
-        path == '/face-recognition' ||
-        path == '/registration-form' ||
-        path == '/password-setup' ||
-        path == '/terms-conditions' ||
-        path == '/login' ||
-        path == '/programas-disponibles';
+    // Verificar si el usuario ya configuró seguridad (PIN/Biometría)
+    // y si YA se autenticó correctamente en esta sesión.
+    final biometricService = BiometricService();
+    final hasSecurityConfigured = await biometricService.hasSecurityConfigured();
+    final session = await LocalStorageService.getSessionData();
+    final isAuthenticated = session?['authenticated'] == true;
 
-    if (!hasSession && !isPublicRoute) {
-      return '/login';
+    // Si tiene PIN/biometría configurado PERO todavía NO se autenticó en esta sesión,
+    // proteger todas las rutas del sistema (excepto splash, start-screen y autenticación)
+    if (hasSecurityConfigured && !isAuthenticated) {
+      // Permitir splash, start-screen y autenticación rápida
+      if (path == '/splash' || 
+          path == '/start-screen' || 
+          path == '/autenticacion-rapida') {
+        return null;
+      }
+      
+      // Proteger todas las demás rutas - redirigir a autenticación
+      if (path.startsWith('/sistema') || 
+          path.startsWith('/perfil') ||
+          path.startsWith('/diplomados') ||
+          path.startsWith('/programas') ||
+          path.startsWith('/detalle-programa') ||
+          path.startsWith('/mi-curriculum') ||
+          path.startsWith('/mis-datos') ||
+          path.startsWith('/mis-documentos') ||
+          path.startsWith('/notificaciones') ||
+          path.startsWith('/confirmacion') ||
+          path.startsWith('/configuracion') ||
+          path.startsWith('/deposito') ||
+          path.startsWith('/program-payments')) {
+        return '/autenticacion-rapida';
+      }
     }
 
-    if (hasSession && path == '/login') {
-      return PantallaPrincipal.name;
-    }
-
+    // Si ya está autenticado en esta sesión, permitir acceso a todo
     return null;
   },
   routes: [
-    // Splash animado inicial
+    // Splash animado inicial - Sin transición (es la primera pantalla)
     GoRoute(
       path: '/splash',
       name: SplashScreen.name,
-      builder: (context, state) => const SplashScreen(),
+      pageBuilder: (context, state) =>
+          NoTransitionPage(key: state.pageKey, child: const SplashScreen()),
     ),
-    // Pantalla inicial antigua. Se mantiene registrada por si
-    // quieres reutilizarla más adelante.
+
+    // Pantalla de Bienvenida - Fade suave
+    GoRoute(
+      path: '/start-screen',
+      name: StartScreen.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const StartScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    ),
+
+    // Pantalla de Registro - Slide desde derecha
+    GoRoute(
+      path: '/register',
+      name: RegisterScreen.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const RegisterScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.3, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Pantalla de Autenticación Rápida (PIN) - Fade rápido
+    GoRoute(
+      path: '/autenticacion-rapida',
+      name: PantallaAutenticacionRapida.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const PantallaAutenticacionRapida(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+      ),
+    ),
+
+    // Login - Slide desde derecha
+    GoRoute(
+      path: '/login',
+      name: PaginaLogin.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const PaginaLogin(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.3, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Pantalla Principal - Slide + Fade
+    GoRoute(
+      path: '/sistema/pantalla_principal',
+      name: PantallaPrincipal.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const PantallaPrincipal(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.2, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
+    ),
+
+    // Perfil - Slide + Fade
+    GoRoute(
+      path: '/perfil',
+      name: 'perfil',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const PantallaPrincipal(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.2, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Mis Programas - Slide + Fade
+    GoRoute(
+      path: '/diplomados',
+      name: 'diplomados',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const DiplomadosScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.2, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Programas Vigentes - Slide + Fade
+    GoRoute(
+      path: '/programas-vigentes',
+      name: ProgramasVigentesScreen.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const ProgramasVigentesScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.2, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Detalle de Programa - Scale + Fade (efecto zoom)
+    GoRoute(
+      path: '/detalle-programa',
+      name: 'detalle-programa',
+      pageBuilder: (context, state) {
+        final extra = state.extra as Map<String, String>?;
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: DetalleProgramaScreen(
+            titulo: extra?['titulo'] ?? 'Programa',
+            tipo: extra?['tipo'] ?? 'DIPLOMADO',
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final scaleTween = Tween<double>(
+              begin: 0.92,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeOutCubic));
+            final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+            return FadeTransition(
+              opacity: animation.drive(fadeTween),
+              child: ScaleTransition(
+                scale: animation.drive(scaleTween),
+                child: child,
+              ),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 320),
+        );
+      },
+    ),
+
+    // Curriculum - Slide + Fade
+    GoRoute(
+      path: '/mi-curriculum',
+      name: MiCurriculumScreen.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const MiCurriculumScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.2, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Mis Datos Personales - Slide + Fade
+    GoRoute(
+      path: '/mis-datos-personales',
+      name: MisDatosPersonalesScreen.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const MisDatosPersonalesScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.2, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Mis Documentos - Slide + Fade
+    GoRoute(
+      path: '/mis-documentos-personales',
+      name: MisDocumentosPersonalesScreen.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const MisDocumentosPersonalesScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.2, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeInOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+
+    // Notificaciones - Slide desde abajo
+    GoRoute(
+      path: '/notificaciones',
+      name: NotificacionesScreen.name,
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const NotificacionesScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 0.15);
+          const end = Offset.zero;
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.easeOutCubic));
+          final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+          return FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 280),
+      ),
+    ),
+
+    // Confirmación de Inscripción - Scale + Fade (celebración)
+    GoRoute(
+      path: '/confirmacion-inscripcion',
+      name: ConfirmacionInscripcionScreen.name,
+      pageBuilder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: ConfirmacionInscripcionScreen(
+            nombrePrograma: extra?['nombrePrograma'] as String? ?? 'Programa',
+            numeroInscripcion: extra?['numeroInscripcion'] as String? ?? '0',
+            mensaje: extra?['mensaje'] as String?,
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final scaleTween = Tween<double>(
+              begin: 0.85,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeOutBack));
+            final fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+            return FadeTransition(
+              opacity: animation.drive(fadeTween),
+              child: ScaleTransition(
+                scale: animation.drive(scaleTween),
+                child: child,
+              ),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 450),
+        );
+      },
+    ),
+
+    // Rutas con loader - Sin transición personalizada (mantener builder)
     GoRoute(
       path: '/inicial-page',
       name: InicialPage.name,
       builder: (context, state) => const InicialPage(),
     ),
-    // Nueva Pantalla de Inicio (Bienvenida)
-    GoRoute(
-      path: '/start-screen',
-      name: StartScreen.name,
-      builder: (context, state) => const StartScreen(),
-    ),
-    // Pantalla de Registro (Binance style)
-    GoRoute(
-      path: '/register',
-      name: RegisterScreen.name,
-      builder: (context, state) => const RegisterScreen(),
-    ),
-    // Pantalla de Verificación (SMS/Email)
     GoRoute(
       path: '/verification',
       name: VerificationScreen.name,
@@ -84,7 +450,6 @@ final goRouter = GoRouter(
         return VerificationScreen(target: target);
       },
     ),
-    // Pantalla de Carga de Carnet (ID)
     GoRoute(
       path: '/upload-ci',
       name: IDUploadScreen.name,
@@ -94,7 +459,6 @@ final goRouter = GoRouter(
         return IDUploadScreen(initialCI: initialCI);
       },
     ),
-    // Pantalla de Reconocimiento Facial
     GoRoute(
       path: '/face-recognition',
       name: FaceRecognitionScreen.name,
@@ -103,13 +467,11 @@ final goRouter = GoRouter(
         return FaceRecognitionScreen(ocrData: data);
       },
     ),
-    // Pantalla de Formulario de Registro (Pre-llenado por OCR)
     GoRoute(
       path: '/registration-form',
       name: RegistrationFormScreen.name,
       builder: (context, state) {
         final data = state.extra as Map<String, String>?;
-        // Si el CI viene del flujo inicial (no del OCR), bloquearlo
         final isCIBlocked = data?['ciFromInitial'] == 'true';
         return RegistrationFormScreen(
           initialNombres: data?['nombres'],
@@ -122,85 +484,31 @@ final goRouter = GoRouter(
         );
       },
     ),
-    // Pantalla de Creación de Contraseña
     GoRoute(
       path: '/password-setup',
       name: PasswordSetupScreen.name,
       builder: (context, state) => const PasswordSetupScreen(),
     ),
-    // Pantalla de Términos y Condiciones
     GoRoute(
       path: '/terms-conditions',
       name: TermsConditionsScreen.name,
       builder: (context, state) => const TermsConditionsScreen(),
     ),
-    // Pantalla principal de inicio de sesión
     GoRoute(
-      path: '/login',
-      name: PaginaLogin.name,
-      builder: (context, state) => const PaginaLogin(),
+      path: '/biometric-setup',
+      name: BiometricSetupScreen.name,
+      builder: (context, state) => const BiometricSetupScreen(),
     ),
-    // Pantalla de perfil con menú 3D y medallas
-    GoRoute(
-      path: '/perfil',
-      name: 'perfil',
-      builder: (context, state) => const PantallaPrincipal(),
-    ),
-    // Pantalla de Diplomados (Mis Programas)
-    GoRoute(
-      path: '/diplomados',
-      name: 'diplomados',
-      builder: (context, state) => const DiplomadosScreen(),
-    ),
-    // Pantalla de Programas Disponibles (Para invitados)
     GoRoute(
       path: '/programas-disponibles',
       name: ProgramasDisponiblesScreen.name,
       builder: (context, state) => const ProgramasDisponiblesScreen(),
     ),
-
-    GoRoute(
-      path: '/sistema/pantalla_principal',
-      name: PantallaPrincipal.name,
-      builder: (context, state) => const PantallaPrincipal(),
-    ),
-    // Pantalla de Detalle del Programa
-    GoRoute(
-      path: '/detalle-programa',
-      name: 'detalle-programa',
-      builder: (context, state) {
-        final extra = state.extra as Map<String, String>?;
-        return DetalleProgramaScreen(
-          titulo: extra?['titulo'] ?? 'Programa',
-          tipo: extra?['tipo'] ?? 'DIPLOMADO',
-        );
-      },
-    ),
-    // Pantalla de Notificaciones
-    GoRoute(
-      path: '/notificaciones',
-      name: NotificacionesScreen.name,
-      builder: (context, state) => const NotificacionesScreen(),
-    ),
-    // Pantalla de Configuración
     GoRoute(
       path: '/configuracion',
       name: ConfiguracionScreen.name,
       builder: (context, state) => const ConfiguracionScreen(),
     ),
-    // Pantalla de Mis Datos Personales
-    GoRoute(
-      path: '/mis-datos-personales',
-      name: MisDatosPersonalesScreen.name,
-      builder: (context, state) => const MisDatosPersonalesScreen(),
-    ),
-    // Pantalla de Mis Documentos Personales
-    GoRoute(
-      path: '/mis-documentos-personales',
-      name: MisDocumentosPersonalesScreen.name,
-      builder: (context, state) => const MisDocumentosPersonalesScreen(),
-    ),
-    // Pantalla de Depósito de Matrícula
     GoRoute(
       path: '/deposito-matricula',
       name: DepositoMatriculaScreen.name,
@@ -212,17 +520,15 @@ final goRouter = GoRouter(
         );
       },
     ),
-    // Pantalla de Mi Curriculum
-    GoRoute(
-      path: '/mi-curriculum',
-      name: MiCurriculumScreen.name,
-      builder: (context, state) => const MiCurriculumScreen(),
-    ),
-    // Pantalla de Pagos del Programa (Demo de tarjetas)
     GoRoute(
       path: '/program-payments',
       name: ProgramPaymentsScreen.name,
       builder: (context, state) => const ProgramPaymentsScreen(),
+    ),
+    GoRoute(
+      path: '/pantalla_firma',
+      name: PantallaFirma.name,
+      builder: (context, state) => const PantallaFirma(),
     ),
   ],
 );

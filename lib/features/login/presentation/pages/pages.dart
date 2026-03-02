@@ -9,3 +9,6 @@ export 'pantalla_splash.dart';
 export 'pantalla_subida_identidad.dart';
 export 'pantalla_verificacion.dart';
 export 'pantalla_terminos_condiciones.dart';
+export 'pantalla_seguridad_biometrica.dart';
+export 'pantalla_autenticacion_rapida.dart';
+export 'pantalla_bienvenida_windows.dart';

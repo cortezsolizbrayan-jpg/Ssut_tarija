@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/cupertino.dart';
 
 import 'dart:io';
 
@@ -6,7 +7,8 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/widgets/ios_date_picker.dart';
 
 class RegistrationFormScreen extends StatefulWidget {
   static const name = 'registration-form-screen';
@@ -158,6 +160,7 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
     TextEditingController controller, {
     DateTime? firstDate,
     DateTime? lastDate,
+    bool esNacimiento = false,
   }) async {
     DateTime initialDate;
     if (controller.text.isNotEmpty) {
@@ -176,34 +179,21 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
       initialDate = effectiveLastDate;
     }
 
-    final picked = await showDatePicker(
+    // La bandera esNacimiento se pasa directamente como parámetro
+    final picked = await mostrarIosFechaPicker(
       context: context,
       initialDate: initialDate,
-      firstDate: effectiveFirstDate,
-      lastDate: effectiveLastDate,
-      helpText: 'Seleccionar fecha',
-      cancelText: 'Cancelar',
-      confirmText: 'Confirmar',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF305BA4),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Color(0xFF1A3A5C),
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
-          ),
-          child: child!,
-        );
-      },
+      titulo: 'Seleccionar Fecha',
+      esFechaNacimiento: esNacimiento,
+      minimumYear: esNacimiento ? null : effectiveFirstDate.year,
+      maximumYear: esNacimiento ? null : effectiveLastDate.year,
     );
+
     if (picked != null) {
       final formatted =
           "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
       controller.text = formatted;
-      setState(() {}); // Actualizar UI
+      setState(() {});
     }
   }
 
@@ -241,17 +231,20 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
     required BuildContext context,
     DateTime? firstDate,
     DateTime? lastDate,
+    bool esNacimiento = false,
     String? Function(String?)? validator,
   }) {
+    final bool isFilled = controller.text.isNotEmpty;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF848E9C),
+          style: TextStyle(
+            color: isFilled ? const Color(0xFF1A3A5C) : const Color(0xFF848E9C),
             fontSize: 13,
-            fontWeight: FontWeight.w500,
+            fontWeight: isFilled ? FontWeight.bold : FontWeight.w500,
           ),
         ),
         const SizedBox(height: 8),
@@ -261,37 +254,46 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
             controller,
             firstDate: firstDate,
             lastDate: lastDate,
+            esNacimiento: esNacimiento,
           ),
           child: AbsorbPointer(
             child: TextFormField(
               controller: controller,
               validator: validator,
+              style: TextStyle(
+                color: const Color(0xFF1A3A5C),
+                fontWeight: isFilled ? FontWeight.bold : FontWeight.normal,
+              ),
               decoration: InputDecoration(
                 prefixIcon: Icon(
                   icon,
-                  color: const Color(0xFF305BA4).withAlpha(179),
+                  color: isFilled ? const Color(0xFF305BA4) : const Color(0xFF305BA4).withAlpha(179),
                   size: 20,
                 ),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: isFilled ? const Color(0xFFE8F0FE) : Colors.white,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 16,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFEEF2F6)),
+                  borderSide: BorderSide(
+                    color: isFilled ? const Color(0xFF305BA4).withOpacity(0.3) : const Color(0xFFEEF2F6),
+                    width: isFilled ? 1.5 : 1,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(
                     color: Color(0xFF305BA4),
-                    width: 1.5,
+                    width: 1.8,
                   ),
                 ),
-                suffixIcon: const Icon(
+                suffixIcon: Icon(
                   Icons.calendar_today_outlined,
-                  color: Colors.grey,
+                  color: isFilled ? const Color(0xFF305BA4) : Colors.grey,
+                  size: 18,
                 ),
               ),
             ),
@@ -407,6 +409,7 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 context: context,
                 firstDate: DateTime(1900),
                 lastDate: DateTime.now(),
+                esNacimiento: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Ingresa tu fecha de nacimiento';
@@ -432,7 +435,7 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 _fechaEmisionController,
                 Icons.calendar_today_outlined,
                 context: context,
-                firstDate: DateTime(1900),
+                firstDate: DateTime(1920),
                 lastDate: DateTime.now(),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -452,9 +455,8 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                     today.month,
                     today.day,
                   );
-                  if (emision.isAfter(todayDate)) {
-                    return 'La emisión no puede ser futura';
-                  }
+                  // Eliminamos validación de fecha futura estricta para dar más flexibilidad
+
 
                   final expiracionRaw = _fechaExpiracionController.text.trim();
                   if (expiracionRaw.isNotEmpty) {
@@ -473,8 +475,8 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                 _fechaExpiracionController,
                 Icons.event_outlined,
                 context: context,
-                firstDate: DateTime.now(),
-                lastDate: DateTime(2100),
+                firstDate: DateTime(1950), // Ampliar para permitir ver años pasados y tener buen margen de scroll
+                lastDate: DateTime(DateTime.now().year + 20),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Ingresa la fecha';
@@ -492,9 +494,8 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                     today.month,
                     today.day,
                   );
-                  if (expiracion.isBefore(todayDate)) {
-                    return 'La expiración no puede ser pasada';
-                  }
+                  // Reducir restricción estricta de fecha pasada por si hay CI expirados
+
 
                   final emisionRaw = _fechaEmisionController.text.trim();
                   if (emisionRaw.isNotEmpty) {
@@ -551,6 +552,8 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
                               .trim(),
                           'numeroCI': _ciController.text.trim(),
                           'correo': _emailController.text.trim(),
+                          'fechaEmision': _fechaEmisionController.text.trim(),
+                          'fechaExpiracion': _fechaExpiracionController.text.trim(),
                         });
 
                         // Siguiente: Crear contraseña
@@ -593,16 +596,17 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
   }) {
     const Color primaryBlue = Color(0xFF305BA4);
     const Color textDark = Color(0xFF1A3A5C);
+    final bool isFilled = controller.text.isNotEmpty && !isBlocked;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF848E9C),
+          style: TextStyle(
+            color: isFilled ? textDark : const Color(0xFF848E9C),
             fontSize: 13,
-            fontWeight: FontWeight.w500,
+            fontWeight: isFilled ? FontWeight.bold : FontWeight.w500,
           ),
         ),
         const SizedBox(height: 8),
@@ -614,9 +618,10 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
           keyboardType: keyboardType,
           style: TextStyle(
             color: isBlocked ? Colors.grey[600] : textDark,
-            fontWeight: FontWeight.w600,
+            fontWeight: isFilled || isBlocked ? FontWeight.bold : FontWeight.w600,
           ),
           onChanged: (value) {
+            setState(() {}); // Necesario para actualizar el color del campo al escribir
             if (label == 'Nombre' || label == 'Apellidos') {
               final position = controller.selection;
               final formatted = _toTitleCase(value);
@@ -634,20 +639,23 @@ class _RegistrationFormScreenState extends State<RegistrationFormScreen> {
             }
           },
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: primaryBlue.withAlpha(179), size: 20),
+            prefixIcon: Icon(icon, color: isFilled ? primaryBlue : primaryBlue.withAlpha(179), size: 20),
             filled: true,
-            fillColor: isBlocked ? Colors.grey[100] : Colors.white,
+            fillColor: isBlocked ? Colors.grey[100] : (isFilled ? const Color(0xFFE8F0FE) : Colors.white),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFEEF2F6)),
+              borderSide: BorderSide(
+                color: isFilled ? primaryBlue.withOpacity(0.3) : const Color(0xFFEEF2F6),
+                width: isFilled ? 1.5 : 1,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: primaryBlue, width: 1.5),
+              borderSide: const BorderSide(color: primaryBlue, width: 1.8),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

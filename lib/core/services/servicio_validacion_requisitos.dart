@@ -1,5 +1,6 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/features/sistema/domain/entities/requisito_inscripcion.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Servicio para validar requisitos de inscripción a programas de posgrado
 class ServicioValidacionRequisitos {
@@ -8,10 +9,10 @@ class ServicioValidacionRequisitos {
         const RequisitoInscripcion(
           id: 'pago_matricula',
           descripcion:
-              'Boletas originales de depósito bancario de matrícula y cuota inicial, más 4 fotocopias de cada uno (pagos separados)',
+              'Comprobante de pago de matrícula o de colegiatura (adjuntar al menos uno)',
           esObligatorio: true,
           tipo: TipoRequisito.pago,
-          campoDocumento: null, // Se maneja fuera del sistema de documentos
+          campoDocumento: 'comprobantePago',
         ),
         const RequisitoInscripcion(
           id: 'fotografias',
@@ -22,12 +23,12 @@ class ServicioValidacionRequisitos {
           campoDocumento: 'profilePhoto', // Foto de perfil
         ),
         const RequisitoInscripcion(
-          id: 'formularios',
+          id: 'ficha_inscripcion',
           descripcion:
-              'Hoja de Inscripción y Formulario de Matriculación debidamente llenados (Recabar de oficinas de Posgrado UPEA)',
+              'Ficha de inscripción (se genera automáticamente con sus datos)',
           esObligatorio: true,
           tipo: TipoRequisito.formulario,
-          campoDocumento: null, // Se maneja en oficinas
+          campoDocumento: 'ficha_inscripcion_path',
         ),
         const RequisitoInscripcion(
           id: 'ci_fotocopias',
@@ -102,11 +103,12 @@ class ServicioValidacionRequisitos {
     required String tipoPrograma,
   }) async {
     final prefs = await SharedPreferences.getInstance();
+    final participantDocs = await LocalStorageService.getParticipantDocumentsData();
     final requisitos = obtenerRequisitosPorTipo(tipoPrograma);
     final resultados = <ResultadoValidacionRequisito>[];
 
     for (final requisito in requisitos) {
-      final resultado = await _validarRequisito(requisito, prefs);
+      final resultado = await _validarRequisito(requisito, prefs, participantDocs);
       resultados.add(resultado);
     }
 
@@ -116,13 +118,12 @@ class ServicioValidacionRequisitos {
     );
   }
 
-  /// Valida un requisito individual
+  /// Valida un requisito individual (lee de participant_documents o prefs)
   Future<ResultadoValidacionRequisito> _validarRequisito(
     RequisitoInscripcion requisito,
     SharedPreferences prefs,
+    Map<String, dynamic>? participantDocs,
   ) async {
-    // Si no tiene campo de documento asociado, se considera pendiente
-    // (debe completarse manualmente fuera del sistema)
     if (requisito.campoDocumento == null) {
       return ResultadoValidacionRequisito(
         requisito: requisito,
@@ -132,23 +133,21 @@ class ServicioValidacionRequisitos {
       );
     }
 
-    // Validar según el tipo de requisito
     switch (requisito.id) {
       case 'ci_fotocopias':
-        return _validarCI(requisito, prefs);
-      
+        return _validarCI(requisito, prefs, participantDocs);
       case 'titulo_academico':
-        return _validarTituloAcademico(requisito, prefs);
-      
+        return _validarTituloAcademico(requisito, prefs, participantDocs);
       case 'carta_inscripcion':
-        return _validarCartaInscripcion(requisito, prefs);
-      
+        return _validarCartaInscripcion(requisito, prefs, participantDocs);
       case 'hoja_vida':
-        return _validarHojaVida(requisito, prefs);
-      
+        return _validarHojaVida(requisito, prefs, participantDocs);
       case 'fotografias':
-        return _validarFotografia(requisito, prefs);
-      
+        return _validarFotografia(requisito, prefs, participantDocs);
+      case 'pago_matricula':
+        return _validarComprobantePago(requisito, participantDocs);
+      case 'ficha_inscripcion':
+        return _validarFichaInscripcion(requisito, prefs, participantDocs);
       default:
         return ResultadoValidacionRequisito(
           requisito: requisito,
@@ -159,18 +158,42 @@ class ServicioValidacionRequisitos {
     }
   }
 
+  String? _path(Map<String, dynamic>? docs, String key) {
+    if (docs == null) return null;
+    final v = docs[key];
+    if (v == null) return null;
+    final s = v.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
   /// Valida el requisito de CI
   Future<ResultadoValidacionRequisito> _validarCI(
     RequisitoInscripcion requisito,
     SharedPreferences prefs,
+    Map<String, dynamic>? participantDocs,
   ) async {
-    final ciLetterPath = prefs.getString('ciLetterPath');
+    final ciLetterPath = _path(participantDocs, 'ci_letter_path') ?? 
+                         _path(participantDocs, 'ci_photocopy_pdf_path') ??
+                         prefs.getString('ciLetterPath');
     
     if (ciLetterPath != null && ciLetterPath.isNotEmpty) {
       return ResultadoValidacionRequisito(
         requisito: requisito,
         estado: EstadoRequisito.completado,
         mensaje: 'Fotocopia de CI disponible',
+        fechaValidacion: DateTime.now(),
+      );
+    }
+
+    // Verificar si tiene anverso y reverso para sugerir generación
+    final hasFront = (_path(participantDocs, 'ci_front_path') ?? prefs.getString('ci_front_path')) != null;
+    final hasBack = (_path(participantDocs, 'ci_back_path') ?? prefs.getString('ci_back_path')) != null;
+
+    if (hasFront && hasBack) {
+      return ResultadoValidacionRequisito(
+        requisito: requisito,
+        estado: EstadoRequisito.pendiente,
+        mensaje: 'PIECES_READY: Anverso y reverso capturados. Pulse para integrar en PDF.',
         fechaValidacion: DateTime.now(),
       );
     }
@@ -187,10 +210,11 @@ class ServicioValidacionRequisitos {
   Future<ResultadoValidacionRequisito> _validarTituloAcademico(
     RequisitoInscripcion requisito,
     SharedPreferences prefs,
+    Map<String, dynamic>? participantDocs,
   ) async {
-    final tituloPath = prefs.getString('tituloPath');
-    final prorrogaPath = prefs.getString('prorrogaPath');
-    final deferDocuments = prefs.getBool('deferDocuments') ?? false;
+    final tituloPath = _path(participantDocs, 'titulo_path') ?? prefs.getString('tituloPath') ?? prefs.getString('titulo_path');
+    final prorrogaPath = _path(participantDocs, 'prorroga_path') ?? prefs.getString('prorrogaPath') ?? prefs.getString('prorroga_path');
+    final deferDocuments = participantDocs?['defer_documents'] as bool? ?? prefs.getBool('deferDocuments') ?? false;
 
     // Si tiene título académico
     if (tituloPath != null && tituloPath.isNotEmpty) {
@@ -224,8 +248,9 @@ class ServicioValidacionRequisitos {
   Future<ResultadoValidacionRequisito> _validarCartaInscripcion(
     RequisitoInscripcion requisito,
     SharedPreferences prefs,
+    Map<String, dynamic>? participantDocs,
   ) async {
-    final cartaPath = prefs.getString('cartaInscripcionPath');
+    final cartaPath = _path(participantDocs, 'carta_inscripcion_path') ?? prefs.getString('cartaInscripcionPath') ?? prefs.getString('carta_inscripcion_path');
     
     if (cartaPath != null && cartaPath.isNotEmpty) {
       return ResultadoValidacionRequisito(
@@ -244,12 +269,13 @@ class ServicioValidacionRequisitos {
     );
   }
 
-  /// Valida el requisito de hoja de vida
+  /// Valida el requisito de hoja de vida (CV)
   Future<ResultadoValidacionRequisito> _validarHojaVida(
     RequisitoInscripcion requisito,
     SharedPreferences prefs,
+    Map<String, dynamic>? participantDocs,
   ) async {
-    final hojaVidaPath = prefs.getString('hojaVidaPath');
+    final hojaVidaPath = _path(participantDocs, 'hoja_vida_path') ?? prefs.getString('hojaVidaPath') ?? prefs.getString('hoja_vida_path');
     
     if (hojaVidaPath != null && hojaVidaPath.isNotEmpty) {
       return ResultadoValidacionRequisito(
@@ -263,7 +289,54 @@ class ServicioValidacionRequisitos {
     return ResultadoValidacionRequisito(
       requisito: requisito,
       estado: EstadoRequisito.pendiente,
-      mensaje: 'Debe cargar su hoja de vida profesional',
+      mensaje: 'Debe cargar su hoja de vida profesional (CV)',
+      fechaValidacion: DateTime.now(),
+    );
+  }
+
+  /// Valida ficha de inscripción (generada automáticamente)
+  Future<ResultadoValidacionRequisito> _validarFichaInscripcion(
+    RequisitoInscripcion requisito,
+    SharedPreferences prefs,
+    Map<String, dynamic>? participantDocs,
+  ) async {
+    final path = _path(participantDocs, 'ficha_inscripcion_path') ?? prefs.getString('fichaInscripcionPath') ?? prefs.getString('ficha_inscripcion_path');
+    if (path != null && path.isNotEmpty) {
+      return ResultadoValidacionRequisito(
+        requisito: requisito,
+        estado: EstadoRequisito.completado,
+        mensaje: 'Ficha de inscripción generada',
+        fechaValidacion: DateTime.now(),
+      );
+    }
+    return ResultadoValidacionRequisito(
+      requisito: requisito,
+      estado: EstadoRequisito.pendiente,
+      mensaje: 'Genere la ficha de inscripción desde la sección Documentos',
+      fechaValidacion: DateTime.now(),
+    );
+  }
+
+  /// Valida comprobante de pago (matrícula o colegiatura)
+  Future<ResultadoValidacionRequisito> _validarComprobantePago(
+    RequisitoInscripcion requisito,
+    Map<String, dynamic>? participantDocs,
+  ) async {
+    final matricula = _path(participantDocs, 'comprobante_matricula_path');
+    final colegiatura = _path(participantDocs, 'comprobante_colegiatura_path');
+    if ((matricula != null && matricula.isNotEmpty) ||
+        (colegiatura != null && colegiatura.isNotEmpty)) {
+      return ResultadoValidacionRequisito(
+        requisito: requisito,
+        estado: EstadoRequisito.completado,
+        mensaje: 'Comprobante de pago adjuntado',
+        fechaValidacion: DateTime.now(),
+      );
+    }
+    return ResultadoValidacionRequisito(
+      requisito: requisito,
+      estado: EstadoRequisito.pendiente,
+      mensaje: 'Adjunte comprobante de pago (matrícula o colegiatura)',
       fechaValidacion: DateTime.now(),
     );
   }
@@ -272,8 +345,11 @@ class ServicioValidacionRequisitos {
   Future<ResultadoValidacionRequisito> _validarFotografia(
     RequisitoInscripcion requisito,
     SharedPreferences prefs,
+    Map<String, dynamic>? participantDocs,
   ) async {
-    final profilePhoto = prefs.getString('profilePhoto');
+    final profilePhoto = _path(participantDocs, 'profile_photo_path') ?? 
+                        prefs.getString('profilePhoto') ?? 
+                        prefs.getString('profile_image_path');
     
     if (profilePhoto != null && profilePhoto.isNotEmpty) {
       return ResultadoValidacionRequisito(

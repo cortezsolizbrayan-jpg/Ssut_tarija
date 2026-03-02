@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -108,7 +108,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A3A5C),
+        backgroundColor: const Color(0xFF005BAC),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
@@ -143,7 +143,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A3A5C),
+                color: Color(0xFF005BAC),
               ),
             ),
           ),
@@ -177,7 +177,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A3A5C),
+                      color: Color(0xFF005BAC),
                     ),
                   ),
                   Expanded(
@@ -257,7 +257,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1A3A5C),
+                        backgroundColor: const Color(0xFF005BAC),
                         padding: EdgeInsets.symmetric(vertical: height * 0.02),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -279,7 +279,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF9800),
+                        backgroundColor: const Color(0xFF005BAC),
                         padding: EdgeInsets.symmetric(vertical: height * 0.02),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -343,7 +343,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
           Row(
             children: [
               Image.asset(
-                'assets/images/logoposgrado.png',
+                'assets/images/logoposgrado.jpg',
                 height: 40,
                 fit: BoxFit.contain,
               ),
@@ -356,7 +356,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A3A5C),
+                      color: Color(0xFF005BAC),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -370,7 +370,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A3A5C),
+                      color: Color(0xFF005BAC),
                       letterSpacing: 1.5,
                     ),
                   ),
@@ -439,7 +439,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A3A5C),
+            color: Color(0xFF005BAC),
           ),
         ),
         const SizedBox(height: 8),
@@ -462,7 +462,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF1A3A5C), width: 2),
+              borderSide: const BorderSide(color: Color(0xFF005BAC), width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -489,7 +489,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1A3A5C),
+            color: Color(0xFF005BAC),
           ),
         ),
         const SizedBox(height: 8),
@@ -571,7 +571,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
     return Container(
       height: 70,
       decoration: BoxDecoration(
-        color: const Color(0xFF1A3A5C),
+        color: const Color(0xFF005BAC),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -609,12 +609,12 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
           width: isActive ? 50 : 40,
           height: isActive ? 50 : 40,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFFFFC900) : Colors.transparent,
+            color: isActive ? const Color(0xFFFFC107) : Colors.transparent,
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
-            color: isActive ? const Color(0xFF1A3A5C) : Colors.white,
+            color: isActive ? const Color(0xFF005BAC) : Colors.white,
             size: isActive ? 28 : 24,
           ),
         ),

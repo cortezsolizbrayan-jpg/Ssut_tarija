@@ -1,27 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/core/services/local_storage_service.dart';
+import 'package:refactor_template/config/providers/theme_mode_provider.dart';
+import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
 
-class ConfiguracionScreen extends StatefulWidget {
+class ConfiguracionScreen extends ConsumerStatefulWidget {
   static const name = 'configuracion';
   const ConfiguracionScreen({super.key});
 
   @override
-  State<ConfiguracionScreen> createState() => _ConfiguracionScreenState();
+  ConsumerState<ConfiguracionScreen> createState() => _ConfiguracionScreenState();
 }
 
-class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
+class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   bool notificationsEnabled = true;
-  bool darkMode = false;
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
+    final darkMode = themeMode == ThemeMode.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final width = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FB),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF6F8FB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A3A5C),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFF1A3A5C),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -39,7 +43,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
       body: ListView(
         padding: EdgeInsets.all(width * 0.05),
         children: [
-          _buildSectionTitle('Cuenta'),
+          _buildSectionTitle('Cuenta', isDark),
           _buildSettingItem(
             context,
             icon: Icons.person,
@@ -55,14 +59,13 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             title: 'Cambiar Contraseña',
             subtitle: 'Actualizar tu contraseña de acceso',
             onTap: () {
-              // TODO: Implementar cambio de contraseña
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Función en desarrollo')),
               );
             },
           ),
           const SizedBox(height: 20),
-          _buildSectionTitle('Notificaciones'),
+          _buildSectionTitle('Notificaciones', isDark),
           _buildSwitchItem(
             context,
             icon: Icons.notifications,
@@ -76,7 +79,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             },
           ),
           const SizedBox(height: 20),
-          _buildSectionTitle('Apariencia'),
+          _buildSectionTitle('Apariencia', isDark),
           _buildSwitchItem(
             context,
             icon: Icons.dark_mode,
@@ -84,20 +87,19 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             subtitle: 'Activar tema oscuro',
             value: darkMode,
             onChanged: (value) {
-              setState(() {
-                darkMode = value;
-              });
+              ref.read(themeModeProvider.notifier).setThemeMode(
+                    value ? ThemeMode.dark : ThemeMode.light,
+                  );
             },
           ),
           const SizedBox(height: 20),
-          _buildSectionTitle('Ayuda y Soporte'),
+          _buildSectionTitle('Ayuda y Soporte', isDark),
           _buildSettingItem(
             context,
             icon: Icons.help_outline,
             title: 'Centro de Ayuda',
             subtitle: 'Preguntas frecuentes y soporte',
             onTap: () {
-              // TODO: Implementar centro de ayuda
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Función en desarrollo')),
               );
@@ -127,7 +129,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
             },
           ),
           const SizedBox(height: 20),
-          _buildSectionTitle('Sesión'),
+          _buildSectionTitle('Sesión', isDark),
           _buildSettingItem(
             context,
             icon: Icons.logout,
@@ -170,15 +172,15 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, top: 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF1A3A5C),
+          color: isDark ? Colors.white : const Color(0xFF1A3A5C),
         ),
       ),
     );
@@ -192,14 +194,18 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    return Container(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -212,12 +218,16 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
           decoration: BoxDecoration(
             color: isDestructive
                 ? Colors.red.shade50
-                : const Color(0xFF1A3A5C).withOpacity(0.1),
+                : (isDark 
+                    ? Colors.white.withOpacity(0.1)
+                    : const Color(0xFF1A3A5C).withOpacity(0.1)),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             icon,
-            color: isDestructive ? Colors.red : const Color(0xFF1A3A5C),
+            color: isDestructive 
+                ? Colors.red 
+                : (isDark ? Colors.white70 : const Color(0xFF1A3A5C)),
             size: 22,
           ),
         ),
@@ -226,14 +236,22 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: isDestructive ? Colors.red : const Color(0xFF1A3A5C),
+            color: isDestructive 
+                ? Colors.red 
+                : (isDark ? Colors.white : const Color(0xFF1A3A5C)),
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          style: TextStyle(
+            fontSize: 13, 
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          ),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        trailing: Icon(
+          Icons.chevron_right, 
+          color: isDark ? Colors.grey.shade500 : Colors.grey,
+        ),
         onTap: onTap,
       ),
     );
@@ -247,45 +265,64 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     required bool value,
     required Function(bool) onChanged,
   }) {
-    return Container(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ListTile(
-        leading: Container(
+        leading: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: const Color(0xFF1A3A5C).withOpacity(0.1),
+            color: value 
+                ? const Color(0xFF305BA4).withOpacity(0.2)
+                : (isDark 
+                    ? Colors.white.withOpacity(0.1) 
+                    : const Color(0xFF1A3A5C).withOpacity(0.1)),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: const Color(0xFF1A3A5C), size: 22),
+          child: Icon(
+            icon, 
+            color: value 
+                ? const Color(0xFF305BA4) 
+                : (isDark ? Colors.white70 : const Color(0xFF1A3A5C)), 
+            size: 22,
+          ),
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A3A5C),
+            color: isDark ? Colors.white : const Color(0xFF1A3A5C),
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          style: TextStyle(
+            fontSize: 13, 
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          ),
         ),
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: const Color(0xFF1A3A5C),
+          activeColor: const Color(0xFF305BA4),
+          activeTrackColor: const Color(0xFF305BA4).withOpacity(0.5),
         ),
       ),
     );

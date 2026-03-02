@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/features/sistema/providers/notificaciones_provider.dart';
@@ -30,7 +30,7 @@ class _NotificacionesScreenState extends ConsumerState<NotificacionesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A3A5C),
+        backgroundColor: const Color(0xFF005BAC),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -96,7 +96,7 @@ class _NotificacionesScreenState extends ConsumerState<NotificacionesScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isRead ? Colors.grey.shade200 : const Color(0xFF1A3A5C),
+          color: isRead ? Colors.grey.shade200 : const Color(0xFF005BAC),
           width: isRead ? 1 : 2,
         ),
         boxShadow: [
@@ -116,7 +116,7 @@ class _NotificacionesScreenState extends ConsumerState<NotificacionesScreen> {
             margin: const EdgeInsets.only(top: 6, right: 12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isRead ? Colors.transparent : const Color(0xFFFFC900),
+              color: isRead ? Colors.transparent : const Color(0xFFFFC107),
             ),
           ),
           Expanded(
@@ -128,7 +128,7 @@ class _NotificacionesScreenState extends ConsumerState<NotificacionesScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
-                    color: const Color(0xFF1A3A5C),
+                    color: const Color(0xFF005BAC),
                   ),
                 ),
                 const SizedBox(height: 4),

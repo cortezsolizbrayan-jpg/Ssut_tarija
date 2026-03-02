@@ -30,6 +30,13 @@
 - ✅ `hs_err_pid30244.log`
 - ✅ `assets/svg/` (carpeta con archivos duplicados)
 - ✅ Archivos de cache temporales
+- ✅ **Reducción de peso (última limpieza):**
+  - `assets/RiveAssets/house.riv` (no referenciado)
+  - `assets/images/19sa.png`, `assets/images/cuentapos.png` (no referenciados)
+  - `app/app.zip`, `app/app.zip.hash` (serious_python deshabilitado; regenerar con `dart run serious_python:main` si se habilita)
+  - `android/paddle_lite_libs_v2_10.tar.gz` (archivo ya extraído en `android/paddle_lite/`)
+  - `assets/icons/Arrow Right.svg`, `email.svg`, `password.svg`, `User.svg` (no referenciados en código)
+  - Archivos de metadatos macOS `._*` en todo el proyecto
 
 ### 📦 Pubspec.yaml Optimizado
 - **Organización mejorada**: Dependencias agrupadas por categoría
@@ -97,6 +104,12 @@
 
 
 ## 📉 Reducción de peso (APK / App Bundle)
+
+### Inicialización perezosa de OCR (menos peso al arranque)
+- **Scanbot**: Ya no se inicializa en `main()`. Se carga solo la primera vez que el usuario toca "Scanbot Scanner" (`runScanbotScanner` → `_ensureScanbotInitialized()`).
+- **Regula**: Ya no se pre-inicializa al abrir la pantalla de subida de identidad. Se carga solo cuando el usuario toca "Regula" o "Escanear con Regula Forensics" (`runRegulaScanner` → `RegulaDocumentReaderService.ensureInitialized()`).
+- **BlinkID / Python OCR / ML Kit**: Siguen cargándose solo cuando se usan (no se inicializan al arranque).
+- Con esto, al abrir la app y la pantalla de carnet no se cargan las librerías pesadas (Regula db.dat, Scanbot, etc.) hasta que el usuario elija esa opción.
 
 ### Ya aplicado en el proyecto
 - **Minify + Shrink**: En `android/app/build.gradle.kts` el tipo `release` tiene `isMinifyEnabled = true` e `isShrinkResources = true` para reducir código y recursos no usados.
