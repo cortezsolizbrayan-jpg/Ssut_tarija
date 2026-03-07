@@ -926,7 +926,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverAppBar(
-          expandedHeight: 115.0,
+          expandedHeight: 132.0,
           floating: false,
           pinned: true,
           elevation: 0,
@@ -934,7 +934,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
           backgroundColor: theme.scaffoldBackgroundColor,
           surfaceTintColor: theme.scaffoldBackgroundColor,
           centerTitle: false,
-          toolbarHeight: 48,
+          toolbarHeight: 44,
           title: BreadcrumbHeader(
             currentName: carpeta.nombre,
             parentName: carpeta.carpetaPadreNombre,
@@ -956,12 +956,14 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
               ),
             const SizedBox(width: 8),
           ],
+          // FlexibleSpace: Área expandible del SliverAppBar con información de la carpeta
           flexibleSpace: FlexibleSpaceBar(
             stretchModes: const [
               StretchMode.blurBackground,
               StretchMode.zoomBackground,
             ],
             background: Container(
+              // Gradiente de fondo sutil
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -975,7 +977,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Decoración sutil de fondo
+                  // Ícono decorativo de fondo (muy transparente)
                   Positioned(
                     top: -20,
                     right: -20,
@@ -988,8 +990,9 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                           .withOpacity(0.03),
                     ),
                   ),
+                  // Contenido principal del header (compacto para evitar superposición con tarjetas)
                   Positioned(
-                    bottom: 8,
+                    bottom: 4,
                     left: 20,
                     right: 20,
                     child: _fadeInUp(
@@ -998,11 +1001,14 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Fila principal: Ícono de carpeta + Información
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              // Ícono de carpeta con botón de retroceso
                               GestureDetector(
                                 onTap: () {
+                                  // Navegar a carpeta padre o volver a vista principal
                                   if (_carpetaSeleccionada?.carpetaPadreId !=
                                       null) {
                                     _navegarACarpetaPadre(
@@ -1014,14 +1020,16 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                                 },
                                 child: Stack(
                                   children: [
+                                    // Ícono principal de carpeta con Hero animation
                                     Hero(
                                       tag: 'folder_icon_${carpeta.id}',
                                       child: Container(
-                                        padding: const EdgeInsets.all(8),
+                                        padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
                                             begin: Alignment.topLeft,
                                             end: Alignment.bottomRight,
+                                            // Color según tipo: Teal para Ingreso, Amber para Egreso
                                             colors:
                                                 (carpeta.tipo?.contains(
                                                           'Ingreso',
@@ -1058,11 +1066,12 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                                                   false)
                                               ? Icons.folder_zip_rounded
                                               : Icons.folder_rounded,
-                                          size: 22,
+                                          size: 20,
                                           color: Colors.white,
                                         ),
                                       ),
                                     ),
+                                    // Indicador de navegación (flecha de retroceso)
                                     Positioned(
                                       right: -2,
                                       bottom: -2,
@@ -1097,35 +1106,39 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                                 ),
                               ),
                               const SizedBox(width: 16),
+                              // Información de la carpeta (nombre, tipo, fecha)
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // Nombre de la carpeta
                                     Text(
                                       carpeta.nombre,
                                       style: GoogleFonts.poppins(
-                                        fontSize: 18,
+                                        fontSize: 16,
                                         fontWeight: FontWeight.w700,
                                         color: theme.colorScheme.onSurface,
-                                        height: 1.2,
+                                        height: 1.25,
                                         letterSpacing: -0.2,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 4),
+                                    // Badges: Tipo de carpeta y fecha de creación
                                     Row(
                                       children: [
+                                        // Badge de tipo de carpeta
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
+                                            horizontal: 6,
+                                            vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
                                             color: theme.colorScheme.primary
                                                 .withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(
-                                              16,
+                                              12,
                                             ),
                                           ),
                                           child: Row(
@@ -1133,7 +1146,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                                             children: [
                                               Icon(
                                                 Icons.folder_shared_rounded,
-                                                size: 12,
+                                                size: 11,
                                                 color:
                                                     theme.colorScheme.primary,
                                               ),
@@ -1141,7 +1154,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                                               Text(
                                                 'Espacio de Trabajo / ${(carpeta.tipo?.contains('Ingreso') ?? false) ? 'Ingresos' : 'Egresos'}',
                                                 style: GoogleFonts.inter(
-                                                  fontSize: 10,
+                                                  fontSize: 9,
                                                   fontWeight: FontWeight.bold,
                                                   color:
                                                       theme.colorScheme.primary,
@@ -1169,7 +1182,8 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
+                          // Estadísticas de la carpeta (gestión, rango, cantidad de documentos)
                           _buildHeaderStats(carpeta, docs, theme),
                         ],
                       ),
@@ -1183,8 +1197,8 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         SliverPersistentHeader(
           pinned: true,
           delegate: _SliverAppBarDelegate(
-            minHeight: 48,
-            maxHeight: 48,
+            minHeight: 44,
+            maxHeight: 44,
             child: Container(
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor.withOpacity(0.95),
@@ -1238,7 +1252,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     );
   }
 
-  // Widget helper para animación de entrada
+  // Widget helper para animación de entrada suave (fade in + desplazamiento hacia arriba)
   Widget _fadeInUp({required Widget child, required Duration duration}) {
     return TweenAnimationBuilder<double>(
       duration: duration,
@@ -1304,7 +1318,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     Color? backgroundColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: backgroundColor ?? color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(14),
@@ -1313,13 +1327,13 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
           Text(
             label,
             style: GoogleFonts.inter(
               color: color,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
