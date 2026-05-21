@@ -1,6 +1,6 @@
-﻿import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:excel/excel.dart' as excel_lib;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,7 +12,6 @@ import 'package:universal_html/html.dart' as html;
 
 import '../../models/documento.dart';
 import '../../services/documento_service.dart';
-import '../../theme/tema_aplicacion.dart';
 import '../../utils/utilidades_errores.dart';
 import '../../widgets/alerta_app.dart';
 
@@ -20,10 +19,12 @@ class ReportePersonalizadoScreen extends StatefulWidget {
   const ReportePersonalizadoScreen({super.key});
 
   @override
-  State<ReportePersonalizadoScreen> createState() => _ReportePersonalizadoScreenState();
+  State<ReportePersonalizadoScreen> createState() =>
+      _ReportePersonalizadoScreenState();
 }
 
-class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen> {
+class _ReportePersonalizadoScreenState
+    extends State<ReportePersonalizadoScreen> {
   // Columnas disponibles
   final Map<String, ColumnConfig> _columnasDisponibles = {
     'codigo': ColumnConfig('Código', true, 120),
@@ -70,12 +71,14 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
     setState(() => _isLoading = true);
     try {
       final service = Provider.of<DocumentoService>(context, listen: false);
-      final result = await service.buscar(BusquedaDocumentoDTO(
-        pageSize: 1000,
-        orderBy: 'fechaDocumento',
-        orderDirection: 'DESC',
-      ));
-      
+      final result = await service.buscar(
+        BusquedaDocumentoDTO(
+          pageSize: 1000,
+          orderBy: 'fechaDocumento',
+          orderDirection: 'DESC',
+        ),
+      );
+
       if (mounted) {
         setState(() {
           _documentos = result.items;
@@ -97,43 +100,55 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
     // Filtro de texto
     if (_filtroTexto.isNotEmpty) {
       final query = _filtroTexto.toLowerCase();
-      filtrados = filtrados.where((doc) {
-        return doc.codigo.toLowerCase().contains(query) ||
-            doc.numeroCorrelativo.toLowerCase().contains(query) ||
-            (doc.descripcion ?? '').toLowerCase().contains(query) ||
-            (doc.tipoDocumentoNombre ?? '').toLowerCase().contains(query) ||
-            (doc.areaOrigenNombre ?? '').toLowerCase().contains(query);
-      }).toList();
+      filtrados =
+          filtrados.where((doc) {
+            return doc.codigo.toLowerCase().contains(query) ||
+                doc.numeroCorrelativo.toLowerCase().contains(query) ||
+                (doc.descripcion ?? '').toLowerCase().contains(query) ||
+                (doc.tipoDocumentoNombre ?? '').toLowerCase().contains(query) ||
+                (doc.areaOrigenNombre ?? '').toLowerCase().contains(query);
+          }).toList();
     }
 
     // Filtro de estado
     if (_filtroEstado != null && _filtroEstado!.isNotEmpty) {
-      filtrados = filtrados.where((doc) => doc.estado == _filtroEstado).toList();
+      filtrados =
+          filtrados.where((doc) => doc.estado == _filtroEstado).toList();
     }
 
     // Filtro de tipo
     if (_filtroTipo != null && _filtroTipo!.isNotEmpty) {
-      filtrados = filtrados.where((doc) => doc.tipoDocumentoNombre == _filtroTipo).toList();
+      filtrados =
+          filtrados
+              .where((doc) => doc.tipoDocumentoNombre == _filtroTipo)
+              .toList();
     }
 
     // Filtro de área
     if (_filtroArea != null && _filtroArea!.isNotEmpty) {
-      filtrados = filtrados.where((doc) => doc.areaOrigenNombre == _filtroArea).toList();
+      filtrados =
+          filtrados
+              .where((doc) => doc.areaOrigenNombre == _filtroArea)
+              .toList();
     }
 
     // Filtro de fecha desde
     if (_filtroFechaDesde != null) {
-      filtrados = filtrados.where((doc) {
-        return doc.fechaDocumento.isAfter(_filtroFechaDesde!) ||
-            doc.fechaDocumento.isAtSameMomentAs(_filtroFechaDesde!);
-      }).toList();
+      filtrados =
+          filtrados.where((doc) {
+            return doc.fechaDocumento.isAfter(_filtroFechaDesde!) ||
+                doc.fechaDocumento.isAtSameMomentAs(_filtroFechaDesde!);
+          }).toList();
     }
 
     // Filtro de fecha hasta
     if (_filtroFechaHasta != null) {
-      filtrados = filtrados.where((doc) {
-        return doc.fechaDocumento.isBefore(_filtroFechaHasta!.add(const Duration(days: 1)));
-      }).toList();
+      filtrados =
+          filtrados.where((doc) {
+            return doc.fechaDocumento.isBefore(
+              _filtroFechaHasta!.add(const Duration(days: 1)),
+            );
+          }).toList();
     }
 
     // Aplicar ordenamiento
@@ -201,15 +216,19 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
 
   Future<void> _exportarPDF() async {
     final columnas = _columnasSeleccionadas;
-    
+
     // Validaciones
     if (columnas.isEmpty) {
       if (mounted) {
-        AppAlert.error(context, 'Error', 'Selecciona al menos una columna para exportar');
+        AppAlert.error(
+          context,
+          'Error',
+          'Selecciona al menos una columna para exportar',
+        );
       }
       return;
     }
-    
+
     if (_documentosFiltrados.isEmpty) {
       if (mounted) {
         AppAlert.error(context, 'Error', 'No hay datos para exportar');
@@ -219,61 +238,81 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
 
     try {
       final pdf = pw.Document();
-      
+
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4.landscape,
           margin: const pw.EdgeInsets.all(20),
-          build: (context) => [
-            pw.Header(
-              level: 0,
-              child: pw.Text(
-                'REPORTE PERSONALIZADO DE DOCUMENTOS',
-                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-              ),
-            ),
-            pw.SizedBox(height: 10),
-            pw.Text(
-              'Generado: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-              style: const pw.TextStyle(fontSize: 10),
-            ),
-            pw.Text(
-              'Total de registros: ${_documentosFiltrados.length}',
-              style: const pw.TextStyle(fontSize: 10),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Table.fromTextArray(
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
-              cellStyle: const pw.TextStyle(fontSize: 7),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              cellHeight: 25,
-              cellAlignments: Map.fromIterable(
-                columnas,
-                key: (col) => columnas.indexOf(col),
-                value: (_) => pw.Alignment.centerLeft,
-              ),
-              headers: columnas.map((col) => _columnasDisponibles[col]!.label).toList(),
-              data: _documentosFiltrados.map((doc) {
-                return columnas.map((col) => _getColumnValue(doc, col)).toList();
-              }).toList(),
-            ),
-          ],
+          build:
+              (context) => [
+                pw.Header(
+                  level: 0,
+                  child: pw.Text(
+                    'REPORTE PERSONALIZADO DE DOCUMENTOS',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  'Generado: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+                pw.Text(
+                  'Total de registros: ${_documentosFiltrados.length}',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Table.fromTextArray(
+                  headerStyle: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 8,
+                  ),
+                  cellStyle: const pw.TextStyle(fontSize: 7),
+                  headerDecoration: const pw.BoxDecoration(
+                    color: PdfColors.grey300,
+                  ),
+                  cellHeight: 25,
+                  cellAlignments: Map.fromIterable(
+                    columnas,
+                    key: (col) => columnas.indexOf(col),
+                    value: (_) => pw.Alignment.centerLeft,
+                  ),
+                  headers:
+                      columnas
+                          .map((col) => _columnasDisponibles[col]!.label)
+                          .toList(),
+                  data:
+                      _documentosFiltrados.map((doc) {
+                        return columnas
+                            .map((col) => _getColumnValue(doc, col))
+                            .toList();
+                      }).toList(),
+                ),
+              ],
         ),
       );
 
       final bytes = await pdf.save();
-      final filename = 'reporte_personalizado_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      
+      final filename =
+          'reporte_personalizado_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
       if (kIsWeb) {
         _downloadFile(bytes, filename, 'application/pdf');
       } else {
         // Para plataformas móviles/desktop, mostrar mensaje
         if (mounted) {
-          AppAlert.error(context, 'Información', 'La descarga de PDF solo está disponible en la versión web');
+          AppAlert.error(
+            context,
+            'Información',
+            'La descarga de PDF solo está disponible en la versión web',
+          );
         }
         return;
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -285,22 +324,30 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
       }
     } catch (e) {
       if (mounted) {
-        AppAlert.error(context, 'Error', 'No se pudo generar el PDF: ${e.toString()}');
+        AppAlert.error(
+          context,
+          'Error',
+          'No se pudo generar el PDF: ${e.toString()}',
+        );
       }
     }
   }
 
   Future<void> _exportarExcel() async {
     final columnas = _columnasSeleccionadas;
-    
+
     // Validaciones
     if (columnas.isEmpty) {
       if (mounted) {
-        AppAlert.error(context, 'Error', 'Selecciona al menos una columna para exportar');
+        AppAlert.error(
+          context,
+          'Error',
+          'Selecciona al menos una columna para exportar',
+        );
       }
       return;
     }
-    
+
     if (_documentosFiltrados.isEmpty) {
       if (mounted) {
         AppAlert.error(context, 'Error', 'No hay datos para exportar');
@@ -309,40 +356,66 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
     }
 
     try {
-      final csv = StringBuffer();
-      
-      // BOM para UTF-8 (ayuda a Excel a reconocer caracteres especiales)
-      csv.write('\uFEFF');
-      
-      // Headers
-      csv.writeln(columnas.map((col) => '"${_columnasDisponibles[col]!.label}"').join(','));
-      
-      // Data
-      for (final doc in _documentosFiltrados) {
-        csv.writeln(columnas.map((col) {
-          final value = _getColumnValue(doc, col);
-          // Escapar comillas dobles
-          return '"${value.replaceAll('"', '""')}"';
-        }).join(','));
+      final excel = excel_lib.Excel.createExcel();
+      final sheet = excel['Sheet1'];
+
+      // Encabezados
+      for (int i = 0; i < columnas.length; i++) {
+        final cell = sheet.cell(
+          excel_lib.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0),
+        );
+        cell.value = excel_lib.TextCellValue(
+          _columnasDisponibles[columnas[i]]!.label,
+        );
+        cell.cellStyle = excel_lib.CellStyle(bold: true);
       }
 
-      final bytes = utf8.encode(csv.toString());
-      final filename = 'reporte_personalizado_${DateTime.now().millisecondsSinceEpoch}.csv';
-      
+      // Datos
+      for (int row = 0; row < _documentosFiltrados.length; row++) {
+        final doc = _documentosFiltrados[row];
+        for (int col = 0; col < columnas.length; col++) {
+          final cell = sheet.cell(
+            excel_lib.CellIndex.indexByColumnRow(
+              columnIndex: col,
+              rowIndex: row + 1,
+            ),
+          );
+          cell.value = excel_lib.TextCellValue(
+            _getColumnValue(doc, columnas[col]),
+          );
+        }
+      }
+
+      // Auto-ajustar ancho de columnas
+      for (int col = 0; col < columnas.length; col++) {
+        sheet.setColumnWidth(col, 20);
+      }
+
+      final bytes = excel.save();
+      final filename =
+          'reporte_personalizado_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+
       if (kIsWeb) {
-        _downloadFile(Uint8List.fromList(bytes), filename, 'text/csv;charset=utf-8');
+        _downloadFile(
+          Uint8List.fromList(bytes!),
+          filename,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
       } else {
-        // Para plataformas móviles/desktop, mostrar mensaje
         if (mounted) {
-          AppAlert.error(context, 'Información', 'La descarga de Excel solo está disponible en la versión web');
+          AppAlert.error(
+            context,
+            'Información',
+            'La descarga de Excel solo está disponible en la versión web',
+          );
         }
         return;
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Excel/CSV generado exitosamente'),
+            content: Text('Excel generado exitosamente'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -350,7 +423,11 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
       }
     } catch (e) {
       if (mounted) {
-        AppAlert.error(context, 'Error', 'No se pudo generar el Excel: ${e.toString()}');
+        AppAlert.error(
+          context,
+          'Error',
+          'No se pudo generar el Excel: ${e.toString()}',
+        );
       }
     }
   }
@@ -360,13 +437,14 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
       try {
         final blob = html.Blob([bytes], mimeType);
         final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
-          ..setAttribute('download', filename)
-          ..style.display = 'none';
-        
+        final anchor =
+            html.AnchorElement(href: url)
+              ..setAttribute('download', filename)
+              ..style.display = 'none';
+
         html.document.body?.append(anchor);
         anchor.click();
-        
+
         // Limpiar después de un pequeño delay
         Future.delayed(const Duration(milliseconds: 100), () {
           anchor.remove();
@@ -412,288 +490,508 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
     }
   }
 
+  bool _mostrarSelectorColumnas = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 1200;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Row(
+      body: Column(
         children: [
-          // Panel lateral de configuración
-          Container(
-            width: isDesktop ? 320 : 280,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(2, 0),
-                ),
-              ],
-            ),
-            child: _buildConfigPanel(theme),
-          ),
+          // Header principal con título, selector de columnas y exportación
+          _buildTopBar(theme),
+          // Selector de columnas horizontal (colapsable)
+          if (_mostrarSelectorColumnas) _buildColumnSelector(theme),
           // Área principal con tabla
-          Expanded(
-            child: _buildMainArea(theme),
+          Expanded(child: _buildMainArea(theme)),
+        ],
+      ),
+    );
+  }
+
+  /// Barra superior horizontal con título, selector de columnas y exportación
+  Widget _buildTopBar(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withOpacity(0.85),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icono + título
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.table_chart_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Reportes',
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                'Personaliza tu reporte',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Colors.white.withOpacity(0.85),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 20),
+          // Botón selector de columnas
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(
+                () => _mostrarSelectorColumnas = !_mostrarSelectorColumnas,
+              );
+            },
+            icon: Icon(
+              _mostrarSelectorColumnas
+                  ? Icons.view_column
+                  : Icons.view_column_outlined,
+              size: 18,
+              color: Colors.white,
+            ),
+            label: Text(
+              'Columnas (${_columnasSeleccionadas.length}/13)',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                color:
+                    _mostrarSelectorColumnas
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.5),
+                width: 1.5,
+              ),
+              backgroundColor:
+                  _mostrarSelectorColumnas
+                      ? Colors.white.withOpacity(0.2)
+                      : Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Menú configuraciones rápidas
+          PopupMenuButton<String>(
+            tooltip: 'Configuraciones rápidas',
+            onSelected: (value) {
+              setState(() {
+                switch (value) {
+                  case 'basica':
+                    _columnasDisponibles.forEach((key, v) {
+                      v.selected = [
+                        'codigo',
+                        'numeroCorrelativo',
+                        'tipoDocumento',
+                        'gestion',
+                        'estado',
+                      ].contains(key);
+                    });
+                    break;
+                  case 'completa':
+                    for (var col in _columnasDisponibles.values)
+                      col.selected = true;
+                    break;
+                  case 'ubicacion':
+                    _columnasDisponibles.forEach((key, v) {
+                      v.selected = [
+                        'codigo',
+                        'numeroCorrelativo',
+                        'ubicacionFisica',
+                        'carpeta',
+                        'estado',
+                      ].contains(key);
+                    });
+                    break;
+                  case 'temporal':
+                    _columnasDisponibles.forEach((key, v) {
+                      v.selected = [
+                        'codigo',
+                        'numeroCorrelativo',
+                        'fechaDocumento',
+                        'fechaRegistro',
+                        'gestion',
+                        'estado',
+                      ].contains(key);
+                    });
+                    break;
+                }
+              });
+            },
+            itemBuilder:
+                (_) => [
+                  const PopupMenuItem(
+                    value: 'basica',
+                    child: Row(
+                      children: [
+                        Icon(Icons.summarize_outlined, size: 16),
+                        SizedBox(width: 8),
+                        Text('Vista Básica'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'completa',
+                    child: Row(
+                      children: [
+                        Icon(Icons.article_outlined, size: 16),
+                        SizedBox(width: 8),
+                        Text('Vista Completa'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'ubicacion',
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 16),
+                        SizedBox(width: 8),
+                        Text('Vista Ubicación'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'temporal',
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, size: 16),
+                        SizedBox(width: 8),
+                        Text('Vista Temporal'),
+                      ],
+                    ),
+                  ),
+                ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.5),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.tune_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Vistas',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          // Botón generar / actualizar
+          if (_documentos.isEmpty)
+            FilledButton.icon(
+              onPressed: _isLoading ? null : _cargarDocumentos,
+              icon:
+                  _isLoading
+                      ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : const Icon(Icons.search_rounded, size: 18),
+              label: Text(_isLoading ? 'Cargando...' : 'Generar Reporte'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+              ),
+            )
+          else
+            OutlinedButton.icon(
+              onPressed: _isLoading ? null : _cargarDocumentos,
+              icon:
+                  _isLoading
+                      ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : const Icon(
+                        Icons.refresh_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+              label: Text(
+                _isLoading ? 'Cargando...' : 'Actualizar',
+                style: const TextStyle(color: Colors.white),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white, width: 1.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          const SizedBox(width: 12),
+          // Exportar PDF
+          FilledButton.icon(
+            onPressed:
+                _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
+                    ? null
+                    : _exportarPDF,
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+            label: const Text('PDF'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              disabledBackgroundColor: Colors.grey.shade500,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Exportar Excel
+          FilledButton.icon(
+            onPressed:
+                _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
+                    ? null
+                    : _exportarExcel,
+            icon: const Icon(Icons.table_chart_rounded, size: 18),
+            label: const Text('Excel'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+              disabledBackgroundColor: Colors.grey.shade500,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildConfigPanel(ThemeData theme) {
-    return Column(
-      children: [
-        // Header del panel con gradiente
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                theme.colorScheme.primary,
-                theme.colorScheme.primary.withOpacity(0.8),
-              ],
-            ),
+  /// Panel horizontal de selección de columnas (colapsable)
+  Widget _buildColumnSelector(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: theme.dividerColor, width: 1.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Fila de título + botones Todas/Ninguna
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.table_chart_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Reportes',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               Text(
-                'Personaliza tu reporte',
+                'Columnas visibles',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                  letterSpacing: 0.4,
                 ),
+              ),
+              const SizedBox(width: 12),
+              // Botón Todas
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    for (var col in _columnasDisponibles.values)
+                      col.selected = true;
+                  });
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.4),
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_box,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Todas',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Botón Ninguna
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    for (var col in _columnasDisponibles.values)
+                      col.selected = false;
+                  });
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_box_outline_blank,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Ninguna',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // Cerrar panel
+              IconButton(
+                onPressed:
+                    () => setState(() => _mostrarSelectorColumnas = false),
+                icon: const Icon(Icons.close, size: 18),
+                tooltip: 'Cerrar',
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),
-        ),
-        // Lista de columnas
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Columnas a mostrar',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.primary,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Text(
-                    '${_columnasSeleccionadas.length}/13',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ..._columnasDisponibles.entries.map((entry) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(
-                    color: entry.value.selected
-                        ? theme.colorScheme.primaryContainer.withOpacity(0.3)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: CheckboxListTile(
-                    dense: true,
-                    title: Text(
+          const SizedBox(height: 8),
+          // Chips de columnas en fila horizontal
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children:
+                _columnasDisponibles.entries.map((entry) {
+                  final selected = entry.value.selected;
+                  return FilterChip(
+                    label: Text(
                       entry.value.label,
                       style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: entry.value.selected ? FontWeight.w600 : FontWeight.w400,
+                        fontSize: 12,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w400,
+                        color:
+                            selected
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    value: entry.value.selected,
-                    onChanged: (value) {
-                      setState(() {
-                        entry.value.selected = value ?? false;
-                      });
+                    selected: selected,
+                    onSelected: (value) {
+                      setState(() => entry.value.selected = value);
                     },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    activeColor: theme.colorScheme.primary,
-                  ),
-                );
-              }),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          for (var col in _columnasDisponibles.values) {
-                            col.selected = true;
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.check_box, size: 18),
-                      label: const Text('Todas'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+                    selectedColor: theme.colorScheme.primary,
+                    checkmarkColor: theme.colorScheme.onPrimary,
+                    backgroundColor: theme.colorScheme.surfaceVariant
+                        .withOpacity(0.5),
+                    side: BorderSide(
+                      color:
+                          selected
+                              ? theme.colorScheme.primary
+                              : theme.dividerColor,
+                      width: 1.2,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          for (var col in _columnasDisponibles.values) {
-                            col.selected = false;
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.check_box_outline_blank, size: 18),
-                      label: const Text('Ninguna'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ExpansionTile(
-                title: Text(
-                  'Configuraciones rápidas',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                dense: true,
-                childrenPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                children: [
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.summarize_outlined, size: 18),
-                    title: const Text('Vista Básica', style: TextStyle(fontSize: 12)),
-                    onTap: () {
-                      setState(() {
-                        _columnasDisponibles.forEach((key, value) {
-                          value.selected = ['codigo', 'numeroCorrelativo', 'tipoDocumento', 'gestion', 'estado'].contains(key);
-                        });
-                      });
-                    },
-                  ),
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.article_outlined, size: 18),
-                    title: const Text('Vista Completa', style: TextStyle(fontSize: 12)),
-                    onTap: () {
-                      setState(() {
-                        for (var col in _columnasDisponibles.values) {
-                          col.selected = true;
-                        }
-                      });
-                    },
-                  ),
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.location_on_outlined, size: 18),
-                    title: const Text('Vista Ubicación', style: TextStyle(fontSize: 12)),
-                    onTap: () {
-                      setState(() {
-                        _columnasDisponibles.forEach((key, value) {
-                          value.selected = ['codigo', 'numeroCorrelativo', 'ubicacionFisica', 'carpeta', 'estado'].contains(key);
-                        });
-                      });
-                    },
-                  ),
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.calendar_today_outlined, size: 18),
-                    title: const Text('Vista Temporal', style: TextStyle(fontSize: 12)),
-                    onTap: () {
-                      setState(() {
-                        _columnasDisponibles.forEach((key, value) {
-                          value.selected = ['codigo', 'numeroCorrelativo', 'fechaDocumento', 'fechaRegistro', 'gestion', 'estado'].contains(key);
-                        });
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _documentos.isEmpty ? _cargarDocumentos : null,
-                icon: _isLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.search_rounded),
-                label: Text(_isLoading ? 'Cargando...' : 'Generar Reporte'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: theme.colorScheme.primary,
-                ),
-              ),
-              if (_documentos.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _cargarDocumentos,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Actualizar Datos'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ],
-            ],
+                    visualDensity: VisualDensity.compact,
+                  );
+                }).toList(),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -803,7 +1101,9 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
           children: [
             CircularProgressIndicator(
               strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                theme.colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -820,95 +1120,20 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
 
     return Column(
       children: [
-        // Header con título y botones de exportación
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.table_view_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Reporte de Documentos',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      'Visualiza y exporta tus datos',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty 
-                    ? null 
-                    : _exportarPDF,
-                icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
-                label: const Text('PDF'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.red.shade600,
-                  disabledBackgroundColor: Colors.grey.shade400,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-              ),
-              const SizedBox(width: 12),
-              FilledButton.icon(
-                onPressed: _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty 
-                    ? null 
-                    : _exportarExcel,
-                icon: const Icon(Icons.table_chart_rounded, size: 20),
-                label: const Text('Excel'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
-                  disabledBackgroundColor: Colors.grey.shade400,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-              ),
-            ],
-          ),
-        ),
         // Barra de filtros
         _buildFilterBar(theme),
         // Tabla de resultados
-        Expanded(
-          child: _buildDataTable(theme),
-        ),
+        Expanded(child: _buildDataTable(theme)),
       ],
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String title, String subtitle, ThemeData theme) {
+  Widget _buildFeatureItem(
+    IconData icon,
+    String title,
+    String subtitle,
+    ThemeData theme,
+  ) {
     return Row(
       children: [
         Container(
@@ -945,7 +1170,8 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
   }
 
   Widget _buildFilterBar(ThemeData theme) {
-    final hasActiveFilters = _filtroTexto.isNotEmpty ||
+    final hasActiveFilters =
+        _filtroTexto.isNotEmpty ||
         _filtroEstado != null ||
         _filtroTipo != null ||
         _filtroArea != null ||
@@ -956,9 +1182,7 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor),
-        ),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -969,24 +1193,29 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Buscar por código, correlativo, descripción, tipo o área...',
+                    hintText:
+                        'Buscar por código, correlativo, descripción, tipo o área...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    suffixIcon: _filtroTexto.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _filtroTexto = '';
-                                _aplicarFiltros();
-                              });
-                            },
-                          )
-                        : null,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    suffixIcon:
+                        _filtroTexto.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _filtroTexto = '';
+                                  _aplicarFiltros();
+                                });
+                              },
+                            )
+                            : null,
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -1001,20 +1230,27 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                 onPressed: () {
                   setState(() => _mostrarFiltros = !_mostrarFiltros);
                 },
-                icon: Icon(_mostrarFiltros ? Icons.filter_list_off : Icons.filter_list),
+                icon: Icon(
+                  _mostrarFiltros ? Icons.filter_list_off : Icons.filter_list,
+                ),
                 tooltip: 'Filtros avanzados',
                 style: IconButton.styleFrom(
-                  backgroundColor: hasActiveFilters
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primaryContainer,
-                  foregroundColor: hasActiveFilters
-                      ? Colors.white
-                      : theme.colorScheme.onPrimaryContainer,
+                  backgroundColor:
+                      hasActiveFilters
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.primaryContainer,
+                  foregroundColor:
+                      hasActiveFilters
+                          ? Colors.white
+                          : theme.colorScheme.onPrimaryContainer,
                 ),
               ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
@@ -1095,7 +1331,9 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                   ),
                 if (_filtroFechaDesde != null)
                   Chip(
-                    label: Text('Desde: ${DateFormat('dd/MM/yyyy').format(_filtroFechaDesde!)}'),
+                    label: Text(
+                      'Desde: ${DateFormat('dd/MM/yyyy').format(_filtroFechaDesde!)}',
+                    ),
                     onDeleted: () {
                       setState(() {
                         _filtroFechaDesde = null;
@@ -1106,7 +1344,9 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                   ),
                 if (_filtroFechaHasta != null)
                   Chip(
-                    label: Text('Hasta: ${DateFormat('dd/MM/yyyy').format(_filtroFechaHasta!)}'),
+                    label: Text(
+                      'Hasta: ${DateFormat('dd/MM/yyyy').format(_filtroFechaHasta!)}',
+                    ),
                     onDeleted: () {
                       setState(() {
                         _filtroFechaHasta = null;
@@ -1131,14 +1371,25 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                     decoration: InputDecoration(
                       labelText: 'Estado',
                       prefixIcon: const Icon(Icons.info_outline, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     items: const [
                       DropdownMenuItem(value: null, child: Text('Todos')),
                       DropdownMenuItem(value: 'Activo', child: Text('Activo')),
-                      DropdownMenuItem(value: 'Prestado', child: Text('Prestado')),
-                      DropdownMenuItem(value: 'Archivado', child: Text('Archivado')),
+                      DropdownMenuItem(
+                        value: 'Prestado',
+                        child: Text('Prestado'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Archivado',
+                        child: Text('Archivado'),
+                      ),
                     ],
                     onChanged: (value) {
                       setState(() {
@@ -1155,14 +1406,28 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                       value: _filtroTipo,
                       decoration: InputDecoration(
                         labelText: 'Tipo Documento',
-                        prefixIcon: const Icon(Icons.description_outlined, size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        prefixIcon: const Icon(
+                          Icons.description_outlined,
+                          size: 18,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Todos')),
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Todos'),
+                        ),
                         ..._tiposDocumentoDisponibles.map((tipo) {
-                          return DropdownMenuItem(value: tipo, child: Text(tipo));
+                          return DropdownMenuItem(
+                            value: tipo,
+                            child: Text(tipo),
+                          );
                         }),
                       ],
                       onChanged: (value) {
@@ -1180,14 +1445,28 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                       value: _filtroArea,
                       decoration: InputDecoration(
                         labelText: 'Área',
-                        prefixIcon: const Icon(Icons.business_outlined, size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        prefixIcon: const Icon(
+                          Icons.business_outlined,
+                          size: 18,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Todas')),
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Todas'),
+                        ),
                         ..._areasDisponibles.map((area) {
-                          return DropdownMenuItem(value: area, child: Text(area));
+                          return DropdownMenuItem(
+                            value: area,
+                            child: Text(area),
+                          );
                         }),
                       ],
                       onChanged: (value) {
@@ -1204,25 +1483,34 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                     decoration: InputDecoration(
                       labelText: 'Fecha Desde',
                       prefixIcon: const Icon(Icons.calendar_today, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      suffixIcon: _filtroFechaDesde != null
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () {
-                                setState(() {
-                                  _filtroFechaDesde = null;
-                                  _aplicarFiltros();
-                                });
-                              },
-                            )
-                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      suffixIcon:
+                          _filtroFechaDesde != null
+                              ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  setState(() {
+                                    _filtroFechaDesde = null;
+                                    _aplicarFiltros();
+                                  });
+                                },
+                              )
+                              : null,
                     ),
                     readOnly: true,
                     controller: TextEditingController(
-                      text: _filtroFechaDesde != null
-                          ? DateFormat('dd/MM/yyyy').format(_filtroFechaDesde!)
-                          : '',
+                      text:
+                          _filtroFechaDesde != null
+                              ? DateFormat(
+                                'dd/MM/yyyy',
+                              ).format(_filtroFechaDesde!)
+                              : '',
                     ),
                     onTap: () async {
                       final date = await showDatePicker(
@@ -1246,25 +1534,34 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                     decoration: InputDecoration(
                       labelText: 'Fecha Hasta',
                       prefixIcon: const Icon(Icons.calendar_today, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      suffixIcon: _filtroFechaHasta != null
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () {
-                                setState(() {
-                                  _filtroFechaHasta = null;
-                                  _aplicarFiltros();
-                                });
-                              },
-                            )
-                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      suffixIcon:
+                          _filtroFechaHasta != null
+                              ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  setState(() {
+                                    _filtroFechaHasta = null;
+                                    _aplicarFiltros();
+                                  });
+                                },
+                              )
+                              : null,
                     ),
                     readOnly: true,
                     controller: TextEditingController(
-                      text: _filtroFechaHasta != null
-                          ? DateFormat('dd/MM/yyyy').format(_filtroFechaHasta!)
-                          : '',
+                      text:
+                          _filtroFechaHasta != null
+                              ? DateFormat(
+                                'dd/MM/yyyy',
+                              ).format(_filtroFechaHasta!)
+                              : '',
                     ),
                     onTap: () async {
                       final date = await showDatePicker(
@@ -1287,7 +1584,10 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
                   icon: const Icon(Icons.clear_all, size: 18),
                   label: const Text('Limpiar filtros'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                   ),
                 ),
               ],
@@ -1300,7 +1600,7 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
 
   Widget _buildDataTable(ThemeData theme) {
     final columnas = _columnasSeleccionadas;
-    
+
     if (columnas.isEmpty) {
       return Center(
         child: Column(
@@ -1369,48 +1669,54 @@ class _ReportePersonalizadoScreenState extends State<ReportePersonalizadoScreen>
           headingRowColor: WidgetStateProperty.all(
             theme.colorScheme.primaryContainer.withOpacity(0.3),
           ),
-          sortColumnIndex: _sortColumn != null ? columnas.indexOf(_sortColumn!) : null,
+          sortColumnIndex:
+              _sortColumn != null ? columnas.indexOf(_sortColumn!) : null,
           sortAscending: _sortAscending,
-          columns: columnas.map((col) {
-            return DataColumn(
-              label: Row(
-                children: [
-                  Text(
-                    _columnasDisponibles[col]!.label,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
+          columns:
+              columnas.map((col) {
+                return DataColumn(
+                  label: Row(
+                    children: [
+                      Text(
+                        _columnasDisponibles[col]!.label,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (_sortColumn == col) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          _sortAscending
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    ],
                   ),
-                  if (_sortColumn == col) ...[
-                    const SizedBox(width: 4),
-                    Icon(
-                      _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ],
-                ],
-              ),
-              onSort: (columnIndex, ascending) => _sortBy(col),
-            );
-          }).toList(),
-          rows: _documentosFiltrados.map((doc) {
-            return DataRow(
-              cells: columnas.map((col) {
-                return DataCell(
-                  SizedBox(
-                    width: _columnasDisponibles[col]!.width,
-                    child: Text(
-                      _getColumnValue(doc, col),
-                      style: GoogleFonts.inter(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                  onSort: (columnIndex, ascending) => _sortBy(col),
                 );
               }).toList(),
-            );
-          }).toList(),
+          rows:
+              _documentosFiltrados.map((doc) {
+                return DataRow(
+                  cells:
+                      columnas.map((col) {
+                        return DataCell(
+                          SizedBox(
+                            width: _columnasDisponibles[col]!.width,
+                            child: Text(
+                              _getColumnValue(doc, col),
+                              style: GoogleFonts.inter(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                );
+              }).toList(),
         ),
       ),
     );

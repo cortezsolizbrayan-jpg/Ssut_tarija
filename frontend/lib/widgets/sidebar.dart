@@ -201,7 +201,9 @@ class _SideBarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withOpacity(0.6);
+    final color = isSelected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.primary.withOpacity(0.75);
 
     return InkWell(
       onTap: onTap,
