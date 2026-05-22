@@ -217,7 +217,8 @@ class _QREscanerScreenState extends State<QREscanerScreen>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => DocumentoDetalleScreen(documento: documento),
+              builder:
+                  (context) => DocumentoDetalleScreen(documento: documento),
             ),
           );
           _qrCodeController.clear();
@@ -326,7 +327,8 @@ class _QREscanerScreenState extends State<QREscanerScreen>
   Future<void> _procesarBytesComoImagenOPdf(Uint8List bytes) async {
     setState(() => _isSearching = true);
     try {
-      final esPdf = bytes.length > 4 &&
+      final esPdf =
+          bytes.length > 4 &&
           bytes[0] == 0x25 &&
           bytes[1] == 0x50 &&
           bytes[2] == 0x44 &&
@@ -417,7 +419,9 @@ class _QREscanerScreenState extends State<QREscanerScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error leyendo archivo: ${ErrorHelper.getErrorMessage(e)}'),
+            content: Text(
+              'Error leyendo archivo: ${ErrorHelper.getErrorMessage(e)}',
+            ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
           ),
@@ -572,13 +576,14 @@ class _QREscanerScreenState extends State<QREscanerScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EscanerMovilWidget(
-          onDetect: (codigo) {
-            final codigoLimpio = _quitarPrefijoQr(codigo);
-            _qrCodeController.text = codigoLimpio;
-            _buscarPorCodigo(codigoLimpio);
-          },
-        ),
+        builder:
+            (context) => EscanerMovilWidget(
+              onDetect: (codigo) {
+                final codigoLimpio = _quitarPrefijoQr(codigo);
+                _qrCodeController.text = codigoLimpio;
+                _buscarPorCodigo(codigoLimpio);
+              },
+            ),
       ),
     );
   }
@@ -587,15 +592,12 @@ class _QREscanerScreenState extends State<QREscanerScreen>
   Widget build(BuildContext context) {
     // UI optimizada: campo de código → un solo botón "Buscar Documento" → fila "Subir imagen o PDF" + "Escanear".
     // No hay "Solo imagen (galería)" ni "Foto, PDF o archivo" por separado. Si ves la versión antigua, haz flutter clean y vuelve a ejecutar.
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.blue.shade50, Colors.white],
-          ),
-        ),
+        color: theme.scaffoldBackgroundColor,
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -671,12 +673,13 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                           prefixIcon: Container(
                             margin: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: theme.colorScheme.primaryContainer
+                                  .withOpacity(0.5),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.qr_code_rounded,
-                              color: Colors.blue.shade700,
+                              color: theme.colorScheme.primary,
                             ),
                           ),
                           suffixIcon:
@@ -709,7 +712,7 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                             ),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: theme.colorScheme.surface,
                         ),
                         onChanged: (value) {
                           setState(() {});
@@ -758,11 +761,17 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: _isSearching ? null : _buscarDesdeArchivo,
-                              icon: const Icon(Icons.photo_library_rounded, size: 20),
+                              onPressed:
+                                  _isSearching ? null : _buscarDesdeArchivo,
+                              icon: const Icon(
+                                Icons.photo_library_rounded,
+                                size: 20,
+                              ),
                               label: const Text('Subir imagen o PDF'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -772,11 +781,17 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                           const SizedBox(width: 12),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: _isSearching ? null : _abrirCamaraScanner,
-                              icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                              onPressed:
+                                  _isSearching ? null : _abrirCamaraScanner,
+                              icon: const Icon(
+                                Icons.qr_code_scanner_rounded,
+                                size: 20,
+                              ),
                               label: const Text('Escanear con Cámara'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -790,14 +805,16 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color: theme.colorScheme.primaryContainer.withOpacity(
+                            isDark ? 0.3 : 0.5,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.info_outline_rounded,
-                              color: Colors.blue.shade700,
+                              color: theme.colorScheme.primary,
                               size: 20,
                             ),
                             const SizedBox(width: 12),
@@ -805,7 +822,7 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                               child: Text(
                                 'Escriba el código, pegue un link o suba una imagen/PDF con QR para buscar el documento',
                                 style: TextStyle(
-                                  color: Colors.blue.shade800,
+                                  color: theme.colorScheme.onPrimaryContainer,
                                   fontSize: 13,
                                 ),
                               ),
