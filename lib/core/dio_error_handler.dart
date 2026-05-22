@@ -39,7 +39,7 @@ class DioErrorHandler {
         return LoginException(
           'Error de certificado. Contacta al administrador.',
         );
-
+      //caso
       case DioExceptionType.unknown:
         return LoginException(
           'Error desconocido: ${error.message ?? 'Sin mensaje'}',
