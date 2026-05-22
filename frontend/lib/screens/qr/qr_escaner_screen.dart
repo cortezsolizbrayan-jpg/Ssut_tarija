@@ -657,7 +657,7 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                       Text(
                         'Escriba el código, pegue un link o suba una foto/PDF del QR para encontrar el documento',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: theme.colorScheme.onSurfaceVariant,
                           fontSize: 15,
                         ),
                         textAlign: TextAlign.center,
@@ -687,7 +687,7 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                                   ? IconButton(
                                     icon: Icon(
                                       Icons.clear_rounded,
-                                      color: Colors.grey.shade600,
+                                      color: theme.colorScheme.onSurfaceVariant,
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -698,16 +698,16 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                                   : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(color: theme.dividerColor),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(color: theme.dividerColor),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                              color: Colors.blue.shade700,
+                              color: theme.colorScheme.primary,
                               width: 2,
                             ),
                           ),
@@ -743,10 +743,12 @@ class _QREscanerScreenState extends State<QREscanerScreen>
                             _isSearching ? 'Buscando...' : 'Buscar Documento',
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade700,
-                            foregroundColor: Colors.white,
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
                             elevation: 4,
-                            shadowColor: Colors.blue.withOpacity(0.4),
+                            shadowColor: theme.colorScheme.primary.withOpacity(
+                              0.4,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
