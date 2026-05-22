@@ -16,7 +16,7 @@ import 'package:refactor_template/features/sistema/presentation/blocs/perfil/per
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  //mainS
   // Configurar el status bar globalmente para evitar fondo negro
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
