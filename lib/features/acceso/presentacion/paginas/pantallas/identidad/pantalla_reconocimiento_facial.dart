@@ -1131,8 +1131,8 @@ class _FaceRecognitionPantallaState extends State<FaceRecognitionPantalla>
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF305BA4);
-    const Color whiteBg = Color(0xFFF6F8FB);
-    const Color textDark = Color(0xFF1A3A5C);
+    const Color whiteBg = Colors.black;
+    const Color textDark = Colors.white;
 
     // Hacer el layout responsive
     final PantallaSize = MediaQuery.of(context).size;
@@ -1146,7 +1146,7 @@ class _FaceRecognitionPantallaState extends State<FaceRecognitionPantalla>
     final fontSize = isSmallPantalla ? 16.0 : 20.0;
 
     return Scaffold(
-      backgroundColor: whiteBg,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           // Fondo Rive Animado (Ambiental)
@@ -1166,8 +1166,8 @@ class _FaceRecognitionPantallaState extends State<FaceRecognitionPantalla>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  whiteBg.withOpacity(0.8),
-                  whiteBg.withOpacity(0.9),
+                  Colors.black.withOpacity(0.8),
+                  Colors.black.withOpacity(0.9),
                   primaryBlue.withOpacity(0.1),
                   primaryBlue.withOpacity(0.15),
                 ],
@@ -1181,10 +1181,7 @@ class _FaceRecognitionPantallaState extends State<FaceRecognitionPantalla>
                     child: Row(
                       children: [
                         IconButton(
-                          icon: const Icon(
-                            Icons.close,
-                            color: Color(0xFF1A3A5C),
-                          ),
+                          icon: const Icon(Icons.close, color: textDark),
                           onPressed: () => context.pop(),
                         ),
                         const Expanded(
@@ -1194,7 +1191,7 @@ class _FaceRecognitionPantallaState extends State<FaceRecognitionPantalla>
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A3A5C),
+                              color: textDark,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -1286,9 +1283,7 @@ class _FaceRecognitionPantallaState extends State<FaceRecognitionPantalla>
                             style: TextStyle(
                               fontSize: fontSize + 2,
                               fontWeight: FontWeight.w800,
-                              color: _isConditionMet
-                                  ? Colors.green
-                                  : const Color(0xFF1A3A5C),
+                              color: _isConditionMet ? Colors.green : textDark,
                               letterSpacing: -0.5,
                             ),
                             textAlign: TextAlign.center,

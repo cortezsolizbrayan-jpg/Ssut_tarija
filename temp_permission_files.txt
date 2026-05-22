@@ -1,0 +1,549 @@
+
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\constants\constants.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\constants\design_tokens.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\constants\environment.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\menu\course.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\menu\menu.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\menu\rive_model.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\providers\theme_mode_provider.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\router\app_router.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\theme\app_colors.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\config\theme\app_theme.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\animations\animations.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\animations\custom_animations.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\animations\enhanced_animations.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\animations\page_transitions.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\animations\SNIPPETS.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\cache\app_cache.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\documentos\servicio_compositor_cartas_ci.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\documentos\servicio_fotocopia_carnet.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\documentos\servicio_generador_carta_inscripcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\documentos\servicio_generador_carta_prorroga.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\documentos\servicio_generador_factura_html.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\image_processing\servicio_preprocesamiento_imagen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\image_processing\servicio_procesador_imagen_perfil.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\image_processing\servicio_remover_fondo.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\ocr\servicio_ocr_blinkid.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\ocr\servicio_ocr_ia_avanzado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\ocr\servicio_ocr_inteligente_identidad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\ocr\servicio_ocr_optimizado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\ocr\servicio_ocr_turbo_ram.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\ocr\servicio_ocr_ultra_optimizado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\ocr\servicio_ocr_vision_nube.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\cancellation_token.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\diccionario_nombres_bolivianos.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\servicio_actualizacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\servicio_biometrico.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\servicio_inscripcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\servicio_notificaciones.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\servicio_personas_facturacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\otros\servicio_sugerencias.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\storage\local_database_service.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\storage\servicio_almacenamiento_local.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\storage\servicio_base_datos_local.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\storage\servicio_usuarios_recepcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\validation\servicio_autenticacion_ci.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\validation\servicio_extraccion_ci_nombres_mejorado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\validation\servicio_procesamiento_ci_optimizado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\validation\servicio_validacion_facial_gemini.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\validation\servicio_validacion_requisitos.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\validation\servicio_verificacion_ci.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\local_database_service.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\services\servicio_procesador_imagen_perfil.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\utils\debouncer.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\utils\helper_validacion_inscripcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\utils\premium_alerts.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\utils\responsive_helper.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\utils\responsive_utils.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\utils\rive_utils.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\widgets\animated_theme_switcher.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\widgets\ios_date_picker.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\widgets\ios_dialogs.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\widgets\offline_banner.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\widgets\optimized_fade_in.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\widgets\optimized_image.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\widgets\skeleton_loader.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\core\dio_error_handler.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\dominio\entities\login.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\dominio\errors\login_exceptions.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\dominio\repositories\login_repository.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\infraestructura\datasources\login_datasource.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\infraestructura\datasources\login_datasource_impl.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\infraestructura\models\login_model.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\infraestructura\repositories\login_repository_impl.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\inicio_sesion\components\boton_animado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\inicio_sesion\components\dialogo_inicio_sesion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\inicio_sesion\components\formulario_inicio_sesion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\inicio_sesion\pantalla_inicio_sesion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\bloques\identity\identity_bloc.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\bloques\identity\identity_event.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\bloques\identity\identity_state.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\componentes\botones_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\componentes\custom_text_form_field.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\componentes\fondo_azul_curvo_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\componentes\interrumptor_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\componentes\session_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\componentes\tarjeta_autenticacion_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\componentes\widgets.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\mixins\identity_ocr_mixin.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\autenticacion\pagina_login.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\autenticacion\pantallas_autenticacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\autenticacion\pantalla_autenticacion_rapida.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\autenticacion\pantalla_login.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\autenticacion\pantalla_login_responsive.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\autenticacion\pantalla_verificacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\bienvenida\pagina_inicial.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\bienvenida\pantallas_bienvenida.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\bienvenida\pantalla_bienvenida_windows.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\bienvenida\pantalla_inicio.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\bienvenida\pantalla_registro.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\carga\pantallas_carga.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\carga\pantalla_carga.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\carga\pantalla_preparando_perfil.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\carga\pantalla_splash.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\identidad\pantallas_identidad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\identidad\pantalla_reconocimiento_facial.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\identidad\pantalla_subida_identidad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\identidad\pantalla_subida_identidad_mejorada.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\registro\pantallas_registro.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\registro\pantalla_formulario_registro.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\seguridad\pantallas_seguridad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\seguridad\pantalla_configuracion_contrasena.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\seguridad\pantalla_seguridad_biometrica.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\seguridad\pantalla_terminos_condiciones.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantallas\pantallas.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\componentes.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\dialogo_consejos_escaneo.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\indicador_pasos_identidad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\superposiciones_carga_ci.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\superposicion_formulario_correccion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\tarjeta_carga.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\tarjeta_carga_identidad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\widget_opciones_escaneo.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\componentes\widget_progreso_escaneo.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\escaneres\escaneres.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\escaneres\escaner_blinkid.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\escaneres\escaner_scanbot.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\escaneres\pantalla_captura_ci_camara.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\escaneres\pantalla_ocr_mlkit_camara.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\mezclas\mezclas.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\mezclas\mezcla_extraccion_ocr_identidad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\modelos\datos_documento_identidad.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\tareas\tareas_carga_imagen_ci.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\utilidades\utilidades_extraccion_texto.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\utilidades\utilidades_fecha.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pantalla_subida_identidad\utilidades\utilidades_preprocesamiento_imagen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\paginas\pages.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\proveedores\login_provider.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\acceso\presentacion\proveedores\login_provider.g.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\recepcion\pantalla_login_recepcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\recepcion\pantalla_recepcion_principal.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\core\errors\ocr_excepciones.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\core\theme\app_colors_escaneo.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\domain\entities\persona_facturacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\domain\entities\programa_posgrado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\domain\entities\requisito_inscripcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\domain\repositories\programa_posgrado_repository.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\domain\usecases\procesar_documento_usecase.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\infrastructure\datasources\inscripcion_datasource.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\infrastructure\datasources\inscripcion_datasource_impl.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\infrastructure\datasources\programa_posgrado_datasource.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\infrastructure\datasources\programa_posgrado_datasource_impl.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\infrastructure\models\programa_posgrado_model.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\infrastructure\repositories\programa_posgrado_repository_impl.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\presentation\blocs\perfil\perfil_bloc.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\presentation\blocs\perfil\perfil_event.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\presentation\blocs\perfil\perfil_state.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\presentation\providers\actualizacion_provider.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\presentation\providers\programa_posgrado_provider.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\providers\notificaciones_provider.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\configuracion\configuracion_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\configuracion\pantalla_configuracion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\contenedor\menu_lateral_scope.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\contenedor\pantalla_contenedor_principal.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\curriculum\mi_curriculum_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\curriculum\pantalla_mi_curriculum.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\componentes\encabezado_aplicacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\componentes\tarjeta_diplomado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\components\app_header.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\components\diplomado_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\diplomados_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\pantalla_detalle_programa.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\pantalla_diplomados.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\pantalla_programas_disponibles.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\pantalla_programas_vigentes.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\diplomados\programas_vigentes_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\entryPoint\components\animated_bar.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\entryPoint\components\btm_nav_item.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\entryPoint\components\info_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\entryPoint\components\menu_btn.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\entryPoint\components\side_bar.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\entryPoint\components\side_menu.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\entryPoint\entry_point.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\home\mis_programas_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\componentes\acciones_rapidas.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\componentes\encabezado_inicio.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\componentes\pestanas_tipo_programa.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\componentes\tarjeta_programa.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\components\inicio_header.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\components\program_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\components\program_type_tabs.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\inicio_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\inicio_screen_optimized.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\pantalla_inicio.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio\pantalla_inicio_optimizada.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\mis_programas_barra_busqueda.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\mis_programas_cargando.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\mis_programas_categorias.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\mis_programas_encabezado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\mis_programas_estado_vacio.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\mis_programas_filtros.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\mis_programas_tarjeta.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\tarjeta_curso.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\componentes\tarjeta_curso_secundario.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\pantalla_inicio_principal.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inicio_principal\pantalla_mis_programas.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inscripcion\ayudantes\visor_documentos_inscripcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inscripcion\componentes\controlador_temporizador_inscripcion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inscripcion\componentes\requisitos_ui_basicos.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inscripcion\confirmacion_inscripcion_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\inscripcion\pantalla_validacion_requisitos.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\mapa\mapa_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\mapa\pantalla_mapa.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\notificaciones\notificaciones_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\notificaciones\pantalla_notificaciones.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pagos\deposito_matricula_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pagos\pantalla_deposito_matricula.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pagos\pantalla_formulario_pago_completo.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pagos\pantalla_formulario_persona_facturacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pagos\pantalla_gestor_personas_facturacion.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pagos\pantalla_visualizar_factura.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pagos\vista_previa_factura_webview.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\datos_personales_validators.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\dialogo_procesamiento_magico.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\fondo_azul_curvo_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\personal_data_dropdown_field.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\personal_data_form_field.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\personal_data_identity_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\personal_data_perfil_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\personal_data_progress_bar.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\personal_data_responsive_group.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\personal_data_section_header.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\componentes\widgets.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\datos_personales\mis_datos_personales_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\documentos\mis_documentos_personales_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\escaneo\pantalla_escaneo_inteligente.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\firma\pantalla_firma.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\modals\legal_document_modal.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\widgets\doc_upload_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\widgets\nodo_linea_tiempo.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\widgets\profile_photo_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\widgets\progress_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\widgets\signature_painter.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\widgets\timeline_node.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\widgets\vertical_timeline_step.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\constantes.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos\constants.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\notificaciones\pantalla_configuracion_notificaciones.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\variantes\pantalla_perfil_mejorado.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\variantes\pantalla_perfil_sin_ruleta.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\widgets\fondo_azul_curvo_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\configuracion_notificaciones_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_datos_personales_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\mis_documentos_personales_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\pantalla_escaneo_inteligente.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\pantalla_firma.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\pantalla_perfil.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\perfil\perfil_screen.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\recepcion\pantalla_recepcion_participantes.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\sugerencias\pantalla_sugerencias.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\screens\pantalla_pagos_programa.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\facturacion\seccion_facturacion_integrada.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\inscripcion\pasos_inscripcion_sheet.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\navegacion\barra_navegacion_inferior_personalizada.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\navegacion\icono_notificaciones_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\perfil\avatar_perfil_widget.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\tarjetas\tarjetas_personalizadas.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\tarjetas\tarjeta_detalle_matricula.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\tarjetas\tarjeta_programa.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\custom_cards.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\matricula_detail_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\features\sistema\widgets\program_card.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\main.dart
+
+FullName : C:\Users\psg\Desktop\sistema_posgradini_gor\sistema_posgradini_gor\lib\test_pin_debug.dart
+
+
+
+
