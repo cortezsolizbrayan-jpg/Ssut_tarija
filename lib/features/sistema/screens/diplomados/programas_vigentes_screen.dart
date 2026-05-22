@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:go_router/go_router.dart';
 import 'package:refactor_template/config/constants/environment.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/core/utils/debouncer.dart';
 import 'package:refactor_template/core/utils/helper_validacion_inscripcion.dart';
 import 'package:refactor_template/core/widgets/optimized_image.dart';
@@ -11,7 +10,7 @@ import 'package:refactor_template/core/widgets/optimized_fade_in.dart';
 import 'package:refactor_template/features/sistema/domain/entities/programa_posgrado.dart';
 import 'package:refactor_template/features/sistema/presentation/providers/programa_posgrado_provider.dart';
 import 'package:refactor_template/core/widgets/skeleton_loader.dart';
-import 'package:refactor_template/features/sistema/screens/entryPoint/entry_point.dart';
+import 'package:refactor_template/features/sistema/screens/contenedor/menu_lateral_scope.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProgramasVigentesScreen extends ConsumerStatefulWidget {
@@ -28,12 +27,13 @@ class _ProgramasVigentesScreenState
     extends ConsumerState<ProgramasVigentesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _vigentesScrollController = ScrollController();
-  final _searchDebouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  final _searchDebouncer = Debouncer(delay: const Duration(milliseconds: 80));
 
   String _selectedTipo = 'TODOS';
   String _selectedModalidad = 'TODOS';
   bool _showFilters = false; // Controla la visibilidad de los filtros
-  bool _isHeaderCollapsed = false; // Controla si se oculta la cabecera al hacer scroll
+  bool _isHeaderCollapsed =
+      false; // Controla si se oculta la cabecera al hacer scroll
 
   String _username = 'anon';
   bool _loadingUser = true;
@@ -182,8 +182,9 @@ class _ProgramasVigentesScreenState
       }
       if (_selectedModalidad != 'TODOS' && selModalidad.isNotEmpty) {
         if (!modalidad.contains(selModalidad) &&
-            !selModalidad.contains(modalidad))
+            !selModalidad.contains(modalidad)) {
           return false;
+        }
       }
       if (search.isNotEmpty &&
           !_normalizeValue(programa.titulo).contains(search)) {
@@ -220,6 +221,7 @@ class _ProgramasVigentesScreenState
       backgroundColor: background,
       body: SafeArea(
         bottom: false,
+        top: false,
         child: Column(
           children: [
             AnimatedSize(
@@ -311,9 +313,11 @@ class _ProgramasVigentesScreenState
                                 )
                               : KeyedSubtree(
                                   key: ValueKey('list-$filtrosKey'),
-                                child: RefreshIndicator(
+                                  child: RefreshIndicator(
                                     onRefresh: () async {
-                                      final scaffold = ScaffoldMessenger.of(context);
+                                      final scaffold = ScaffoldMessenger.of(
+                                        context,
+                                      );
                                       scaffold.showSnackBar(
                                         const SnackBar(
                                           content: Row(
@@ -321,10 +325,11 @@ class _ProgramasVigentesScreenState
                                               SizedBox(
                                                 width: 18,
                                                 height: 18,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Colors.white,
-                                                ),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.white,
+                                                    ),
                                               ),
                                               SizedBox(width: 12),
                                               Text('Actualizando programas...'),
@@ -335,7 +340,9 @@ class _ProgramasVigentesScreenState
                                         ),
                                       );
                                       ref.invalidate(programasVigentesProvider);
-                                      await ref.read(programasVigentesProvider.future);
+                                      await ref.read(
+                                        programasVigentesProvider.future,
+                                      );
                                       if (context.mounted) {
                                         scaffold.hideCurrentSnackBar();
                                         scaffold.showSnackBar(
@@ -366,8 +373,9 @@ class _ProgramasVigentesScreenState
                                           if (index < vigentes.length) {
                                             final programa = vigentes[index];
                                             final isEnrolled =
-                                                _enrolledProgramIds
-                                                    .contains(programa.id);
+                                                _enrolledProgramIds.contains(
+                                                  programa.id,
+                                                );
                                             // Animación de entrada para cada tarjeta
                                             return Padding(
                                               padding: const EdgeInsets.only(
@@ -383,8 +391,8 @@ class _ProgramasVigentesScreenState
                                                   isEnrolled: isEnrolled,
                                                   onEnroll: () =>
                                                       _onInscribirseTap(
-                                                    programa,
-                                                  ),
+                                                        programa,
+                                                      ),
                                                 ),
                                               ),
                                             );
@@ -405,7 +413,7 @@ class _ProgramasVigentesScreenState
                 loading: () => ListView.builder(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   itemCount: 5,
-                  itemBuilder: (_, __) => const ProgramaCardSkeleton(),
+                  itemBuilder: (_, _) => const ProgramaCardSkeleton(),
                 ),
               ),
             ),
@@ -417,18 +425,19 @@ class _ProgramasVigentesScreenState
 
   Widget _buildHeader(Color headerBlue, Color headerBlueDark) {
     final width = MediaQuery.of(context).size.width;
+    final topPadding = MediaQuery.of(context).padding.top;
     final isSmall = width < 360;
     final chipLabelFont = isSmall ? 12.0 : 13.0;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 14 + topPadding, 20, 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [headerBlue, headerBlueDark],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(0),
           bottomRight: Radius.circular(40),
         ),
@@ -459,37 +468,8 @@ class _ProgramasVigentesScreenState
                   ),
                 ),
                 const Spacer(),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      onTap: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.of(context).pop();
-                        } else {
-                          // Volver siempre al dashboard principal si no hay back stack
-                          context.goNamed(PantallaPrincipal.name);
-                        }
-                      },
-                      customBorder: const CircleBorder(),
-                      child: Container(
-                        width: 46,
-                        height: 46,
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                const BotonMenuLateral(),
+                const SizedBox(width: 4),
               ],
             ),
           ),
@@ -511,7 +491,10 @@ class _ProgramasVigentesScreenState
                     style: const TextStyle(fontSize: 15),
                     decoration: InputDecoration(
                       hintText: 'Buscar programa',
-                      hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 15,
+                      ),
                       prefixIcon: Icon(
                         Icons.search,
                         color: Colors.grey.shade600,
@@ -533,9 +516,7 @@ class _ProgramasVigentesScreenState
                 const SizedBox(width: 12),
                 // Botón de filtros
                 Material(
-                  color: _showFilters 
-                      ? const Color(0xFF305BA4) 
-                      : Colors.white,
+                  color: _showFilters ? const Color(0xFF305BA4) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     onTap: () {
@@ -550,8 +531,8 @@ class _ProgramasVigentesScreenState
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _showFilters 
-                              ? const Color(0xFF305BA4) 
+                          color: _showFilters
+                              ? const Color(0xFF305BA4)
                               : Colors.grey.shade300,
                           width: 1,
                         ),
@@ -561,19 +542,20 @@ class _ProgramasVigentesScreenState
                         children: [
                           Icon(
                             Icons.tune_rounded,
-                            color: _showFilters 
-                                ? Colors.white 
+                            color: _showFilters
+                                ? Colors.white
                                 : const Color(0xFF305BA4),
                             size: 24,
                           ),
-                          if (_selectedTipo != 'TODOS' || _selectedModalidad != 'TODOS')
+                          if (_selectedTipo != 'TODOS' ||
+                              _selectedModalidad != 'TODOS')
                             Positioned(
                               top: 8,
                               right: 8,
                               child: Container(
                                 width: 8,
                                 height: 8,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: Color(0xFF4CAF50),
                                   shape: BoxShape.circle,
                                 ),
@@ -904,13 +886,12 @@ class _ProgramaVigenteCard extends StatelessWidget {
     final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
     if (digits.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Número de WhatsApp no válido.'),
-        ),
+        const SnackBar(content: Text('Número de WhatsApp no válido.')),
       );
       return;
     }
-    final message = '''
+    final message =
+        '''
 Hola, buen día.
 
 Estoy interesado/a en la $programTitle de Posgrado UPEA.
@@ -959,7 +940,7 @@ Mensaje enviado desde la app móvil de preinscripción.
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -1044,10 +1025,7 @@ Mensaje enviado desde la app móvil de preinscripción.
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      icon: const FaIcon(
-                        FontAwesomeIcons.whatsapp,
-                        size: 18,
-                      ),
+                      icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 18),
                       label: Text(
                         'Contactarse: $telefono',
                         style: const TextStyle(
@@ -1095,7 +1073,7 @@ Mensaje enviado desde la app móvil de preinscripción.
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF1A237E), Color(0xFF0D47A1)],
           begin: Alignment.topLeft,
@@ -1234,25 +1212,29 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
     _PasoData(
       icono: Icons.person_outline_rounded,
       titulo: 'Paso 1 · Datos personales',
-      descripcion: 'Asegúrate de tener tu nombre completo, CI y datos de contacto actualizados en tu perfil.',
+      descripcion:
+          'Asegúrate de tener tu nombre completo, CI y datos de contacto actualizados en tu perfil.',
       color: Color(0xFF1565C0),
     ),
     _PasoData(
       icono: Icons.folder_copy_outlined,
       titulo: 'Paso 2 · Documentos requeridos',
-      descripcion: 'Prepara tu título académico, hoja de vida y fotocopia de CI en formato PDF o imagen.',
+      descripcion:
+          'Prepara tu título académico, hoja de vida y fotocopia de CI en formato PDF o imagen.',
       color: Color(0xFF6A1B9A),
     ),
     _PasoData(
       icono: Icons.description_outlined,
       titulo: 'Paso 3 · Carta de inscripción',
-      descripcion: 'La app generará automáticamente tu carta de solicitud de inscripción con tus datos.',
+      descripcion:
+          'La app generará automáticamente tu carta de solicitud de inscripción con tus datos.',
       color: Color(0xFF00695C),
     ),
     _PasoData(
       icono: Icons.receipt_long_outlined,
       titulo: 'Paso 4 · Comprobante de pago',
-      descripcion: 'Sube el comprobante de depósito bancario de matrícula y colegiatura para completar tu inscripción.',
+      descripcion:
+          'Sube el comprobante de depósito bancario de matrícula y colegiatura para completar tu inscripción.',
       color: Color(0xFFE65100),
     ),
   ];
@@ -1275,7 +1257,8 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
   @override
   Widget build(BuildContext context) {
     final tipo = widget.programa.tipo.isNotEmpty
-        ? widget.programa.tipo[0].toUpperCase() + widget.programa.tipo.substring(1).toLowerCase()
+        ? widget.programa.tipo[0].toUpperCase() +
+              widget.programa.tipo.substring(1).toLowerCase()
         : 'Programa';
     final nombre = widget.programa.titulo.isNotEmpty
         ? widget.programa.titulo
@@ -1286,8 +1269,8 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (ctx, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -1306,7 +1289,7 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF005BAC), Color(0xFF003F7A)],
                   begin: Alignment.topLeft,
@@ -1320,7 +1303,10 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -1338,7 +1324,11 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
                       const Spacer(),
                       IconButton(
                         onPressed: () => Navigator.of(ctx).pop(false),
-                        icon: const Icon(Icons.close, color: Colors.white70, size: 22),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white70,
+                          size: 22,
+                        ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -1376,7 +1366,11 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
                     final delay = i * 0.15;
                     final animation = CurvedAnimation(
                       parent: _controller,
-                      curve: Interval(delay, delay + 0.5, curve: Curves.easeOut),
+                      curve: Interval(
+                        delay,
+                        delay + 0.5,
+                        curve: Curves.easeOut,
+                      ),
                     );
                     return AnimatedBuilder(
                       animation: animation,
@@ -1397,12 +1391,18 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0F4FF),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF005BAC).withOpacity(0.2)),
+                      border: Border.all(
+                        color: const Color(0xFF005BAC).withOpacity(0.2),
+                      ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.lightbulb_outline, color: Color(0xFF005BAC), size: 18),
+                        const Icon(
+                          Icons.lightbulb_outline,
+                          color: Color(0xFF005BAC),
+                          size: 18,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -1423,7 +1423,12 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
             ),
             // Botones
             Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                MediaQuery.of(context).padding.bottom + 16,
+              ),
               child: Column(
                 children: [
                   SizedBox(
@@ -1434,12 +1439,17 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
                       icon: const Icon(Icons.arrow_forward_rounded, size: 20),
                       label: const Text(
                         'Iniciar inscripción',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF005BAC),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         elevation: 0,
                       ),
                     ),
@@ -1452,7 +1462,10 @@ class _PasosInscripcionSheetState extends State<_PasosInscripcionSheet>
                       onPressed: () => Navigator.of(ctx).pop(false),
                       child: Text(
                         'Cancelar',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -1536,4 +1549,6 @@ class _PasoTile extends StatelessWidget {
     );
   }
 }
+
+
 

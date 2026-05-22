@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/features/sistema/domain/entities/programa_posgrado.dart';
 import 'package:refactor_template/features/sistema/presentation/providers/programa_posgrado_provider.dart';
-import 'package:refactor_template/features/sistema/screens/diplomados/detalle_programa_screen.dart';
-import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
-import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
+import 'package:refactor_template/features/sistema/screens/diplomados/pantalla_detalle_programa.dart';
+import 'package:refactor_template/features/sistema/widgets/navegacion/icono_notificaciones_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/perfil/avatar_perfil_widget.dart';
 
 /// Pantalla de "Mis Programas" con filtros y lista de programas.
 class MisProgramasScreen extends ConsumerStatefulWidget {
@@ -23,7 +23,7 @@ class MisProgramasScreen extends ConsumerStatefulWidget {
 class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
   String _selectedFilter = 'Todos';
   final TextEditingController _searchController = TextEditingController();
-  int _selectedCategory = 0; // Índice del icono seleccionado
+  int _selectedCategory = 0; // Ãndice del icono seleccionado
   String _sortBy = 'nombre'; // 'nombre', 'progreso', 'saldo'
   bool _isGridView = false; // Vista de lista o grilla
   final Set<String> _favorites = {}; // IDs de programas favoritos
@@ -35,7 +35,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
 
   final List<String> _filters = [
     'Todos',
-    'Maestría',
+    'MaestrÃ­a',
     'Especialidad',
     'Diplomado',
     'Doctorado',
@@ -69,7 +69,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
     super.dispose();
   }
 
-  /// Widget que muestra el estado vacío cuando el usuario no tiene programas inscritos
+  /// Widget que muestra el estado vacÃ­o cuando el usuario no tiene programas inscritos
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
@@ -98,10 +98,10 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            
-            // Título
+
+            // TÃ­tulo
             Text(
-              '¡Aún no tienes programas!',
+              'Â¡AÃºn no tienes programas!',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -110,10 +110,10 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            
-            // Descripción
+
+            // DescripciÃ³n
             Text(
-              'Todas tus medallas están en plomo.\nInscríbete a un programa para comenzar a ganar medallas y avanzar en tu carrera profesional.',
+              'Todas tus medallas estÃ¡n en plomo.\nInscrÃ­bete a un programa para comenzar a ganar medallas y avanzar en tu carrera profesional.',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey.shade600,
@@ -122,21 +122,29 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            
+
             // Fila de medallas en plomo
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildMedalIcon(Icons.military_tech, Colors.grey.shade400, 'Bronce'),
+                _buildMedalIcon(
+                  Icons.military_tech,
+                  Colors.grey.shade400,
+                  'Bronce',
+                ),
                 const SizedBox(width: 16),
                 _buildMedalIcon(Icons.stars, Colors.grey.shade400, 'Plata'),
                 const SizedBox(width: 16),
-                _buildMedalIcon(Icons.emoji_events, Colors.grey.shade400, 'Oro'),
+                _buildMedalIcon(
+                  Icons.emoji_events,
+                  Colors.grey.shade400,
+                  'Oro',
+                ),
               ],
             ),
             const SizedBox(height: 40),
-            
-            // Botón de acción
+
+            // BotÃ³n de acciÃ³n
             ElevatedButton.icon(
               onPressed: () {
                 // Navegar a la pantalla de programas vigentes
@@ -150,7 +158,10 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1A3A5C),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -158,10 +169,10 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Texto secundario
             Text(
-              'Descubre maestrías, especialidades y diplomados\nque impulsarán tu crecimiento profesional',
+              'Descubre maestrÃ­as, especialidades y diplomados\nque impulsarÃ¡n tu crecimiento profesional',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade500,
@@ -175,7 +186,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
     );
   }
 
-  /// Widget individual de medalla (para el estado vacío)
+  /// Widget individual de medalla (para el estado vacÃ­o)
   Widget _buildMedalIcon(IconData icon, Color color, String label) {
     return Column(
       children: [
@@ -236,15 +247,16 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
         bottom: false,
+        top: false,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header azul con título y subtítulo
+              // Header azul con tÃ­tulo y subtÃ­tulo
               _buildHeader(),
-              // Barra de búsqueda
+              // Barra de bÃºsqueda
               _buildSearchBar(),
-              // Iconos de categorías conectados
+              // Iconos de categorÃ­as conectados
               _buildCategoryIcons(),
               // Filtros horizontales
               _buildFilters(),
@@ -273,40 +285,24 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
           bottomRight: Radius.circular(100),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 20, 20, 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        20 + MediaQuery.of(context).padding.top,
+        20,
+        24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Primera fila: Menú, Logo Posgrado y otros iconos
+          // Primera fila: Logo Posgrado y otros iconos
+          // El botón de menú lo provee el MainShell (botón flotante)
           FadeInDown(
             duration: const Duration(milliseconds: 500),
             child: Row(
               children: [
-                // Menú hamburguesa - Al principio
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.black, size: 26),
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      // TODO: Abrir menú lateral
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Logo Posgrado con animación
+                // Espacio reservado para el botón flotante de menú del MainShell
+                const SizedBox(width: 56),
+                // Logo Posgrado con animaciÃ³n
                 Image.asset(
                   'assets/images/logoposgrado.jpg',
                   height: 80,
@@ -346,7 +342,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                     ],
                   ),
                 ),
-                // Iconos adicionales (Notificaciones, Configuración, Avatar)
+                // Iconos adicionales (Notificaciones, ConfiguraciÃ³n, Avatar)
                 const SizedBox(width: 8),
                 const NotificationIconWidget(size: 40, iconSize: 22),
                 const SizedBox(width: 6),
@@ -394,7 +390,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // Título con animación
+          // TÃ­tulo con animaciÃ³n
           FadeInLeft(
             duration: const Duration(milliseconds: 800),
             delay: const Duration(milliseconds: 200),
@@ -420,12 +416,12 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          // Subtítulo con animación
+          // Subtitulo con animacion
           FadeInRight(
             duration: const Duration(milliseconds: 800),
             delay: const Duration(milliseconds: 300),
             child: Text(
-              'Todos los programas que está cursando o cursó.',
+              'Todos los programas que estÃ¡ cursando o cursÃ³.',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white.withOpacity(0.95),
@@ -786,7 +782,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
               ),
               child: Row(
                 children: [
-                  // Botón de ordenar
+                  // BotÃ³n de ordenar
                   Flexible(
                     child: GestureDetector(
                       onTap: () => _showSortDialog(context),
@@ -826,7 +822,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                     ),
                   ),
                   const Spacer(),
-                  // Botón de favoritos
+                  // BotÃ³n de favoritos
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -858,7 +854,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                     ),
                   ),
                   SizedBox(width: spacing),
-                  // Botón de vista (lista/grilla)
+                  // BotÃ³n de vista (lista/grilla)
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -994,13 +990,13 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
         final visiblePrograms = programas
             .where((programa) => _enrolledProgramIds.contains(programa.id))
             .toList();
-        
-        // Si no hay programas inscritos, mostrar estado vacío
+
+        // Si no hay programas inscritos, mostrar estado vacÃ­o
         if (visiblePrograms.isEmpty) {
           return _buildEmptyState(context);
         }
-        
-        // Filtrar por búsqueda
+
+        // Filtrar por bÃºsqueda
         var filteredPrograms = visiblePrograms.where((programa) {
           if (_searchController.text.isNotEmpty) {
             final searchLower = _searchController.text.toLowerCase();
@@ -1011,14 +1007,14 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
           return true;
         }).toList();
 
-        // Filtrar por favoritos si está activo
+        // Filtrar por favoritos si estÃ¡ activo
         if (_showOnlyFavorites) {
           filteredPrograms = filteredPrograms
               .where((p) => _favorites.contains(p.titulo))
               .toList();
         }
 
-        // Filtrar por categoría seleccionada
+        // Filtrar por categorÃ­a seleccionada
         if (_selectedCategory == 0) {
           // Completados
           filteredPrograms = filteredPrograms
@@ -1071,7 +1067,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                   : 65.0;
               return progresoB.compareTo(progresoA); // Mayor a menor
             case 'saldo':
-              // Simulado - en producción vendría del backend
+              // Simulado - en producciÃ³n vendrÃ­a del backend
               final saldoA = 1200.0;
               final saldoB = 200.0;
               return saldoA.compareTo(saldoB); // Mayor a menor
@@ -1096,7 +1092,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                 Text(
                   _searchController.text.isNotEmpty
                       ? 'No se encontraron programas con "${_searchController.text}"'
-                      : 'No hay programas en esta categoría',
+                      : 'No hay programas en esta categorÃ­a',
                   style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                   textAlign: TextAlign.center,
                 ),
@@ -1108,7 +1104,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                         _searchController.clear();
                       });
                     },
-                    child: const Text('Limpiar búsqueda'),
+                    child: const Text('Limpiar bÃºsqueda'),
                   ),
                 ],
               ],
@@ -1155,7 +1151,8 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                               mainAxisSpacing: 16,
                             ),
                         itemCount: filteredPrograms.length,
-                        cacheExtent: 100, // Menor caché para reducir uso de memoria
+                        cacheExtent:
+                            100, // Menor cachÃ© para reducir uso de memoria
                         itemBuilder: (context, index) {
                           final programa = filteredPrograms[index];
                           return RepaintBoundary(
@@ -1176,10 +1173,11 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => DetalleProgramaScreen(
-                                      titulo: programa.titulo,
-                                      tipo: programa.tipo,
-                                    ),
+                                    builder: (context) =>
+                                        DetalleProgramaPantalla(
+                                          titulo: programa.titulo,
+                                          tipo: programa.tipo,
+                                        ),
                                   ),
                                 );
                               },
@@ -1195,7 +1193,8 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                         ),
                         itemCount: filteredPrograms.length,
                         itemExtent: 280, // Altura fija para mejor rendimiento
-                        cacheExtent: 100, // Menor caché para reducir uso de memoria
+                        cacheExtent:
+                            100, // Menor cachÃ© para reducir uso de memoria
                         itemBuilder: (context, index) {
                           final programa = filteredPrograms[index];
                           return RepaintBoundary(
@@ -1222,7 +1221,7 @@ class _MisProgramasScreenState extends ConsumerState<MisProgramasScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          DetalleProgramaScreen(
+                                          DetalleProgramaPantalla(
                                             titulo: programa.titulo,
                                             tipo: programa.tipo,
                                           ),
@@ -1300,14 +1299,14 @@ class _ProgramCardState extends State<_ProgramCard>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    //se define la animación de escala del widget
+    //se define la animaciÃ³n de escala del widget
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.95,
-      //se define la curva de la animación
+      //se define la curva de la animaciÃ³n
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _rotationAnimation = Tween<double>(
-      //se define el valor inicial y final de la animación
+      //se define el valor inicial y final de la animaciÃ³n
       begin: 0.0,
       end: 0.02,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
@@ -1341,7 +1340,7 @@ class _ProgramCardState extends State<_ProgramCard>
         _controller.reverse();
         widget.onTap();
       },
-      //se cancela la animación
+      //se cancela la animaciÃ³n
       onTapCancel: () {
         setState(() => _isPressed = false);
         _controller.reverse();
@@ -1373,7 +1372,7 @@ class _ProgramCardState extends State<_ProgramCard>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Badge de tipo y estado con botón de favorito
+                    // Badge de tipo y estado con botÃ³n de favorito
                     Row(
                       children: [
                         Expanded(
@@ -1421,7 +1420,7 @@ class _ProgramCardState extends State<_ProgramCard>
                             ],
                           ),
                         ),
-                        // Botón de favorito
+                        // BotÃ³n de favorito
                         if (widget.onFavoriteToggle != null)
                           //se muestra el boton de favorito
                           GestureDetector(
@@ -1448,7 +1447,7 @@ class _ProgramCardState extends State<_ProgramCard>
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Título
+                    // TÃ­tulo
                     //se muestra el titulo del programa
                     Text(
                       widget.programa.titulo,
@@ -1461,7 +1460,7 @@ class _ProgramCardState extends State<_ProgramCard>
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 12),
-                    // Información del programa
+                    // InformaciÃ³n del programa
                     Row(
                       children: [
                         Icon(
@@ -1578,7 +1577,7 @@ class _ProgramCardState extends State<_ProgramCard>
                           ),
                           child: Center(
                             child: Text(
-                              estaCompletado ? '🎓' : '📚',
+                              estaCompletado ? 'ðŸŽ“' : 'ðŸ“š',
                               style: const TextStyle(fontSize: 32),
                             ),
                           ),
@@ -1639,9 +1638,9 @@ class _LoadingStateWidgetState extends State<_LoadingStateWidget>
     super.initState();
     _controller =
         AnimationController(vsync: this, duration: const Duration(seconds: 2))
-          //se repite la animación
+          //se repite la animaciÃ³n
           ..repeat();
-    //se define la animación de rotación del widget
+    //se define la animaciÃ³n de rotaciÃ³n del widget
 
     _rotationAnimation = Tween<double>(
       begin: 0.0,

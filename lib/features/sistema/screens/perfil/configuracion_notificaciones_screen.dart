@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:refactor_template/core/services/servicio_notificaciones.dart';
+import 'package:refactor_template/core/services/otros/servicio_notificaciones.dart';
 
 /// Pantalla para configurar preferencias de notificaciones
 class ConfiguracionNotificacionesScreen extends StatefulWidget {
@@ -82,7 +82,7 @@ class _ConfiguracionNotificacionesScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEEF1F8),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Notificaciones',
@@ -431,3 +431,4 @@ class _ConfiguracionNotificacionesScreenState
     );
   }
 }
+

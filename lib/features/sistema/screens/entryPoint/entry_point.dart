@@ -1,13 +1,12 @@
 import 'dart:math';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:refactor_template/config/constants/constants.dart';
+import 'package:go_router/go_router.dart';
 import 'package:refactor_template/core/widgets/offline_banner.dart';
-import 'package:refactor_template/features/sistema/screens/perfil/perfil_screen.dart';
-import 'package:rive/rive.dart'
-    hide LinearGradient, Image, Animation, PaintingStyle;
+import 'package:refactor_template/features/sistema/screens/inicio/pantalla_inicio_optimizada.dart';
+import 'package:refactor_template/features/sistema/widgets/navegacion/barra_navegacion_inferior_personalizada.dart';
+import 'package:rive/rive.dart' hide LinearGradient, Image;
 
 import 'components/menu_btn.dart';
 import 'components/side_bar.dart';
@@ -34,74 +33,77 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
   late AnimationController _animationController;
   late Animation<double> scalAnimation;
   late Animation<double> animation;
-  
-  // Animación de entrada estilo Windows 11
+
+  // Animación de entrada
   late AnimationController _entryController;
-  late Animation<double> _blurAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  bool _showContent = false;
+
+  void _onNavTap(int index) {
+    switch (index) {
+      case 0:
+        context.go('/diplomados');
+        break;
+      case 1:
+        context.go('/programas-vigentes');
+        break;
+      case 2:
+        context.go('/sistema/pantalla_principal');
+        break;
+      case 3:
+        context.go('/mi-curriculum');
+        break;
+      case 4:
+        context.go('/mis-documentos-personales');
+        break;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
-    )..addListener(() {
-        setState(() {});
-      });
-      
+    );
+    // NO usar addListener con setState — usar AnimatedBuilder en el build
+
     scalAnimation = Tween<double>(begin: 1, end: 0.8).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeInOutCubic,
       ),
     );
-    
+
     animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutCubic,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
-    
-    // Animación de entrada estilo Windows 11
+
+    // Animación de entrada
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 800), // Reducido de 1400ms
     );
-    
-    _blurAnimation = Tween<double>(begin: 30.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _entryController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic),
-      ),
-    );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entryController,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
       ),
     );
-    
-    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+
+    _scaleAnimation = Tween<double>(begin: 0.97, end: 1.0).animate(
       CurvedAnimation(
         parent: _entryController,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
       ),
     );
-    
+
     // Iniciar animación de entrada
     WidgetsBinding.instance.addPostFrameCallback((_) {
       HapticFeedback.lightImpact();
-      _entryController.forward().then((_) {
-        if (mounted) {
-          setState(() => _showContent = true);
-        }
-      });
+      _entryController.forward();
     });
   }
 
@@ -124,30 +126,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
       child: Scaffold(
         extendBody: true,
         resizeToAvoidBottomInset: false,
-        backgroundColor: backgroundColor2,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: AnimatedBuilder(
           animation: _entryController,
           builder: (context, child) {
-            return Stack(
-              children: [
-                // Contenido principal con blur y fade
-                ImageFiltered(
-                  imageFilter: ImageFilter.blur(
-                    sigmaX: _blurAnimation.value,
-                    sigmaY: _blurAnimation.value,
-                  ),
-                  child: Opacity(
-                    opacity: _fadeAnimation.value,
-                    child: Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: child!,
-                    ),
-                  ),
-                ),
-              ],
+            // Usar solo Opacity + Scale — sin ImageFilter.blur (muy costoso en GPU)
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.scale(
+                scale: _scaleAnimation.value,
+                child: child!,
+              ),
             );
           },
-          // OnboardingOverlay removido - ya no se muestra la pantalla flotante de bienvenida
           child: Stack(
             children: [
               AnimatedPositioned(
@@ -160,23 +151,27 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
                 top: 0,
                 child: SideBar(refreshTrigger: _sidebarRefreshTrigger),
               ),
-              Transform(
-                key: const ValueKey('mainScreen'),
-                alignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001)
-                  ..rotateY(
-                    1 * animation.value - 30 * (animation.value) * pi / 180,
-                  ),
-                child: Transform.translate(
-                  offset: Offset(animation.value * 265, 0),
-                  child: Transform.scale(
-                    scale: scalAnimation.value,
-                    child: const ClipRRect(
-                      borderRadius: BorderRadius.all(Radius.circular(24)),
-                      child: PerfilScreen(),
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) => Transform(
+                  key: const ValueKey('mainScreen'),
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001)
+                    ..rotateY(
+                      1 * animation.value - 30 * (animation.value) * pi / 180,
+                    ),
+                  child: Transform.translate(
+                    offset: Offset(animation.value * 265, 0),
+                    child: Transform.scale(
+                      scale: scalAnimation.value,
+                      child: child,
                     ),
                   ),
+                ),
+                child: const ClipRRect(
+                  borderRadius: BorderRadius.all(Radius.circular(24)),
+                  child: InicioPantalla(),
                 ),
               ),
               AnimatedPositioned(
@@ -238,6 +233,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal>
               ),
             ],
           ),
+        ),
+        bottomNavigationBar: CustomBottomNavBar(
+          currentIndex: 2,
+          onShellTap: _onNavTap,
         ),
       ),
     );

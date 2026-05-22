@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:rive/rive.dart' hide PaintingStyle;
 
 class MenuBtn extends StatelessWidget {
@@ -16,7 +16,7 @@ class MenuBtn extends StatelessWidget {
           margin: const EdgeInsets.only(left: 12),
           height: 40,
           width: 40,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
             boxShadow: [
@@ -36,3 +36,4 @@ class MenuBtn extends StatelessWidget {
     );
   }
 }
+

@@ -199,7 +199,7 @@ class PremiumAlerts {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (customHeader != null) customHeader,
+              ?customHeader,
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(

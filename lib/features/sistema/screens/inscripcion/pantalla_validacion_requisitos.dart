@@ -8,19 +8,21 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:refactor_template/config/constants/design_tokens.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
-import 'package:refactor_template/core/services/servicio_generador_carta_inscripcion.dart';
-import 'package:refactor_template/core/services/servicio_validacion_requisitos.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/documentos/servicio_generador_carta_inscripcion.dart';
+import 'package:refactor_template/core/services/validation/servicio_validacion_requisitos.dart';
 import 'package:refactor_template/features/sistema/domain/entities/requisito_inscripcion.dart';
-import 'package:refactor_template/features/sistema/screens/perfil/mis_datos_personales_screen.dart';
-import 'package:refactor_template/features/sistema/screens/perfil/mis_documentos_personales_screen.dart';
-import 'package:refactor_template/core/services/servicio_fotocopia_carnet.dart';
+import 'package:refactor_template/features/sistema/screens/perfil/datos_personales/mis_datos_personales_screen.dart';
+import 'package:refactor_template/features/sistema/screens/perfil/documentos/mis_documentos_personales_screen.dart';
+import 'package:refactor_template/core/services/documentos/servicio_fotocopia_carnet.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
 /// Pantalla para validar requisitos de inscripción antes de permitir inscribirse
 class PantallaValidacionRequisitos extends StatefulWidget {
   final String tipoPrograma;
   final String nombrePrograma;
+
   /// Modalidad del programa (Virtual, Presencial, Semi-presencial).
   /// Si no se provee, se usa 'Virtual' por defecto.
   final String modalidad;
@@ -66,83 +68,129 @@ class _PantallaValidacionRequisitosState
     }
   }
 
+  /// Valida requisitos en segundo plano — solo actualiza el progreso visual,
+  /// NO muestra diálogo de éxito ni hace Navigator.pop.
+  Future<void> _validarRequisitosSilencioso() async {
+    try {
+      final resultado = await _servicioValidacion.validarRequisitos(
+        tipoPrograma: widget.tipoPrograma,
+      );
+      if (!mounted) return;
+      setState(() {
+        _resultado = resultado;
+        _cargando = false;
+      });
+      _determinarSiPuedeAutoCompletar();
+      // Mostrar snackbar discreto si todos los requisitos están completos
+      if (resultado.todosLosRequisitosObligatoriosCumplidos && mounted) {
+        _mostrarMensaje(
+          '✅ Requisitos completos. Pulsa "Continuar" para inscribirte.',
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
   Future<void> _validarRequisitos() async {
     setState(() => _cargando = true);
+    // Timeout de seguridad: si algo falla, el loader no se queda colgado
+    Future.delayed(const Duration(seconds: 20), () {
+      if (mounted && _cargando) setState(() => _cargando = false);
+    });
 
     try {
       final resultado = await _servicioValidacion.validarRequisitos(
         tipoPrograma: widget.tipoPrograma,
       );
 
+      if (!mounted) return;
       setState(() {
         _resultado = resultado;
         _cargando = false;
       });
-      
-      // Llamar después de setState para asegurar que el estado esté actualizado
+
       _determinarSiPuedeAutoCompletar();
-      
-      // Auto-completar automáticamente si es posible (solo la primera vez)
+
       if (_puedeAutoCompletar && !_autoGeneracionIniciada) {
         _autoGeneracionIniciada = true;
-        // Ejecutar después de un pequeño delay para que la UI se actualice
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) _autoCompletarTodo();
         });
       }
 
-      // Si todos los requisitos están completos, ejecutar callback y cerrar para volver (ej. Programas Vigentes)
       if (resultado.todosLosRequisitosObligatoriosCumplidos) {
-        if (mounted) {
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 10),
-                  FadeInDown(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
-                      child: const Icon(Icons.check, color: Colors.white, size: 40),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text('¡Trámite Listo!',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A3A5C))),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Has cumplido con todos los requisitos obligatorios. Ya puedes proceder a inscribirte en tu programa.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _headerBlue,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('CONTINUAR A INSCRIPCIÓN',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
+        if (!mounted) return;
+        await showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-          );
-        }
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                FadeInDown(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  '¡Trámite Listo!',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A3A5C),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Has cumplido con todos los requisitos obligatorios. Ya puedes proceder a inscribirte en tu programa.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _headerBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'CONTINUAR A INSCRIPCIÓN',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
         widget.onRequisitosCompletos?.call();
         if (mounted) Navigator.of(context).pop(true);
       }
     } catch (e) {
-      setState(() => _cargando = false);
+      if (mounted) setState(() => _cargando = false);
       _mostrarError('Error al validar requisitos: $e');
     }
   }
@@ -156,10 +204,7 @@ class _PantallaValidacionRequisitosState
             const Icon(Icons.error_outline, color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                mensaje,
-                style: const TextStyle(fontSize: 13),
-              ),
+              child: Text(mensaje, style: const TextStyle(fontSize: 13)),
             ),
           ],
         ),
@@ -181,7 +226,7 @@ class _PantallaValidacionRequisitosState
     final resultado = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const MisDocumentosPersonalesScreen(),
+        builder: (context) => const MisDocumentosPersonalesPantalla(),
       ),
     );
 
@@ -195,7 +240,7 @@ class _PantallaValidacionRequisitosState
     final current =
         await LocalStorageService.getParticipantDocumentsData() ??
         <String, dynamic>{};
-    
+
     if (path == null) {
       current.remove(key);
       if (key == 'prorroga_path') current['defer_documents'] = false;
@@ -231,17 +276,18 @@ class _PantallaValidacionRequisitosState
 
   void _determinarSiPuedeAutoCompletar() {
     if (_resultado == null) return;
-    
-    final faltanAutoGenerables = _resultado!.resultados.any((r) => 
-      r.estado == EstadoRequisito.pendiente && 
-      (r.requisito.id == 'carta_inscripcion' || 
-       r.requisito.id == 'ficha_inscripcion' || 
-       r.requisito.id == 'formularios' ||
-       (r.mensaje?.contains('PIECES_READY') ?? false))
+
+    final faltanAutoGenerables = _resultado!.resultados.any(
+      (r) =>
+          r.estado == EstadoRequisito.pendiente &&
+          (r.requisito.id == 'carta_inscripcion' ||
+              r.requisito.id == 'ficha_inscripcion' ||
+              r.requisito.id == 'formularios' ||
+              (r.mensaje?.contains('PIECES_READY') ?? false)),
     );
 
     setState(() => _puedeAutoCompletar = faltanAutoGenerables);
-    
+
     // Auto-generar carta de inscripción automáticamente si está pendiente
     if (!_autoGeneracionIniciada && faltanAutoGenerables) {
       _autoGeneracionIniciada = true;
@@ -255,50 +301,65 @@ class _PantallaValidacionRequisitosState
       debugPrint('❌ No se puede auto-generar: _resultado es null');
       return;
     }
-    
+
     // Solo generar carta de inscripción automáticamente
-    final cartaReqs = _resultado!.resultados.where((r) => r.requisito.id == 'carta_inscripcion');
+    final cartaReqs = _resultado!.resultados.where(
+      (r) => r.requisito.id == 'carta_inscripcion',
+    );
     if (cartaReqs.isEmpty) {
       debugPrint('❌ No se encontró requisito de carta_inscripcion');
       return;
     }
-    
+
     final cartaReq = cartaReqs.first;
     debugPrint('📋 Estado de carta_inscripcion: ${cartaReq.estado}');
-    
+
     if (cartaReq.estado == EstadoRequisito.pendiente) {
-      debugPrint('🤖 Auto-generando carta de inscripción...');
+      debugPrint('🤖 Auto-generando carta de inscripción en segundo plano...');
       try {
-        await _generarCartaInscripcion();
+        await _generarCartaInscripcion(silencioso: true);
         debugPrint('✅ Carta de inscripción generada exitosamente');
       } catch (e) {
         debugPrint('❌ Error en auto-generación: $e');
       }
     } else {
-      debugPrint('ℹ️ Carta de inscripción ya está en estado: ${cartaReq.estado}');
+      debugPrint(
+        'ℹ️ Carta de inscripción ya está en estado: ${cartaReq.estado}',
+      );
     }
   }
 
   Future<void> _autoCompletarTodo() async {
     if (_resultado == null) return;
-    
+
     _mostrarMensaje('Iniciando recuperación y generación automática...');
 
     // 1. CI PDF
-    final ciReqs = _resultado!.resultados.where((r) => r.requisito.id == 'ci_fotocopias');
-    if (ciReqs.isNotEmpty && (ciReqs.first.mensaje?.contains('PIECES_READY') ?? false)) {
+    final ciReqs = _resultado!.resultados.where(
+      (r) => r.requisito.id == 'ci_fotocopias',
+    );
+    if (ciReqs.isNotEmpty &&
+        (ciReqs.first.mensaje?.contains('PIECES_READY') ?? false)) {
       await _generarFotocopiaCIPDF();
     }
 
     // 2. Carta
-    final cartaReqs = _resultado!.resultados.where((r) => r.requisito.id == 'carta_inscripcion');
-    if (cartaReqs.isNotEmpty && cartaReqs.first.estado == EstadoRequisito.pendiente) {
-      await _generarCartaInscripcion();
+    final cartaReqs = _resultado!.resultados.where(
+      (r) => r.requisito.id == 'carta_inscripcion',
+    );
+    if (cartaReqs.isNotEmpty &&
+        cartaReqs.first.estado == EstadoRequisito.pendiente) {
+      await _generarCartaInscripcion(silencioso: true);
     }
 
     // 3. Ficha
-    final fichaReqs = _resultado!.resultados.where((r) => r.requisito.id == 'ficha_inscripcion' || r.requisito.id == 'formularios');
-    if (fichaReqs.isNotEmpty && fichaReqs.first.estado == EstadoRequisito.pendiente) {
+    final fichaReqs = _resultado!.resultados.where(
+      (r) =>
+          r.requisito.id == 'ficha_inscripcion' ||
+          r.requisito.id == 'formularios',
+    );
+    if (fichaReqs.isNotEmpty &&
+        fichaReqs.first.estado == EstadoRequisito.pendiente) {
       await _generarFichaInscripcion();
     }
 
@@ -313,14 +374,16 @@ class _PantallaValidacionRequisitosState
     return TipoPrograma.diplomado;
   }
 
-  Future<void> _generarCartaInscripcion() async {
-    setState(() => _busyRequisitoId = 'carta_inscripcion');
+  Future<void> _generarCartaInscripcion({bool silencioso = false}) async {
+    if (!silencioso) setState(() => _busyRequisitoId = 'carta_inscripcion');
     try {
       debugPrint('📝 Iniciando generación de carta de inscripción...');
-      
+
       final personalData = await LocalStorageService.getPersonalData();
-      debugPrint('📋 Datos personales obtenidos: ${personalData?.keys.toList()}');
-      
+      debugPrint(
+        '📋 Datos personales obtenidos: ${personalData?.keys.toList()}',
+      );
+
       var nombreCompleto =
           '${personalData?['nombre'] ?? ''} ${personalData?['apPaterno'] ?? ''} ${personalData?['apMaterno'] ?? ''}'
               .trim();
@@ -331,13 +394,15 @@ class _PantallaValidacionRequisitosState
       } else {
         debugPrint('📋 Nombre completo: $nombreCompleto');
       }
-      
+
       final numeroCI = (personalData?['numeroCI'] ?? '').toString().trim();
       debugPrint('📋 Número CI: ${numeroCI.isEmpty ? "VACÍO" : numeroCI}');
-      
+
       if (numeroCI.isEmpty || nombreCompleto.isEmpty) {
-        debugPrint('⚠️ Datos faltantes - CI: ${numeroCI.isEmpty}, Nombre: ${nombreCompleto.isEmpty}');
-        
+        debugPrint(
+          '⚠️ Datos faltantes - CI: ${numeroCI.isEmpty}, Nombre: ${nombreCompleto.isEmpty}',
+        );
+
         if (!mounted) return;
         final bool? irACompletar = await showDialog<bool>(
           context: context,
@@ -353,7 +418,10 @@ class _PantallaValidacionRequisitosState
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                style: ElevatedButton.styleFrom(backgroundColor: _headerBlue, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _headerBlue,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Ir a completar'),
               ),
             ],
@@ -361,15 +429,17 @@ class _PantallaValidacionRequisitosState
         );
 
         if (irACompletar == true && mounted) {
-           await Navigator.push(
-             context,
-             MaterialPageRoute(builder: (context) => const MisDatosPersonalesScreen()),
-           );
-           _validarRequisitos(); // Re-validar al volver
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MisDatosPersonalesPantalla(),
+            ),
+          );
+          _validarRequisitos(); // Re-validar al volver
         }
         return;
       }
-      
+
       final expedidoEn = (personalData?['expedidoEn'] ?? '').toString().trim();
       final nombrePrograma = widget.nombrePrograma.isNotEmpty
           ? widget.nombrePrograma
@@ -381,19 +451,23 @@ class _PantallaValidacionRequisitosState
           : (personalData?['modalidadProgramaCarta'] ?? 'Virtual')
                 .toString()
                 .trim();
-      
+
       debugPrint('📋 Programa: $nombrePrograma');
       debugPrint('📋 Modalidad: $modalidad');
-      debugPrint('📋 Expedido en: ${expedidoEn.isEmpty ? "NO ESPECIFICADO" : expedidoEn}');
-      
+      debugPrint(
+        '📋 Expedido en: ${expedidoEn.isEmpty ? "NO ESPECIFICADO" : expedidoEn}',
+      );
+
       final numeroRef = DateTime.now().millisecondsSinceEpoch % 10000;
-      
+
       // Obtener la ruta de la firma digital
       final firmaPath = await LocalStorageService.getSignatureImagePath();
-      debugPrint('✍️ Firma digital: ${firmaPath != null ? "Configurada" : "No configurada"}');
-      
+      debugPrint(
+        '✍️ Firma digital: ${firmaPath != null ? "Configurada" : "No configurada"}',
+      );
+
       final generador = ServicioGeneradorCartaInscripcion();
-      
+
       debugPrint('🔄 Generando carta con ServicioGeneradorCartaInscripcion...');
       final ruta = await generador.generarCarta(
         tipoPrograma: _getTipoProgramaEnum(),
@@ -407,23 +481,28 @@ class _PantallaValidacionRequisitosState
         signatureImagePath: firmaPath, // ✅ Pasar la firma
         guardarEnPreferencias: false,
       );
-      
+
       debugPrint('✅ Carta generada en: $ruta');
-      
+
       await _saveDocPath('carta_inscripcion_path', ruta);
       debugPrint('✅ Ruta guardada en LocalStorage');
-      
+
       if (!mounted) return;
-      _mostrarMensaje('Carta de inscripción generada');
-      
-      debugPrint('🔄 Re-validando requisitos...');
-      await _validarRequisitos();
-      debugPrint('✅ Validación completada');
-      
+
+      if (silencioso) {
+        // Modo background: actualizar progreso sin diálogos ni pop
+        debugPrint('✅ Carta generada en segundo plano');
+        _validarRequisitosSilencioso();
+      } else {
+        _mostrarMensaje('Carta de inscripción generada');
+        debugPrint('🔄 Re-validando requisitos...');
+        await _validarRequisitos();
+        debugPrint('✅ Validación completada');
+      }
     } catch (e, stackTrace) {
       debugPrint('❌ Error al generar carta: $e');
       debugPrint('❌ Stack trace: $stackTrace');
-      _mostrarError('Error al generar carta: $e');
+      if (!silencioso) _mostrarError('Error al generar carta: $e');
     } finally {
       if (mounted) setState(() => _busyRequisitoId = null);
     }
@@ -433,36 +512,58 @@ class _PantallaValidacionRequisitosState
     setState(() => _busyRequisitoId = 'ficha_inscripcion');
     try {
       final personalData = await LocalStorageService.getPersonalData();
-      final participantDocs = await LocalStorageService.getParticipantDocumentsData();
-      
+      final participantDocs =
+          await LocalStorageService.getParticipantDocumentsData();
+
       final nombreCompleto =
           '${personalData?['nombre'] ?? ''} ${personalData?['apPaterno'] ?? ''} ${personalData?['apMaterno'] ?? ''}'
               .trim();
       final numeroCI = (personalData?['numeroCI'] ?? '').toString().trim();
       final email = (personalData?['email'] ?? '').toString().trim();
       final telefono = (personalData?['telefono'] ?? '').toString().trim();
-      final fechaNac = (personalData?['fechaNacimiento'] ?? '').toString().trim();
+      final fechaNac = (personalData?['fechaNacimiento'] ?? '')
+          .toString()
+          .trim();
       final domicilio = (personalData?['domicilio'] ?? '').toString().trim();
       final ocupacion = (personalData?['ocupacion'] ?? '').toString().trim();
-      final lugarTrabajo = (personalData?['lugarTrabajo'] ?? '').toString().trim();
-      final institucion = (personalData?['institucion'] ?? '').toString().trim();
-      final cargoActual = (personalData?['cargoActual'] ?? '').toString().trim();
+      final lugarTrabajo = (personalData?['lugarTrabajo'] ?? '')
+          .toString()
+          .trim();
+      final institucion = (personalData?['institucion'] ?? '')
+          .toString()
+          .trim();
+      final cargoActual = (personalData?['cargoActual'] ?? '')
+          .toString()
+          .trim();
       final vigencia = (personalData?['vigencia'] ?? '').toString().trim();
       final localidad = (personalData?['localidad'] ?? '').toString().trim();
       final provincia = (personalData?['provincia'] ?? '').toString().trim();
-      final departamento = (personalData?['departamento'] ?? '').toString().trim();
-      
+      final departamento = (personalData?['departamento'] ?? '')
+          .toString()
+          .trim();
+
       // Formación académica
-      final licenciatura = (personalData?['licenciatura'] ?? '').toString().trim();
-      final institucionLic = (personalData?['institucionLicenciatura'] ?? '').toString().trim();
-      final anoExpedicion = (personalData?['anoExpedicionTitulo'] ?? '').toString().trim();
-      final nroRegistro = (personalData?['numeroRegistroTitulo'] ?? '').toString().trim();
+      final licenciatura = (personalData?['licenciatura'] ?? '')
+          .toString()
+          .trim();
+      final institucionLic = (personalData?['institucionLicenciatura'] ?? '')
+          .toString()
+          .trim();
+      final anoExpedicion = (personalData?['anoExpedicionTitulo'] ?? '')
+          .toString()
+          .trim();
+      final nroRegistro = (personalData?['numeroRegistroTitulo'] ?? '')
+          .toString()
+          .trim();
       final profesion = (personalData?['profesion'] ?? '').toString().trim();
-      final areaEspecializacion = (personalData?['areaEspecializacion'] ?? '').toString().trim();
-      
+      final areaEspecializacion = (personalData?['areaEspecializacion'] ?? '')
+          .toString()
+          .trim();
+
       // Foto de perfil en base64
       String fotoBase64 = '';
-      final profilePhotoPath = participantDocs?['profile_photo_path'] as String?;
+      final profilePhotoPath =
+          participantDocs?['profile_photo_path'] as String?;
       if (profilePhotoPath != null && profilePhotoPath.isNotEmpty) {
         try {
           final photoFile = File(profilePhotoPath);
@@ -474,11 +575,13 @@ class _PantallaValidacionRequisitosState
           debugPrint('Error cargando foto: $e');
         }
       }
-      
+
       final now = DateTime.now();
-      final fechaStr = '${now.day} de ${_getMesEspanol(now.month)} de ${now.year}';
-      
-      final html = '''
+      final fechaStr =
+          '${now.day} de ${_getMesEspanol(now.month)} de ${now.year}';
+
+      final html =
+          '''
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -866,7 +969,7 @@ class _PantallaValidacionRequisitosState
     </div>
 </body>
 </html>''';
-      
+
       final dir = await getApplicationDocumentsDirectory();
       final fichaDir = Directory('${dir.path}/fichas_inscripcion');
       if (!await fichaDir.exists()) await fichaDir.create(recursive: true);
@@ -884,11 +987,22 @@ class _PantallaValidacionRequisitosState
       if (mounted) setState(() => _busyRequisitoId = null);
     }
   }
-  
+
   String _getMesEspanol(int mes) {
     const meses = [
-      '', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      '',
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
     ];
     return meses[mes];
   }
@@ -899,9 +1013,15 @@ class _PantallaValidacionRequisitosState
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 10),
-            Expanded(child: Text(mensaje, style: const TextStyle(fontSize: 13))),
+            Expanded(
+              child: Text(mensaje, style: const TextStyle(fontSize: 13)),
+            ),
           ],
         ),
         backgroundColor: DesignTokens.successGreen,
@@ -914,7 +1034,7 @@ class _PantallaValidacionRequisitosState
 
   Future<void> _mostrarDialogoComprobantePago() async {
     if (!mounted) return;
-    
+
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -938,7 +1058,7 @@ class _PantallaValidacionRequisitosState
               ),
             ),
             const SizedBox(height: 20),
-            
+
             // Título
             Row(
               children: [
@@ -970,19 +1090,16 @@ class _PantallaValidacionRequisitosState
                       SizedBox(height: 4),
                       Text(
                         'Selecciona el tipo de pago',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Opciones de pago
             _buildPaymentOption(
               context: context,
@@ -998,9 +1115,9 @@ class _PantallaValidacionRequisitosState
                 );
               },
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             _buildPaymentOption(
               context: context,
               icon: Icons.payment_rounded,
@@ -1015,9 +1132,9 @@ class _PantallaValidacionRequisitosState
                 );
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Botón cancelar
             SizedBox(
               width: double.infinity,
@@ -1028,14 +1145,11 @@ class _PantallaValidacionRequisitosState
                 ),
                 child: const Text(
                   'Cancelar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
-            
+
             SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
           ],
         ),
@@ -1089,10 +1203,7 @@ class _PantallaValidacionRequisitosState
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -1139,7 +1250,11 @@ class _PantallaValidacionRequisitosState
           await LocalStorageService.getParticipantDocumentsData() ??
           <String, dynamic>{};
       String? key;
-      String titulo = _getTituloRequisito(_resultado!.resultados.firstWhere((r) => r.requisito.id == requisitoId).requisito);
+      String titulo = _getTituloRequisito(
+        _resultado!.resultados
+            .firstWhere((r) => r.requisito.id == requisitoId)
+            .requisito,
+      );
 
       switch (requisitoId) {
         case 'fotografias':
@@ -1169,47 +1284,57 @@ class _PantallaValidacionRequisitosState
           if (docs[key] == null) key = 'comprobante_colegiatura_path';
           break;
         default:
-          key = _resultado!.resultados.firstWhere((r) => r.requisito.id == requisitoId).requisito.campoDocumento;
+          key = _resultado!.resultados
+              .firstWhere((r) => r.requisito.id == requisitoId)
+              .requisito
+              .campoDocumento;
       }
 
       if (key == null) {
         debugPrint('❌ No se encontró key para requisito: $requisitoId');
-        _mostrarError('No se pudo determinar el documento para este requisito.');
+        _mostrarError(
+          'No se pudo determinar el documento para este requisito.',
+        );
         return;
       }
-      
+
       final raw = docs[key];
       final path = raw?.toString().trim();
-      
+
       debugPrint('📄 Intentando previsualizar documento:');
       debugPrint('   Requisito: $requisitoId');
       debugPrint('   Key: $key');
       debugPrint('   Path: $path');
-      
+
       if (path == null || path.isEmpty) {
         debugPrint('❌ Path vacío o nulo para key: $key');
-        _mostrarError('No se encontró el documento para este requisito. Genera el documento primero.');
+        _mostrarError(
+          'No se encontró el documento para este requisito. Genera el documento primero.',
+        );
         return;
       }
 
       final file = File(path);
       if (!await file.exists()) {
         debugPrint('❌ El archivo no existe físicamente: $path');
-        _mostrarError('El archivo no existe físicamente en el dispositivo. Intenta generarlo nuevamente.');
+        _mostrarError(
+          'El archivo no existe físicamente en el dispositivo. Intenta generarlo nuevamente.',
+        );
         return;
       }
 
       debugPrint('✅ Archivo encontrado, abriendo: $path');
 
       // Manejar diferentes tipos de archivos
-      if (path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm')) {
+      if (path.toLowerCase().endsWith('.html') ||
+          path.toLowerCase().endsWith('.htm')) {
         await _showHtmlPreview(titulo, path);
       } else if (path.toLowerCase().endsWith('.pdf')) {
         // Para PDFs (como fotocopia de CI), mostrar en WebView
         await _showPdfPreview(titulo, path);
-      } else if (path.toLowerCase().endsWith('.jpg') || 
-                 path.toLowerCase().endsWith('.jpeg') || 
-                 path.toLowerCase().endsWith('.png')) {
+      } else if (path.toLowerCase().endsWith('.jpg') ||
+          path.toLowerCase().endsWith('.jpeg') ||
+          path.toLowerCase().endsWith('.png')) {
         // Para imágenes (como fotografías), mostrar en visor de imágenes
         await _showImagePreview(titulo, path);
       } else {
@@ -1228,7 +1353,7 @@ class _PantallaValidacionRequisitosState
       final docs = await LocalStorageService.getParticipantDocumentsData();
       final front = docs?['ci_front_path'] as String?;
       final back = docs?['ci_back_path'] as String?;
-      
+
       if (front == null || back == null) {
         _mostrarError('Faltan capturas de anverso o reverso.');
         return;
@@ -1246,16 +1371,17 @@ class _PantallaValidacionRequisitosState
       );
 
       if (pdfPath != null) {
-        final current = await LocalStorageService.getParticipantDocumentsData() ?? {};
+        final current =
+            await LocalStorageService.getParticipantDocumentsData() ?? {};
         current['ci_photocopy_pdf_path'] = pdfPath;
         await LocalStorageService.saveParticipantDocumentsData(current);
-        
+
         if (!mounted) return;
         _mostrarMensaje('Fotocopia PDF generada correctamente');
-        
+
         // Revalidar para actualizar el estado de los requisitos
         await _validarRequisitos();
-        
+
         debugPrint('✅ Fotocopia CI PDF guardada en: $pdfPath');
       } else {
         _mostrarError('No se pudo generar el PDF de la fotocopia.');
@@ -1276,9 +1402,7 @@ class _PantallaValidacionRequisitosState
     String folderName,
   ) async {
     final dir = await getApplicationDocumentsDirectory();
-    final outDir = Directory(
-      '${dir.path}${Platform.pathSeparator}$folderName',
-    );
+    final outDir = Directory('${dir.path}${Platform.pathSeparator}$folderName');
     if (!await outDir.exists()) {
       await outDir.create(recursive: true);
     }
@@ -1286,8 +1410,7 @@ class _PantallaValidacionRequisitosState
     final sep = Platform.pathSeparator;
     final fileName = originalPath.split(sep).last;
     final dotIndex = fileName.lastIndexOf('.');
-    final baseName =
-        dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+    final baseName = dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
 
     final outPath =
         '${outDir.path}${Platform.pathSeparator}$baseName.$newExtension';
@@ -1306,7 +1429,10 @@ class _PantallaValidacionRequisitosState
       if (result.type != ResultType.done) {
         // Fallback: intentar con url_launcher
         final uri = Uri.file(htmlPath);
-        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
         if (!launched && mounted) {
           _mostrarError(
             'No se encontró una aplicación para abrir el documento.\n'
@@ -1334,10 +1460,8 @@ class _PantallaValidacionRequisitosState
 
       // Usar printing para generar PDF real desde HTML preservando el diseño
       await Printing.layoutPdf(
-        onLayout: (format) async => await Printing.convertHtml(
-          format: format,
-          html: html,
-        ),
+        onLayout: (format) async =>
+            await Printing.convertHtml(format: format, html: html),
         name: titulo,
       );
     } catch (e) {
@@ -1358,11 +1482,17 @@ class _PantallaValidacionRequisitosState
       // Texto plano solo para exportar a PDF (se mantiene la lógica anterior)
       var cleanHtml = html
           .replaceAll(
-              RegExp(r'<style[\s\S]*?</style>', caseSensitive: false), '')
+            RegExp(r'<style[\s\S]*?</style>', caseSensitive: false),
+            '',
+          )
           .replaceAll(
-              RegExp(r'<script[\s\S]*?</script>', caseSensitive: false), '')
+            RegExp(r'<script[\s\S]*?</script>', caseSensitive: false),
+            '',
+          )
           .replaceAll(
-              RegExp(r'<head[\s\S]*?</head>', caseSensitive: false), '');
+            RegExp(r'<head[\s\S]*?</head>', caseSensitive: false),
+            '',
+          );
       var text = cleanHtml
           .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
           .replaceAll(RegExp(r'</p>', caseSensitive: false), '\n\n')
@@ -1394,10 +1524,19 @@ class _PantallaValidacionRequisitosState
 
             // Fijar ancho de la página en el HTML para que se vea igual que en Word
             // Usar regex para asegurar que el reemplazo sea robusto
-            final viewportRegex = RegExp(r'''<meta\s+name=["\']viewport["\']\s+content=["\'][^"\']*["\']\s*/?>''', caseSensitive: false);
-            final htmlConViewport = html.contains(viewportRegex) 
-                ? html.replaceFirst(viewportRegex, '<meta name="viewport" content="width=612, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">')
-                : html.replaceFirst('<head>', '<head><meta name="viewport" content="width=612, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">');
+            final viewportRegex = RegExp(
+              r'''<meta\s+name=["\']viewport["\']\s+content=["\'][^"\']*["\']\s*/?>''',
+              caseSensitive: false,
+            );
+            final htmlConViewport = html.contains(viewportRegex)
+                ? html.replaceFirst(
+                    viewportRegex,
+                    '<meta name="viewport" content="width=612, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">',
+                  )
+                : html.replaceFirst(
+                    '<head>',
+                    '<head><meta name="viewport" content="width=612, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">',
+                  );
 
             final controller = WebViewController()
               ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -1439,7 +1578,10 @@ class _PantallaValidacionRequisitosState
                             height: scaledH,
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              border: Border.all(color: Colors.grey.shade300, width: 0.5),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 0.5,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.15),
@@ -1483,15 +1625,16 @@ class _PantallaValidacionRequisitosState
                                 _exportHtmlToWord(path);
                               },
                             ),
-                              ListTile(
-                                leading:
-                                    const Icon(Icons.picture_as_pdf_outlined),
-                                title: const Text('Exportar a PDF'),
-                                onTap: () {
-                                  Navigator.of(bottomCtx).pop();
-                                  _exportHtmlToPdf(path, titulo);
-                                },
+                            ListTile(
+                              leading: const Icon(
+                                Icons.picture_as_pdf_outlined,
                               ),
+                              title: const Text('Exportar a PDF'),
+                              onTap: () {
+                                Navigator.of(bottomCtx).pop();
+                                _exportHtmlToPdf(path, titulo);
+                              },
+                            ),
                           ],
                         ),
                       );
@@ -1552,10 +1695,7 @@ class _PantallaValidacionRequisitosState
                         ),
                       ],
                     ),
-                    child: Image.file(
-                      file,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.file(file, fit: BoxFit.contain),
                   ),
                 ),
               ),
@@ -1582,15 +1722,15 @@ class _PantallaValidacionRequisitosState
       // WebView no puede mostrar PDFs nativamente en Android
       // Usar OpenFilex para abrir con visor de PDF del sistema
       debugPrint('📱 Abriendo PDF con visor del sistema: $path');
-      
+
       final result = await OpenFilex.open(path);
-      
+
       if (result.type != ResultType.done) {
         debugPrint('⚠️ No se pudo abrir el PDF: ${result.message}');
-        
+
         // Mostrar diálogo con opciones
         if (!mounted) return;
-        
+
         await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -1684,10 +1824,18 @@ class _PantallaValidacionRequisitosState
         centerTitle: false,
         title: const Text(
           'Requisitos de Inscripción',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -1719,7 +1867,11 @@ class _PantallaValidacionRequisitosState
           const SizedBox(height: 20),
           Text(
             'Verificando requisitos...',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 15, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -1799,7 +1951,11 @@ class _PantallaValidacionRequisitosState
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: _headerBlue.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: _headerBlue.withOpacity(0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Row(
@@ -1819,20 +1975,33 @@ class _PantallaValidacionRequisitosState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     widget.tipoPrograma.toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   widget.nombrePrograma,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, height: 1.3),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1902,45 +2071,49 @@ class _PantallaValidacionRequisitosState
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Paso 1: Datos personales
           _buildPasoCard(
             numero: 1,
             titulo: 'Datos personales',
-            descripcion: 'Asegúrate de tener tu nombre completo, CI y datos de contacto actualizados en tu perfil.',
+            descripcion:
+                'Asegúrate de tener tu nombre completo, CI y datos de contacto actualizados en tu perfil.',
             icono: Icons.person_outline,
             color: const Color(0xFF4A90E2),
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Paso 2: Documentos requeridos
           _buildPasoCard(
             numero: 2,
             titulo: 'Documentos requeridos',
-            descripcion: 'Prepara tu título académico, hoja de vida y fotocopia de CI en formato PDF o imagen.',
+            descripcion:
+                'Prepara tu título académico, hoja de vida y fotocopia de CI en formato PDF o imagen.',
             icono: Icons.description_outlined,
             color: const Color(0xFF9B59B6),
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Paso 3: Carta de inscripción
           _buildPasoCard(
             numero: 3,
             titulo: 'Carta de inscripción',
-            descripcion: 'La app generará automáticamente tu carta de solicitud de inscripción con tus datos.',
+            descripcion:
+                'La app generará automáticamente tu carta de solicitud de inscripción con tus datos.',
             icono: Icons.article_outlined,
             color: const Color(0xFF16A085),
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Paso 4: Comprobante de pago
           _buildPasoCard(
             numero: 4,
             titulo: 'Comprobante de pago',
-            descripcion: 'Sube el comprobante de depósito bancario de matrícula y colegiatura para completar tu inscripción.',
+            descripcion:
+                'Sube el comprobante de depósito bancario de matrícula y colegiatura para completar tu inscripción.',
             icono: Icons.receipt_long_outlined,
             color: const Color(0xFFE67E22),
           ),
@@ -1961,10 +2134,7 @@ class _PantallaValidacionRequisitosState
       decoration: BoxDecoration(
         color: color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1976,11 +2146,7 @@ class _PantallaValidacionRequisitosState
               color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icono,
-              color: color,
-              size: 24,
-            ),
+            child: Icon(icono, color: color, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -2001,10 +2167,7 @@ class _PantallaValidacionRequisitosState
                     const SizedBox(width: 6),
                     Text(
                       '·',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[400],
-                      ),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[400]),
                     ),
                     const SizedBox(width: 6),
                     Flexible(
@@ -2057,7 +2220,11 @@ class _PantallaValidacionRequisitosState
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -2084,7 +2251,9 @@ class _PantallaValidacionRequisitosState
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          color: isComplete ? DesignTokens.successGreen : _headerBlue,
+                          color: isComplete
+                              ? DesignTokens.successGreen
+                              : _headerBlue,
                         ),
                       ),
                     ),
@@ -2097,24 +2266,37 @@ class _PantallaValidacionRequisitosState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isComplete ? '¡Listo para inscribirse!' : 'Progreso de requisitos',
+                      isComplete
+                          ? '¡Listo para inscribirse!'
+                          : 'Progreso de requisitos',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: isComplete ? DesignTokens.successGreen : DesignTokens.primaryText,
+                        color: isComplete
+                            ? DesignTokens.successGreen
+                            : DesignTokens.primaryText,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        _buildChipEstado('$completados OK', DesignTokens.successGreen),
+                        _buildChipEstado(
+                          '$completados OK',
+                          DesignTokens.successGreen,
+                        ),
                         const SizedBox(width: 6),
                         if (conProrroga > 0) ...[
-                          _buildChipEstado('$conProrroga Prórroga', DesignTokens.warningOrange),
+                          _buildChipEstado(
+                            '$conProrroga Prórroga',
+                            DesignTokens.warningOrange,
+                          ),
                           const SizedBox(width: 6),
                         ],
                         if (pendientes > 0)
-                          _buildChipEstado('$pendientes Pend.', Colors.red.shade400),
+                          _buildChipEstado(
+                            '$pendientes Pend.',
+                            Colors.red.shade400,
+                          ),
                       ],
                     ),
                   ],
@@ -2141,32 +2323,41 @@ class _PantallaValidacionRequisitosState
 
   Widget _buildSmartAdvice() {
     if (_resultado == null) return const SizedBox.shrink();
-    
-    final faltantes = _resultado!.resultados.where((r) => r.requisito.esObligatorio && !r.estaCumplido).length;
+
+    final faltantes = _resultado!.resultados
+        .where((r) => r.requisito.esObligatorio && !r.estaCumplido)
+        .length;
     if (faltantes == 0) return const SizedBox.shrink();
 
     String consejo = '';
     IconData icono = Icons.lightbulb_outline_rounded;
     Color colorBase = Colors.amber;
-    
+
     if (_puedeAutoCompletar) {
-      consejo = 'He notado que tenemos tus datos básicos. Pulsa "Recuperar y Generar" arriba para ahorrar tiempo.';
+      consejo =
+          'He notado que tenemos tus datos básicos. Pulsa "Recuperar y Generar" arriba para ahorrar tiempo.';
       icono = Icons.auto_awesome_rounded;
       colorBase = Colors.blue;
     } else if (faltantes > 5) {
-      consejo = '¡Bienvenido! Te sugiero comenzar escaneando tu Cédula de Identidad en "Mis Documentos".';
+      consejo =
+          '¡Bienvenido! Te sugiero comenzar escaneando tu Cédula de Identidad en "Mis Documentos".';
     } else if (faltantes == 1) {
-      final req = _resultado!.resultados.firstWhere((r) => r.requisito.esObligatorio && !r.estaCumplido);
+      final req = _resultado!.resultados.firstWhere(
+        (r) => r.requisito.esObligatorio && !r.estaCumplido,
+      );
       final id = req.requisito.id;
       if (id == "pago_matricula") {
-        consejo = '¡Ya casi terminas! Solo falta adjuntar el comprobante de tu depósito bancario.';
+        consejo =
+            '¡Ya casi terminas! Solo falta adjuntar el comprobante de tu depósito bancario.';
       } else {
-        consejo = '¡Sigue así! Solo te falta completar un último requisito obligatorio.';
+        consejo =
+            '¡Sigue así! Solo te falta completar un último requisito obligatorio.';
       }
       colorBase = Colors.green;
       icono = Icons.stars_rounded;
     } else {
-      consejo = 'Consejo: Si no tienes tu título físico, puedes generar una carta de prórroga al instante.';
+      consejo =
+          'Consejo: Si no tienes tu título físico, puedes generar una carta de prórroga al instante.';
     }
 
     return FadeInRight(
@@ -2187,9 +2378,9 @@ class _PantallaValidacionRequisitosState
               child: Text(
                 consejo,
                 style: TextStyle(
-                  color: colorBase, 
-                  fontSize: 13, 
-                  height: 1.4, 
+                  color: colorBase,
+                  fontSize: 13,
+                  height: 1.4,
                   fontWeight: FontWeight.w700,
                   fontFamily: 'Intel',
                 ),
@@ -2208,7 +2399,14 @@ class _PantallaValidacionRequisitosState
         color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
@@ -2222,7 +2420,11 @@ class _PantallaValidacionRequisitosState
       children: [
         Row(
           children: [
-            const Icon(Icons.checklist_rounded, size: 20, color: Color(0xFF005BAC)),
+            const Icon(
+              Icons.checklist_rounded,
+              size: 20,
+              color: Color(0xFF005BAC),
+            ),
             const SizedBox(width: 8),
             Text(
               'Requisitos Obligatorios',
@@ -2254,19 +2456,30 @@ class _PantallaValidacionRequisitosState
 
   IconData _getIconoRequisito(String id) {
     switch (id) {
-      case 'fotografias': return Icons.photo_camera_rounded;
-      case 'pago_matricula': return Icons.receipt_long_rounded;
+      case 'fotografias':
+        return Icons.photo_camera_rounded;
+      case 'pago_matricula':
+        return Icons.receipt_long_rounded;
       case 'ficha_inscripcion':
-      case 'formularios': return Icons.assignment_rounded;
-      case 'ci_fotocopias': return Icons.badge_rounded;
-      case 'titulo_academico': return Icons.school_rounded;
-      case 'carta_inscripcion': return Icons.description_rounded;
-      case 'hoja_vida': return Icons.person_pin_rounded;
-      default: return Icons.task_alt_rounded;
+      case 'formularios':
+        return Icons.assignment_rounded;
+      case 'ci_fotocopias':
+        return Icons.badge_rounded;
+      case 'titulo_academico':
+        return Icons.school_rounded;
+      case 'carta_inscripcion':
+        return Icons.description_rounded;
+      case 'hoja_vida':
+        return Icons.person_pin_rounded;
+      default:
+        return Icons.task_alt_rounded;
     }
   }
 
-  Widget _buildRequisitoItem(ResultadoValidacionRequisito resultado, int index) {
+  Widget _buildRequisitoItem(
+    ResultadoValidacionRequisito resultado,
+    int index,
+  ) {
     final color = _getColorEstado(resultado.estado);
     final textoEstado = _getTextoEstado(resultado.estado);
     final isCompleto = resultado.estado == EstadoRequisito.completado;
@@ -2280,13 +2493,16 @@ class _PantallaValidacionRequisitosState
     final isPiecesReady = resultado.mensaje?.contains('PIECES_READY') ?? false;
 
     // Quitar el prefijo técnico del mensaje para mostrarlo al usuario
-    final displayMensaje = isPiecesReady 
-        ? resultado.mensaje!.replaceAll('PIECES_READY: ', '') 
+    final displayMensaje = isPiecesReady
+        ? resultado.mensaje!.replaceAll('PIECES_READY: ', '')
         : resultado.mensaje;
 
-    final canPreviewAny = isCompleto || (isProrroga && resultado.requisito.id == 'titulo_academico');
+    final canPreviewAny =
+        isCompleto ||
+        (isProrroga && resultado.requisito.id == 'titulo_academico');
 
-    final hasAction = isPending &&
+    final hasAction =
+        isPending &&
         (resultado.requisito.id == 'carta_inscripcion' ||
             resultado.requisito.id == 'ficha_inscripcion' ||
             resultado.requisito.id == 'formularios' ||
@@ -2319,10 +2535,7 @@ class _PantallaValidacionRequisitosState
               left: 0,
               top: 0,
               bottom: 0,
-              child: Container(
-                width: 5,
-                color: color,
-              ),
+              child: Container(width: 5, color: color),
             ),
             Padding(
               padding: const EdgeInsets.all(14),
@@ -2360,7 +2573,12 @@ class _PantallaValidacionRequisitosState
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                _buildBadgeEstado(textoEstado, color, isCompleto, isProrroga),
+                                _buildBadgeEstado(
+                                  textoEstado,
+                                  color,
+                                  isCompleto,
+                                  isProrroga,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -2380,38 +2598,54 @@ class _PantallaValidacionRequisitosState
                     ],
                   ),
                   // Mensaje de estado
-                    if (displayMensaje != null) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: isPiecesReady ? Colors.blue.withOpacity(0.1) : color.withOpacity(0.07),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              isCompleto ? Icons.check_circle_outline_rounded
-                                  : isProrroga ? Icons.schedule_rounded
-                                  : isPiecesReady ? Icons.auto_awesome_rounded : Icons.info_outline_rounded,
-                              color: isPiecesReady ? Colors.blue : color,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                displayMensaje,
-                                style: TextStyle(color: isPiecesReady ? Colors.blue : color, fontSize: 11.5, height: 1.3),
+                  if (displayMensaje != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isPiecesReady
+                            ? Colors.blue.withOpacity(0.1)
+                            : color.withOpacity(0.07),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            isCompleto
+                                ? Icons.check_circle_outline_rounded
+                                : isProrroga
+                                ? Icons.schedule_rounded
+                                : isPiecesReady
+                                ? Icons.auto_awesome_rounded
+                                : Icons.info_outline_rounded,
+                            color: isPiecesReady ? Colors.blue : color,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              displayMensaje,
+                              style: TextStyle(
+                                color: isPiecesReady ? Colors.blue : color,
+                                fontSize: 11.5,
+                                height: 1.3,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                  ],
                   // Botones de acción
-                  if (canPreviewAny || hasAction || (isTitulo && isPending) || isPiecesReady) ...[
+                  if (canPreviewAny ||
+                      hasAction ||
+                      (isTitulo && isPending) ||
+                      isPiecesReady) ...[
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -2424,14 +2658,16 @@ class _PantallaValidacionRequisitosState
                             icono: Icons.visibility_outlined,
                             color: _headerBlue,
                             outlined: true,
-                            onTap: () => _previewDocumento(resultado.requisito.id),
+                            onTap: () =>
+                                _previewDocumento(resultado.requisito.id),
                           ),
                         if (isPiecesReady)
                           _buildBotonAccion(
                             label: 'Integrar PDF',
                             icono: Icons.auto_awesome_rounded,
                             color: Colors.blue,
-                            isBusy: isBusy && _busyRequisitoId == 'ci_fotocopias',
+                            isBusy:
+                                isBusy && _busyRequisitoId == 'ci_fotocopias',
                             onTap: () => _generarFotocopiaCIPDF(),
                           ),
                         if (isFoto && isPending) ...[
@@ -2448,13 +2684,17 @@ class _PantallaValidacionRequisitosState
                             icono: Icons.upload_file_rounded,
                             color: _headerBlue,
                             isBusy: isBusy && _busyRequisitoId == 'titulo_path',
-                            onTap: () => _pickFileAndSave(key: 'titulo_path', prefix: 'titulo_prov_nacional'),
+                            onTap: () => _pickFileAndSave(
+                              key: 'titulo_path',
+                              prefix: 'titulo_prov_nacional',
+                            ),
                           ),
                           _buildBotonAccion(
                             label: 'Solicitar prórroga',
                             icono: Icons.schedule_rounded,
                             color: DesignTokens.warningOrange,
-                            isBusy: isBusy && _busyRequisitoId == 'prorroga_path',
+                            isBusy:
+                                isBusy && _busyRequisitoId == 'prorroga_path',
                             onTap: _mostrarDialogoProrrogaTitulo,
                           ),
                         ],
@@ -2463,8 +2703,12 @@ class _PantallaValidacionRequisitosState
                             label: _getLabelAccion(resultado.requisito.id),
                             icono: _getIconoAccion(resultado.requisito.id),
                             color: _headerBlue,
-                            isBusy: isBusy && _busyRequisitoId == resultado.requisito.id,
-                            onTap: isBusy ? null : () => _ejecutarAccionRequisito(resultado),
+                            isBusy:
+                                isBusy &&
+                                _busyRequisitoId == resultado.requisito.id,
+                            onTap: isBusy
+                                ? null
+                                : () => _ejecutarAccionRequisito(resultado),
                           ),
                       ],
                     ),
@@ -2478,7 +2722,12 @@ class _PantallaValidacionRequisitosState
     );
   }
 
-  Widget _buildBadgeEstado(String label, Color color, bool isCompleto, bool isProrroga) {
+  Widget _buildBadgeEstado(
+    String label,
+    Color color,
+    bool isCompleto,
+    bool isProrroga,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -2489,14 +2738,23 @@ class _PantallaValidacionRequisitosState
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isCompleto ? Icons.check_rounded
-                : isProrroga ? Icons.schedule_rounded
+            isCompleto
+                ? Icons.check_rounded
+                : isProrroga
+                ? Icons.schedule_rounded
                 : Icons.radio_button_unchecked_rounded,
             color: color,
             size: 11,
           ),
           const SizedBox(width: 3),
-          Text(label, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -2519,14 +2777,23 @@ class _PantallaValidacionRequisitosState
           foregroundColor: color,
           side: BorderSide(color: color.withOpacity(0.5)),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
     return ElevatedButton.icon(
       onPressed: isBusy ? null : onTap,
       icon: isBusy
-          ? const SizedBox(width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+          ? const SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
           : Icon(icono, size: 14),
       label: Text(label, style: const TextStyle(fontSize: 12)),
       style: ElevatedButton.styleFrom(
@@ -2540,28 +2807,39 @@ class _PantallaValidacionRequisitosState
     );
   }
 
-
   IconData _getIconoAccion(String requisitoId) {
     switch (requisitoId) {
-      case 'carta_inscripcion': return Icons.description_outlined;
+      case 'carta_inscripcion':
+        return Icons.description_outlined;
       case 'ficha_inscripcion':
-      case 'formularios': return Icons.article_outlined;
-      case 'hoja_vida': return Icons.upload_file_outlined;
-      case 'titulo_academico': return Icons.school_outlined;
-      case 'pago_matricula': return Icons.receipt_long_outlined;
-      default: return Icons.add;
+      case 'formularios':
+        return Icons.article_outlined;
+      case 'hoja_vida':
+        return Icons.upload_file_outlined;
+      case 'titulo_academico':
+        return Icons.school_outlined;
+      case 'pago_matricula':
+        return Icons.receipt_long_outlined;
+      default:
+        return Icons.add;
     }
   }
 
   String _getLabelAccion(String requisitoId) {
     switch (requisitoId) {
-      case 'carta_inscripcion': return 'Generar carta';
+      case 'carta_inscripcion':
+        return 'Generar carta';
       case 'ficha_inscripcion':
-      case 'formularios': return 'Generar ficha';
-      case 'hoja_vida': return 'Subir hoja de vida';
-      case 'titulo_academico': return 'Subir título';
-      case 'pago_matricula': return 'Subir comprobante';
-      default: return 'Completar';
+      case 'formularios':
+        return 'Generar ficha';
+      case 'hoja_vida':
+        return 'Subir hoja de vida';
+      case 'titulo_academico':
+        return 'Subir título';
+      case 'pago_matricula':
+        return 'Subir comprobante';
+      default:
+        return 'Completar';
     }
   }
 
@@ -2579,7 +2857,6 @@ class _PantallaValidacionRequisitosState
       _mostrarDialogoComprobantePago();
     }
   }
-
 
   Future<void> _mostrarDialogoProrrogaTitulo() async {
     if (!mounted) return;
@@ -2614,14 +2891,17 @@ class _PantallaValidacionRequisitosState
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE65100),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ],
       ),
     );
   }
-//funcion que retorna el titulo del requisito
+
+  //funcion que retorna el titulo del requisito
   String _getTituloRequisito(RequisitoInscripcion requisito) {
     switch (requisito.id) {
       case 'pago_matricula':
@@ -2643,16 +2923,22 @@ class _PantallaValidacionRequisitosState
         return 'Requisito';
     }
   }
-//funcion que retorna el icono del estado del requisito 
+
+  //funcion que retorna el icono del estado del requisito
   IconData _getIconoEstado(EstadoRequisito estado) {
     switch (estado) {
-      case EstadoRequisito.completado: return Icons.check_circle_rounded;
-      case EstadoRequisito.conProrroga: return Icons.schedule_rounded;
-      case EstadoRequisito.pendiente: return Icons.radio_button_unchecked_rounded;
-      case EstadoRequisito.noAplica: return Icons.remove_circle_outline_rounded;
+      case EstadoRequisito.completado:
+        return Icons.check_circle_rounded;
+      case EstadoRequisito.conProrroga:
+        return Icons.schedule_rounded;
+      case EstadoRequisito.pendiente:
+        return Icons.radio_button_unchecked_rounded;
+      case EstadoRequisito.noAplica:
+        return Icons.remove_circle_outline_rounded;
     }
   }
-//funcion que retorna el color del estado del requisito
+
+  //funcion que retorna el color del estado del requisito
   Color _getColorEstado(EstadoRequisito estado) {
     switch (estado) {
       case EstadoRequisito.completado:
@@ -2665,7 +2951,8 @@ class _PantallaValidacionRequisitosState
         return DesignTokens.secondaryText;
     }
   }
-//funcion que retorna el texto del estado del requisito
+
+  //funcion que retorna el texto del estado del requisito
   String _getTextoEstado(EstadoRequisito estado) {
     switch (estado) {
       case EstadoRequisito.completado:
@@ -2678,7 +2965,8 @@ class _PantallaValidacionRequisitosState
         return 'N/A';
     }
   }
-//funcion que contrue el boton de accion cuando todos los requisitos estan completos
+
+  //funcion que contrue el boton de accion cuando todos los requisitos estan completos
   Widget _buildBotonesAccion(bool todosCompletos) {
     return Column(
       children: [
@@ -2688,21 +2976,43 @@ class _PantallaValidacionRequisitosState
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [DesignTokens.successGreen.withOpacity(0.1), DesignTokens.successGreen.withOpacity(0.05)],
+                colors: [
+                  DesignTokens.successGreen.withOpacity(0.1),
+                  DesignTokens.successGreen.withOpacity(0.05),
+                ],
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: DesignTokens.successGreen.withOpacity(0.3)),
+              border: Border.all(
+                color: DesignTokens.successGreen.withOpacity(0.3),
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: DesignTokens.successGreen, size: 28),
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: DesignTokens.successGreen,
+                  size: 28,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('¡Todo listo!', style: TextStyle(color: DesignTokens.successGreen, fontWeight: FontWeight.w800, fontSize: 15)),
-                      Text('Todos los requisitos están completos.', style: TextStyle(color: DesignTokens.successGreen.withOpacity(0.8), fontSize: 12)),
+                      Text(
+                        '¡Todo listo!',
+                        style: TextStyle(
+                          color: DesignTokens.successGreen,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                        ),
+                      ),
+                      Text(
+                        'Todos los requisitos están completos.',
+                        style: TextStyle(
+                          color: DesignTokens.successGreen.withOpacity(0.8),
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -2718,11 +3028,23 @@ class _PantallaValidacionRequisitosState
                 widget.onRequisitosCompletos?.call();
                 if (context.mounted) Navigator.pop(context, true);
               },
-              icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
-              label: const Text('Continuar con Inscripción', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+              icon: const Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'Continuar con Inscripción',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: DesignTokens.successGreen,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 2,
               ),
             ),
@@ -2734,10 +3056,19 @@ class _PantallaValidacionRequisitosState
             child: ElevatedButton.icon(
               onPressed: _irADocumentosPersonales,
               icon: const Icon(Icons.folder_open_rounded, color: Colors.white),
-              label: const Text('Ir a Mis Documentos', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+              label: const Text(
+                'Ir a Mis Documentos',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _headerBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 2,
               ),
             ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/core/widgets/optimized_fade_in.dart';
 
@@ -196,7 +196,7 @@ class _ConfirmacionInscripcionScreenState
                     FadeInUp(
                       from: 15,
                       duration: const Duration(milliseconds: 400),
-                      delay: const Duration(milliseconds: 300),
+                      delay: const Duration(milliseconds: 80),
                       child: Text(
                         widget.mensaje ?? 
                         'Tu inscripción ha sido registrada correctamente',
@@ -216,7 +216,7 @@ class _ConfirmacionInscripcionScreenState
                     FadeInUp(
                       from: 30,
                       duration: const Duration(milliseconds: 500),
-                      delay: const Duration(milliseconds: 400),
+                      delay: const Duration(milliseconds: 100),
                       child: Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -269,7 +269,7 @@ class _ConfirmacionInscripcionScreenState
                     FadeInUp(
                       from: 20,
                       duration: const Duration(milliseconds: 400),
-                      delay: const Duration(milliseconds: 500),
+                      delay: const Duration(milliseconds: 150),
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -329,7 +329,7 @@ class _ConfirmacionInscripcionScreenState
                     FadeInUp(
                       from: 15,
                       duration: const Duration(milliseconds: 400),
-                      delay: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 200),
                       child: Column(
                         children: [
                           // Botón principal
@@ -482,7 +482,7 @@ class _ConfirmacionInscripcionScreenState
           margin: const EdgeInsets.only(top: 4),
           width: 6,
           height: 6,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: kPrimaryColor,
             shape: BoxShape.circle,
           ),
@@ -523,3 +523,5 @@ class _ConfirmacionInscripcionScreenState
     context.go('/sistema/pantalla_principal');
   }
 }
+
+

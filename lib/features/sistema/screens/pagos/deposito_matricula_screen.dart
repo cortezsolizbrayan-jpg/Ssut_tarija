@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/navegacion/icono_notificaciones_widget.dart';
 
 class DepositoMatriculaScreen extends StatefulWidget {
   static const name = 'deposito-matricula';
@@ -303,7 +303,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
     return Container(
       padding: EdgeInsets.all(width * 0.04),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.red.shade300,
@@ -317,7 +317,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
           const Row(
             children: [
               Text(
-                '▲ IMPORTANTE:',
+                '? IMPORTANTE:',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -572,7 +572,7 @@ class _DepositoMatriculaScreenState extends State<DepositoMatriculaScreen> {
       height: 70,
       decoration: BoxDecoration(
         color: const Color(0xFF005BAC),
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
@@ -657,3 +657,5 @@ class _DottedLinePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+

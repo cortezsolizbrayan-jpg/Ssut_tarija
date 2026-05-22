@@ -4,9 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/core/services/servicio_remover_fondo.dart';
 import 'package:path_provider/path_provider.dart';
+import 'storage/servicio_almacenamiento_local.dart';
 
 /// Servicio para procesar la imagen de perfil del usuario.
 /// Incluye rostro + hombros + traje (más cuerpo), con fondo plomo (gris) estilo 4x4.
@@ -25,7 +25,8 @@ class ProfileImageProcessorService {
   static Future<File?> processProfileImage(
     File imageFile, {
     required bool isFirstPhoto,
-    bool removerFondo = true, // Nuevo parámetro para controlar remoción de fondo
+    bool removerFondo =
+        true, // Nuevo parámetro para controlar remoción de fondo
   }) async {
     if (!isFirstPhoto) {
       return imageFile;
@@ -34,28 +35,36 @@ class ProfileImageProcessorService {
     try {
       // PASO 1: Remover fondo automáticamente con ONNX ML si está habilitado
       File imagenProcesada = imageFile;
-      
+
       if (removerFondo) {
         debugPrint('🔄 Removiendo fondo de foto de perfil con ONNX ML...');
-        
+
         final tempDir = await getTemporaryDirectory();
-        final outputPath = '${tempDir.path}/profile_no_bg_${DateTime.now().millisecondsSinceEpoch}.png';
-        
+        final outputPath =
+            '${tempDir.path}/profile_no_bg_${DateTime.now().millisecondsSinceEpoch}.png';
+
         // Usar color plomo institucional (gris medio) para el fondo
         final success = await ServicioRemoverFondo.removerFondo(
           imagePath: imageFile.path,
           outputPath: outputPath,
-          bgColor: const ui.Color.fromARGB(255, plomoRed, plomoGreen, plomoBlue), // Plomo institucional
+          bgColor: const ui.Color.fromARGB(
+            255,
+            plomoRed,
+            plomoGreen,
+            plomoBlue,
+          ), // Plomo institucional
         );
-        
+
         if (success) {
           imagenProcesada = File(outputPath);
-          debugPrint('✅ Fondo removido automáticamente con ONNX ML (fondo plomo institucional)');
+          debugPrint(
+            '✅ Fondo removido automáticamente con ONNX ML (fondo plomo institucional)',
+          );
         } else {
           debugPrint('⚠️ No se pudo remover fondo, usando imagen original');
         }
       }
-      
+
       // PASO 2: Continuar con el procesamiento normal (detección facial y recorte)
       final imageBytes = await imagenProcesada.readAsBytes();
       img.Image? originalImage = img.decodeImage(imageBytes);
@@ -88,30 +97,36 @@ class ProfileImageProcessorService {
 
         // Calcular qué tan cerca está la persona (ratio del rostro vs imagen)
         final faceRatio = boundingBox.width / originalImage.width;
-        
+
         // Ajustar padding dinámicamente según cercanía
         // Si faceRatio > 0.5 = muy cerca, necesita más padding
         // Si faceRatio < 0.3 = lejos, puede usar menos padding
         double paddingTop, paddingBottom, paddingSides;
-        
+
         if (faceRatio > 0.5) {
           // Persona MUY CERCA - Máximo padding para no cortar nada
-          paddingTop = 0.6;    // Mucho espacio arriba
+          paddingTop = 0.6; // Mucho espacio arriba
           paddingBottom = 1.8; // Mucho espacio abajo para brazos
-          paddingSides = 1.2;  // Mucho espacio a los lados
-          debugPrint('📸 Persona muy cerca (ratio: ${faceRatio.toStringAsFixed(2)}) - Usando padding máximo');
+          paddingSides = 1.2; // Mucho espacio a los lados
+          debugPrint(
+            ' Persona muy cerca (ratio: ${faceRatio.toStringAsFixed(2)}) - Usando padding máximo',
+          );
         } else if (faceRatio > 0.35) {
           // Persona CERCA - Padding generoso
           paddingTop = 0.45;
           paddingBottom = 1.4;
           paddingSides = 0.9;
-          debugPrint('📸 Persona cerca (ratio: ${faceRatio.toStringAsFixed(2)}) - Usando padding generoso');
+          debugPrint(
+            ' Persona cerca (ratio: ${faceRatio.toStringAsFixed(2)}) - Usando padding generoso',
+          );
         } else {
           // Persona LEJOS - Padding estándar
           paddingTop = 0.3;
           paddingBottom = 1.0;
           paddingSides = 0.7;
-          debugPrint('📸 Persona a distancia normal (ratio: ${faceRatio.toStringAsFixed(2)}) - Usando padding estándar');
+          debugPrint(
+            ' Persona a distancia normal (ratio: ${faceRatio.toStringAsFixed(2)}) - Usando padding estándar',
+          );
         }
 
         // Calcular área de recorte con padding dinámico
@@ -132,9 +147,13 @@ class ProfileImageProcessorService {
             )).toInt();
 
         // Si el recorte es muy grande (persona muy cerca), usar toda la imagen
-        final cropRatio = (cropWidth * cropHeight) / (originalImage.width * originalImage.height);
+        final cropRatio =
+            (cropWidth * cropHeight) /
+            (originalImage.width * originalImage.height);
         if (cropRatio > 0.8) {
-          debugPrint('⚠️ Recorte muy grande (${(cropRatio * 100).toStringAsFixed(1)}%) - Usando imagen completa');
+          debugPrint(
+            ' Recorte muy grande (${(cropRatio * 100).toStringAsFixed(1)}%) - Usando imagen completa',
+          );
           processedImage = originalImage;
         } else {
           processedImage = img.copyCrop(
@@ -144,7 +163,9 @@ class ProfileImageProcessorService {
             width: cropWidth,
             height: cropHeight,
           );
-          debugPrint('✂️ Recorte aplicado: ${cropWidth}x${cropHeight} (${(cropRatio * 100).toStringAsFixed(1)}% de la imagen)');
+          debugPrint(
+            ' Recorte aplicado: ${cropWidth}x${cropHeight} (${(cropRatio * 100).toStringAsFixed(1)}% de la imagen)',
+          );
         }
 
         final aspectRatio = processedImage.width / processedImage.height;
@@ -181,7 +202,9 @@ class ProfileImageProcessorService {
           dstY: offsetY,
         );
 
-        debugPrint('✅ Imagen procesada: ${newWidth}x${newHeight} centrada en canvas ${photoSize}x${photoSize}');
+        debugPrint(
+          ' Imagen procesada: ${newWidth}x${newHeight} centrada en canvas ${photoSize}x${photoSize}',
+        );
 
         processedImage = squareImage;
       } else {

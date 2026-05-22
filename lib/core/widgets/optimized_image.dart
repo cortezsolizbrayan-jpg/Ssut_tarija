@@ -31,74 +31,81 @@ class OptimizedImage extends StatelessWidget {
     Widget imageWidget;
 
     // Validar dimensiones para evitar Infinity/NaN
-    final safeWidth = (width != null && width!.isFinite && !width!.isNaN) ? width : null;
-    final safeHeight = (height != null && height!.isFinite && !height!.isNaN) ? height : null;
+    final safeWidth = (width != null && width!.isFinite && !width!.isNaN)
+        ? width
+        : null;
+    final safeHeight = (height != null && height!.isFinite && !height!.isNaN)
+        ? height
+        : null;
     final cacheWidth = safeWidth?.toInt();
     final cacheHeight = safeHeight?.toInt();
 
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       // Imagen de red con caché
-      imageWidget = CachedNetworkImage(
-        imageUrl: imageUrl,
-        width: safeWidth,
-        height: safeHeight,
-        fit: fit,
-        memCacheWidth: cacheWidth,
-        memCacheHeight: cacheHeight,
-        placeholder: (context, url) =>
-            placeholder ??
-            SkeletonLoader(
-              width: safeWidth ?? double.infinity,
-              height: safeHeight ?? 200,
-            ),
-        errorWidget: (context, url, error) =>
-            errorWidget ??
-            Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.error_outline, color: Colors.grey),
-            ),
-        fadeInDuration: const Duration(milliseconds: 200),
-        fadeOutDuration: const Duration(milliseconds: 100),
+      imageWidget = RepaintBoundary(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: safeWidth,
+          height: safeHeight,
+          fit: fit,
+          memCacheWidth: cacheWidth,
+          memCacheHeight: cacheHeight,
+          placeholder: (context, url) =>
+              placeholder ??
+              SkeletonLoader(
+                width: safeWidth ?? double.infinity,
+                height: safeHeight ?? 200,
+              ),
+          errorWidget: (context, url, error) =>
+              errorWidget ??
+              Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.error_outline, color: Colors.grey),
+              ),
+          fadeInDuration: const Duration(milliseconds: 150),
+          fadeOutDuration: const Duration(milliseconds: 80),
+        ),
       );
     } else if (imageUrl.startsWith('assets/')) {
       // Imagen de assets
-      imageWidget = Image.asset(
-        imageUrl,
-        width: safeWidth,
-        height: safeHeight,
-        fit: fit,
-        cacheWidth: cacheWidth,
-        cacheHeight: cacheHeight,
-        errorBuilder: (context, error, stackTrace) =>
-            errorWidget ??
-            Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.error_outline, color: Colors.grey),
-            ),
+      imageWidget = RepaintBoundary(
+        child: Image.asset(
+          imageUrl,
+          width: safeWidth,
+          height: safeHeight,
+          fit: fit,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheHeight,
+          errorBuilder: (context, error, stackTrace) =>
+              errorWidget ??
+              Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.error_outline, color: Colors.grey),
+              ),
+        ),
       );
     } else {
       // Imagen local (archivo)
-      imageWidget = Image.file(
-        File(imageUrl),
-        width: safeWidth,
-        height: safeHeight,
-        fit: fit,
-        cacheWidth: cacheWidth,
-        cacheHeight: cacheHeight,
-        errorBuilder: (context, error, stackTrace) =>
-            errorWidget ??
-            Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.error_outline, color: Colors.grey),
-            ),
+      imageWidget = RepaintBoundary(
+        child: Image.file(
+          File(imageUrl),
+          width: safeWidth,
+          height: safeHeight,
+          fit: fit,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheHeight,
+          errorBuilder: (context, error, stackTrace) =>
+              errorWidget ??
+              Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.error_outline, color: Colors.grey),
+              ),
+        ),
       );
     }
 
     if (borderRadius != null) {
-      return ClipRRect(
-        borderRadius: borderRadius!,
-        child: imageWidget,
-      );
+      return ClipRRect(borderRadius: borderRadius!, child: imageWidget);
     }
 
     return imageWidget;

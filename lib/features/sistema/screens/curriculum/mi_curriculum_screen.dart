@@ -1,17 +1,13 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/config/constants/constants.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/core/widgets/ios_date_picker.dart';
-import 'package:refactor_template/features/sistema/screens/entryPoint/components/menu_btn.dart';
-import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
-import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
-import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
-import 'package:rive/rive.dart'
-    hide LinearGradient, Image, Animation, PaintingStyle;
+import 'package:refactor_template/features/sistema/screens/contenedor/menu_lateral_scope.dart';
+import 'package:refactor_template/features/sistema/widgets/navegacion/icono_notificaciones_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/perfil/avatar_perfil_widget.dart';
 
 class MiCurriculumScreen extends StatefulWidget {
   static const name = 'mi-curriculum';
@@ -21,49 +17,17 @@ class MiCurriculumScreen extends StatefulWidget {
   State<MiCurriculumScreen> createState() => _MiCurriculumScreenState();
 }
 
-class _MiCurriculumScreenState extends State<MiCurriculumScreen>
-    with SingleTickerProviderStateMixin {
+class _MiCurriculumScreenState extends State<MiCurriculumScreen> {
   bool _isFormacionAcademicaExpanded = true;
   bool _isFormacionComplementariaExpanded = true;
-  bool isSideBarOpen = false;
-  late SMIBool isMenuOpenInput;
 
   final List<Map<String, dynamic>> _formacionesAcademicas = [];
   final List<Map<String, dynamic>> _formacionesComplementarias = [];
-
-  late AnimationController _animationController;
-  late Animation<double> scalAnimation;
-  late Animation<double> animation;
 
   @override
   void initState() {
     super.initState();
     _loadSavedData();
-    _animationController =
-        AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 200),
-        )..addListener(() {
-          setState(() {});
-        });
-    scalAnimation = Tween<double>(begin: 1, end: 0.8).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
-    animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
   }
 
   /// Carga los datos guardados del curriculum
@@ -102,86 +66,26 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0D1B2E) : const Color(0xFFF5F5F5);
 
+    // Pantalla simple: sidebar y MenuBtn los provee el MainShell
     return Scaffold(
-      backgroundColor: backgroundColor2,
+      backgroundColor: bgColor,
       extendBody: true,
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          // Menú lateral
-          AnimatedPositioned(
-            width: 288,
-            height: MediaQuery.of(context).size.height,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
-            left: isSideBarOpen ? 0 : -288,
-            top: 0,
-            child: const SideBar(),
-          ),
-          // Contenido principal con efecto 3D
-          Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(
-                1 * animation.value - 30 * (animation.value) * math.pi / 180,
-              ),
-            child: Transform.translate(
-              offset: Offset(animation.value * 265, 0),
-              child: Transform.scale(
-                scale: scalAnimation.value,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(24)),
-                  child: _buildContent(context, width, height),
-                ),
-              ),
-            ),
-          ),
-          // Botón de menú fuera del contenido transformado
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
-            left: isSideBarOpen ? 220 : 0,
-            top: 16,
-            child: MenuBtn(
-              press: () {
-                isMenuOpenInput.value = !isMenuOpenInput.value;
-
-                if (_animationController.value == 0) {
-                  _animationController.forward();
-                } else {
-                  _animationController.reverse();
-                }
-
-                setState(() {
-                  isSideBarOpen = !isSideBarOpen;
-                });
-              },
-              riveOnInit: (artboard) {
-                final controller = StateMachineController.fromArtboard(
-                  artboard,
-                  "State Machine",
-                );
-
-                artboard.addController(controller!);
-
-                isMenuOpenInput =
-                    controller.findInput<bool>("isOpen") as SMIBool;
-                isMenuOpenInput.value = true;
-              },
-            ),
-          ),
-        ],
-      ),
+      body: _buildContent(context, width, height),
     );
   }
 
   Widget _buildContent(BuildContext context, double width, double height) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0D1B2E) : const Color(0xFFF5F5F5);
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: bgColor,
       body: SafeArea(
         bottom: false,
+        top: false,
         child: Column(
           children: [
             // Header azul
@@ -210,10 +114,11 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
     );
   }
 
+  //AQUI SE PRODUCE EL BUILD HEADER
   Widget _buildHeader(BuildContext context, double width, double height) {
     return Container(
       padding: EdgeInsets.only(
-        top: height * 0.02,
+        top: height * 0.02 + MediaQuery.of(context).padding.top,
         bottom: height * 0.03,
         left: width * 0.05,
         right: width * 0.05,
@@ -241,8 +146,8 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
           // Barra superior con iconos
           Row(
             children: [
-              // Espacio para el botón de menú
-              SizedBox(width: isSideBarOpen ? 220 : 52),
+              // Botón de menú lateral
+              const BotonMenuLateral(),
               SizedBox(width: math.max(6, width * 0.015)),
               // Logo Posgrado
               Expanded(
@@ -361,7 +266,7 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
   Widget _buildFormacionAcademicaSection(double width) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -572,7 +477,7 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
   Widget _buildFormacionComplementariaSection(double width) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -835,7 +740,9 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
               color: isEmpty ? Colors.white : const Color(0xFFF0F7FF),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isEmpty ? Colors.grey.shade300 : const Color(0xFF005BAC).withOpacity(0.3),
+                color: isEmpty
+                    ? Colors.grey.shade300
+                    : const Color(0xFF005BAC).withOpacity(0.3),
                 width: isEmpty ? 1 : 1.5,
               ),
             ),
@@ -847,7 +754,9 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: isEmpty ? FontWeight.normal : FontWeight.bold,
-                      color: isEmpty ? Colors.grey.shade400 : const Color(0xFF003D73),
+                      color: isEmpty
+                          ? Colors.grey.shade400
+                          : const Color(0xFF003D73),
                     ),
                   ),
                 ),
@@ -855,7 +764,9 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                   Icon(
                     Icons.edit,
                     size: 16,
-                    color: isEmpty ? Colors.grey.shade400 : const Color(0xFF005BAC),
+                    color: isEmpty
+                        ? Colors.grey.shade400
+                        : const Color(0xFF005BAC),
                   ),
               ],
             ),
@@ -1058,7 +969,8 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
                     readOnly: true,
                     onTap: () async {
                       final DateTime now = DateTime.now();
-                      final DateTime initial = _parseDate(fechaController.text) ?? now;
+                      final DateTime initial =
+                          _parseDate(fechaController.text) ?? now;
                       final DateTime? picked = await mostrarIosFechaPicker(
                         context: context,
                         initialDate: initial,
@@ -1292,7 +1204,11 @@ class _MiCurriculumScreenState extends State<MiCurriculumScreen>
     try {
       final parts = text.split('/');
       if (parts.length != 3) return null;
-      return DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+      return DateTime(
+        int.parse(parts[2]),
+        int.parse(parts[1]),
+        int.parse(parts[0]),
+      );
     } catch (e) {
       return null;
     }

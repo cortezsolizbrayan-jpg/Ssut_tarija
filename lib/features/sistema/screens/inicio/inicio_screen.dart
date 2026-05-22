@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'components/inicio_header.dart';
 import 'components/program_card.dart';
@@ -43,9 +43,10 @@ class _InicioScreenState extends State<InicioScreen> {
     final filteredPrograms = _getFilteredPrograms();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         bottom: false,
+        top: false,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -241,7 +242,7 @@ class _AchievementsSectionState extends State<_AchievementsSection> {
       height: 152,
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -331,3 +332,5 @@ class _AchievementsSectionState extends State<_AchievementsSection> {
     );
   }
 }
+
+

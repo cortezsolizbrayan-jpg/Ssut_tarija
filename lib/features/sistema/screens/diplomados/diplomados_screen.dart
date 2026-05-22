@@ -1,11 +1,5 @@
-import 'dart:math';
-
-import 'package:flutter/material.dart';
-import 'package:refactor_template/config/constants/constants.dart';
-import 'package:refactor_template/features/sistema/screens/entryPoint/components/menu_btn.dart';
-import 'package:refactor_template/features/sistema/screens/entryPoint/components/side_bar.dart';
-import 'package:rive/rive.dart'
-    hide LinearGradient, Image, Animation, PaintingStyle;
+﻿import 'package:flutter/material.dart';
+import 'package:refactor_template/features/sistema/screens/contenedor/menu_lateral_scope.dart';
 
 import 'components/app_header.dart';
 import 'components/diplomado_card.dart';
@@ -17,12 +11,9 @@ class DiplomadosScreen extends StatefulWidget {
   State<DiplomadosScreen> createState() => _DiplomadosScreenState();
 }
 
-class _DiplomadosScreenState extends State<DiplomadosScreen>
-    with SingleTickerProviderStateMixin {
+class _DiplomadosScreenState extends State<DiplomadosScreen> {
   String _selectedFilter = 'Todos';
   final TextEditingController _searchController = TextEditingController();
-  bool isSideBarOpen = false;
-  late SMIBool isMenuOpenInput;
 
   final List<String> _filters = [
     'Todos',
@@ -33,87 +24,31 @@ class _DiplomadosScreenState extends State<DiplomadosScreen>
     'Posdoctorado',
   ];
 
-  late AnimationController _animationController;
-  late Animation<double> scalAnimation;
-  late Animation<double> animation;
-
   @override
   void initState() {
     super.initState();
-    _animationController =
-        AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 200),
-        )..addListener(() {
-          setState(() {});
-        });
-    scalAnimation = Tween<double>(begin: 1, end: 0.8).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
-    animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Pantalla simple: el sidebar y MenuBtn los provee el MainShell
     return Scaffold(
-      backgroundColor: backgroundColor2,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          // Menú lateral
-          AnimatedPositioned(
-            width: 288,
-            height: MediaQuery.of(context).size.height,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
-            left: isSideBarOpen ? 0 : -288,
-            top: 0,
-            child: const SideBar(),
-          ),
-          // Contenido principal con efecto 3D
-          Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(
-                1 * animation.value - 30 * (animation.value) * pi / 180,
-              ),
-            child: Transform.translate(
-              offset: Offset(animation.value * 265, 0),
-              child: Transform.scale(
-                scale: scalAnimation.value,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(24)),
-                  child: _buildContent(),
-                ),
-              ),
-            ),
-          ),
-          // El menú ahora está en la fila principal del header
-        ],
-      ),
+      body: _buildContent(),
     );
   }
 
   Widget _buildContent() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           // Header azul oscuro
@@ -122,33 +57,7 @@ class _DiplomadosScreenState extends State<DiplomadosScreen>
             onSearchChanged: (value) {
               setState(() {});
             },
-            menuButton: MenuBtn(
-              press: () {
-                isMenuOpenInput.value = !isMenuOpenInput.value;
-
-                if (_animationController.value == 0) {
-                  _animationController.forward();
-                } else {
-                  _animationController.reverse();
-                }
-
-                setState(() {
-                  isSideBarOpen = !isSideBarOpen;
-                });
-              },
-              riveOnInit: (artboard) {
-                final controller = StateMachineController.fromArtboard(
-                  artboard,
-                  "State Machine",
-                );
-
-                artboard.addController(controller!);
-
-                isMenuOpenInput =
-                    controller.findInput<bool>("isOpen") as SMIBool;
-                isMenuOpenInput.value = true;
-              },
-            ),
+            menuButton: const BotonMenuLateral(),
           ),
           // Filtros horizontales (debajo del header)
           _buildFilters(),
@@ -233,8 +142,8 @@ class _DiplomadosScreenState extends State<DiplomadosScreen>
     final programs = _getFilteredPrograms();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -306,3 +215,6 @@ class _DiplomadosScreenState extends State<DiplomadosScreen>
     return filtered;
   }
 }
+
+
+

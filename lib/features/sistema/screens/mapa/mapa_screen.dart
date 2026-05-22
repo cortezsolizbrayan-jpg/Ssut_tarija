@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -141,9 +141,10 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         bottom: false,
+        top: false,
         child: Column(
           children: [
             // Header
@@ -166,7 +167,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
       child: SlideTransition(
         position: _headerSlideAnimation,
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -177,7 +178,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
               bottomRight: Radius.circular(30),
             ),
           ),
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+          padding: EdgeInsets.fromLTRB(20, 24 + MediaQuery.of(context).padding.top, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -382,7 +383,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
         child: Container(
           margin: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -580,7 +581,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
             offset: Offset(0, 30 * (1 - value)),
             child: Container(
               constraints: const BoxConstraints(maxHeight: 250),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30),
@@ -696,7 +697,7 @@ class _MapaScreenState extends ConsumerState<MapaScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       // Usar animación de lista del controller maestro
@@ -1334,3 +1335,6 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
+
+
+

@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
-import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/navegacion/icono_notificaciones_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/perfil/avatar_perfil_widget.dart';
 
 class AppHeader extends StatefulWidget {
   final TextEditingController? searchController;
@@ -50,7 +50,7 @@ class _AppHeaderState extends State<AppHeader> {
           ],
           stops: [0.0, 0.5, 1.0],
         ),
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(175),
           bottomRight: Radius.circular(175),
         ),
@@ -66,12 +66,12 @@ class _AppHeaderState extends State<AppHeader> {
         bottom: false,
         child: Column(
           children: [
-            // Primera fila: Menu, Logo Posgrado, Banco Union, Notificaciones, Configuración y Avatar
+            // Primera fila: Menu, Logo Posgrado, Banco Union, Notificaciones, ConfiguraciÃ³n y Avatar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
-                  // Menú hamburguesa (si se proporciona)
+                  // MenÃº hamburguesa (si se proporciona)
                   if (widget.menuButton != null) ...[
                     widget.menuButton!,
                     const SizedBox(width: 12),
@@ -124,7 +124,7 @@ class _AppHeaderState extends State<AppHeader> {
                               ),
                             ),
                             Text(
-                              'Número de cuenta único',
+                              'NÃºmero de cuenta Ãºnico',
                               style: TextStyle(
                                 fontSize: 7,
                                 color: Color(0xFF64748B),
@@ -136,10 +136,10 @@ class _AppHeaderState extends State<AppHeader> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // Notificaciones - Más reducido
+                  // Notificaciones - MÃ¡s reducido
                   const NotificationIconWidget(size: 40, iconSize: 22),
                   const SizedBox(width: 6),
-                  // Configuración - Más reducido
+                  // ConfiguraciÃ³n - MÃ¡s reducido
                   GestureDetector(
                     onTap: () {
                       context.push('/configuracion');
@@ -169,7 +169,7 @@ class _AppHeaderState extends State<AppHeader> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // Avatar - Más reducido
+                  // Avatar - MÃ¡s reducido
                   ProfileAvatarWidget(
                     radius: 16,
                     showShadow: true,
@@ -180,7 +180,7 @@ class _AppHeaderState extends State<AppHeader> {
                 ],
               ),
             ),
-            // Segunda fila: Título y subtítulo
+            // Segunda fila: TÃ­tulo y subtÃ­tulo
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
@@ -196,7 +196,7 @@ class _AppHeaderState extends State<AppHeader> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Todos los programas que está cursando o cursó',
+                    'Todos los programas que estÃ¡ cursando o cursÃ³',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 14,
@@ -205,7 +205,7 @@ class _AppHeaderState extends State<AppHeader> {
                 ],
               ),
             ),
-            // Barra de búsqueda - Reducida
+            // Barra de bÃºsqueda - Reducida
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Container(
@@ -262,18 +262,18 @@ class _AppHeaderState extends State<AppHeader> {
               ),
             ),
             const SizedBox(height: 8),
-            // Selector de tipo de programa (Línea de tiempo)
+            // Selector de tipo de programa (LÃ­nea de tiempo)
             Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 20),
               child: Column(
                 children: [
-                  // Línea de tiempo con círculos conectados
+                  // LÃ­nea de tiempo con cÃ­rculos conectados
                   SizedBox(
                     height: 80,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Línea horizontal conectando los círculos
+                        // LÃ­nea horizontal conectando los cÃ­rculos
                         Positioned(
                           left: 40,
                           right: 40,
@@ -286,7 +286,7 @@ class _AppHeaderState extends State<AppHeader> {
                             ),
                           ),
                         ),
-                        // Círculos con iconos
+                        // CÃ­rculos con iconos
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +301,7 @@ class _AppHeaderState extends State<AppHeader> {
                             ),
                             Expanded(
                               child: _ProgramTypeSelector(
-                                label: 'Maestría',
+                                label: 'MaestrÃ­a',
                                 type: ProgramType.maestria,
                                 isSelected: false,
                                 onTap: () {},
@@ -357,7 +357,7 @@ class _ProgramTypeSelector extends StatelessWidget {
     if (isSelected) {
       return const Color(
         0xFFFFC900,
-      ); // Amarillo dorado cuando está seleccionado
+      ); // Amarillo dorado cuando estÃ¡ seleccionado
     }
     switch (type) {
       case ProgramType.maestria:
@@ -373,7 +373,7 @@ class _ProgramTypeSelector extends StatelessWidget {
 
   Widget _getIcon() {
     if (isSelected) {
-      // Cuando está seleccionado, mostrar un escudo con check
+      // Cuando estÃ¡ seleccionado, mostrar un escudo con check
       return Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -454,3 +454,4 @@ class _ProgramTypeSelector extends StatelessWidget {
     );
   }
 }
+

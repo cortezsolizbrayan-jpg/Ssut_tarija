@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class ProgramCard extends StatelessWidget {
   final String title;
@@ -11,7 +11,7 @@ class ProgramCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -52,3 +52,4 @@ class ProgramCard extends StatelessWidget {
     );
   }
 }
+

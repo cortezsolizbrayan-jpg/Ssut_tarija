@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:refactor_template/features/login/domain/errors/login_exceptions.dart';
+import 'package:refactor_template/features/acceso/dominio/errors/login_exceptions.dart';
 
 class DioErrorHandler {
   static Exception handle(DioException error) {

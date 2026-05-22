@@ -9,9 +9,10 @@ import 'package:refactor_template/config/constants/environment.dart';
 import 'package:refactor_template/config/providers/theme_mode_provider.dart';
 import 'package:refactor_template/config/router/app_router.dart';
 import 'package:refactor_template/config/theme/app_theme.dart';
-import 'package:refactor_template/core/services/servicio_base_datos_local.dart';
-import 'package:refactor_template/core/services/servicio_notificaciones.dart';
-import 'package:refactor_template/core/services/servicio_remover_fondo.dart';
+import 'package:refactor_template/core/services/storage/servicio_base_datos_local.dart';
+import 'package:refactor_template/core/services/otros/servicio_notificaciones.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:refactor_template/features/sistema/presentation/blocs/perfil/perfil_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,32 +65,26 @@ void main() async {
     }
   }
 
-  // Inicializar servicio de notificaciones
-  try {
-    final servicioNotificaciones = ServicioNotificaciones();
-    await servicioNotificaciones.initialize();
-    await servicioNotificaciones.requestPermissions();
-  } catch (e) {
-    if (kDebugMode) {
-      print('Error inicializando notificaciones: $e');
-    }
-  }
+  // Inicializar servicio de notificaciones (asíncrono, no bloqueante)
+  ServicioNotificaciones()
+      .initialize()
+      .then((_) {
+        ServicioNotificaciones().requestPermissions();
+      })
+      .catchError((e) {
+        if (kDebugMode) print('Error inicializando notificaciones: $e');
+      });
 
-  // Inicializar modelo ONNX para remoción de fondo (una sola vez)
-  try {
-    await ServicioRemoverFondo.inicializar();
-  } catch (e) {
-    if (kDebugMode) {
-      print('Error inicializando ONNX para remoción de fondo: $e');
-    }
-  }
+  // ONNX deshabilitado temporalmente — causa crash nativo en Android 14+
+  // con el paquete image_background_remover. Habilitar cuando se actualice el paquete.
+  // ServicioRemoverFondo.inicializar()...
 
   // No inicializar Scanbot aquí: se carga solo cuando el usuario usa
   // "Scanbot Scanner", para reducir peso y uso de memoria al inicio.
 
   // Limitar caché de imágenes para evitar que la app supere cientos de MB
-  PaintingBinding.instance.imageCache.maximumSize = 100;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50 MiB
+  PaintingBinding.instance.imageCache.maximumSize = 80; // máx 80 imágenes
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 60 << 20; // 60 MiB
 
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -102,6 +97,9 @@ class _ObservadorCicloVidaApp with WidgetsBindingObserver {
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
       _liberarMemoriaEnSegundoPlano();
+    } else if (state == AppLifecycleState.resumed) {
+      // Restaurar límite normal al volver al primer plano
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 60 << 20;
     }
   }
 
@@ -110,6 +108,8 @@ class _ObservadorCicloVidaApp with WidgetsBindingObserver {
       // Liberar caché de imágenes (principal fuente de peso en muchas apps)
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
+      // Reducir límite temporalmente para liberar más agresivamente
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 20 << 20; // 20 MiB
     } catch (_) {}
   }
 }
@@ -139,50 +139,60 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    
+
     // Actualizar el status bar según el tema actual
-    final isDark = themeMode == ThemeMode.dark || 
-                   (themeMode == ThemeMode.system && 
-                    MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-    
+    final isDark =
+        themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.light,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.dark,
-        systemNavigationBarColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: isDark
+            ? const Color(0xFF132338) // azul marino medio
+            : Colors.white,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
     );
-    
-    return MaterialApp.router(
-      routerConfig: goRouter,
-      debugShowCheckedModeBanner: false,
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        physics: const BouncingScrollPhysics(),
-        dragDevices: {
-          PointerDeviceKind.touch,
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.trackpad,
-        },
+
+    return MultiBlocProvider(
+      providers: [BlocProvider<PerfilBloc>(create: (_) => PerfilBloc())],
+      child: MaterialApp.router(
+        routerConfig: goRouter,
+        debugShowCheckedModeBanner: false,
+        scrollBehavior: const MaterialScrollBehavior().copyWith(
+          physics: const BouncingScrollPhysics(
+            decelerationRate: ScrollDecelerationRate.fast,
+          ),
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+        title: 'Posgrado UPEA',
+        locale: const Locale('es'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es'),
+          Locale('es', 'ES'),
+          Locale('es', 'BO'),
+          Locale('en'),
+        ],
+        // Usar temas profesionales con colores institucionales
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: themeMode,
       ),
-      title: 'Posgrado UPEA',
-      locale: const Locale('es'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('es'),
-        Locale('es', 'ES'),
-        Locale('es', 'BO'),
-        Locale('en'),
-      ],
-      // Usar temas profesionales con colores institucionales
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
     );
   }
 }

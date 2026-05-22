@@ -35,6 +35,8 @@ dependencies:
   path_provider: ^2.1.5
   connectivity_plus: ^6.0.5
   path: ^1.9.0
+  in_app_update: ^4.2.5
+  package_info_plus: ^9.0.1
   
   # Documentos y Archivos
   pdf: ^3.11.0
@@ -64,6 +66,10 @@ dependencies:
   # Notificaciones
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.8
+  google_sign_in: ^7.2.0
+  liquid_progress_indicator_v2: ^0.5.0
   
 
 dev_dependencies:

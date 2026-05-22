@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class AnimatedBar extends StatelessWidget {
   const AnimatedBar({
@@ -15,7 +15,7 @@ class AnimatedBar extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       height: 4,
       width: isActive ? 20 : 0,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
           color: Color(0xFF81B4FF),
           borderRadius: BorderRadius.all(
             Radius.circular(12),
@@ -23,3 +23,4 @@ class AnimatedBar extends StatelessWidget {
     );
   }
 }
+

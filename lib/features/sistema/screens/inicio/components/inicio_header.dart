@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/features/sistema/screens/diplomados/diplomados_screen.dart';
-import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
-import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/navegacion/icono_notificaciones_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/perfil/avatar_perfil_widget.dart';
 
 class InicioHeader extends StatelessWidget {
   final String? userName;
@@ -18,7 +17,7 @@ class InicioHeader extends StatelessWidget {
         statusBarBrightness: Brightness.dark,
       ),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -35,7 +34,7 @@ class InicioHeader extends StatelessWidget {
         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
         child: Column(
           children: [
-            // Primera fila: Menú hamburguesa y iconos de acción
+            // Primera fila: MenÃº hamburguesa y iconos de acciÃ³n
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
@@ -57,11 +56,11 @@ class InicioHeader extends StatelessWidget {
                       ),
                       padding: EdgeInsets.zero,
                       onPressed: () {
-                        // TODO: Abrir menú lateral
+                        // TODO: Abrir menÃº lateral
                       },
                     ),
                   ),
-                  // Iconos de acción (notificaciones, configuración, avatar)
+                  // Iconos de acciÃ³n (notificaciones, configuraciÃ³n, avatar)
                   Row(
                     children: [
                       const NotificationIconWidget(
@@ -90,23 +89,26 @@ class InicioHeader extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      ProfileAvatarWidget(
-                        radius: 22,
-                        showShadow: true,
-                        borderColor: Colors.white,
-                        borderWidth: 2,
-                        onTap: () {
-                          context.push('/mis-datos-personales');
-                        },
+                      Hero(
+                        tag: 'avatar_hero_main',
+                        child: ProfileAvatarWidget(
+                          radius: 22,
+                          showShadow: true,
+                          borderColor: Colors.white,
+                          borderWidth: 2,
+                          onTap: () {
+                            context.push('/mis-datos-personales');
+                          },
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Logo CEUB centrado
             Container(
               width: 80,
@@ -123,15 +125,12 @@ class InicioHeader extends StatelessWidget {
                 ],
               ),
               padding: const EdgeInsets.all(12),
-              child: Image.asset(
-                'assets/images/ceub.png',
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset('assets/images/ceub.png', fit: BoxFit.contain),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Nombre del usuario - más prominente
+
+            // Nombre del usuario - mÃ¡s prominente
             Text(
               userName ?? 'Bienvenido',
               style: const TextStyle(
@@ -142,10 +141,10 @@ class InicioHeader extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // Botón "Ver Mis Programas" - más destacado
+
+            // BotÃ³n "Ver Mis Programas" - mÃ¡s destacado
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Container(
@@ -179,10 +178,7 @@ class InicioHeader extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.school_rounded,
-                        size: 20,
-                      ),
+                      const Icon(Icons.school_rounded, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         'Ver Mis Programas',
@@ -197,7 +193,7 @@ class InicioHeader extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),

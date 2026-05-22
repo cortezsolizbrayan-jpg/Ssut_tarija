@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'components/inicio_header.dart';
 import 'components/program_card.dart';
 import 'components/program_type_tabs.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/features/sistema/screens/perfil/mis_datos_personales_screen.dart';
-import 'package:animate_do/animate_do.dart';
 
 class InicioScreen extends StatefulWidget {
   const InicioScreen({super.key});
@@ -97,9 +97,10 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         bottom: false,
+        top: false,
         child: SingleChildScrollView(
           child: FadeTransition(
             opacity: _controller,
@@ -174,7 +175,7 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
                             Container(
                               width: 50,
                               height: 50,
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 color: Color(0xFF1DA1F2),
                                 shape: BoxShape.circle,
                               ),
@@ -221,7 +222,7 @@ class _InicioScreenState extends State<InicioScreen> with SingleTickerProviderSt
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 15, 20, 0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.blue.withOpacity(0.2)),
         boxShadow: [
@@ -342,7 +343,7 @@ class _AchievementsSectionOptimized extends StatelessWidget {
       height: 152,
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -434,3 +435,6 @@ class _AchievementsSectionOptimized extends StatelessWidget {
     );
   }
 }
+
+
+

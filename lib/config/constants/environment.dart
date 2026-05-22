@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Environment {
   static bool _initialized = false;
-  static String _defaultApiUrl =
+  static final String _defaultApiUrl =
       'https://dev-repositorio-backend.posgradoupea.edu.bo/api/v1';
 
   static Future<void> initEnvironment() async {
@@ -123,4 +123,13 @@ class Environment {
     return '';
   }
 
+  /// Obtiene la URL del webhook para sugerencias (o vacío si no existe).
+  static String get suggestionWebhookUrl {
+    if (!_initialized) return '';
+    try {
+      return dotenv.env['SUGGESTION_WEBHOOK_URL'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
 }

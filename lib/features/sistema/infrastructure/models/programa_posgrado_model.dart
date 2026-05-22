@@ -19,6 +19,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
     super.urlFichaTecnica,
     super.responsable,
     super.inscripcionHasta,
+    super.imagenPortada,
+    super.celularSoporte,
   });
 
   /// Crea un modelo desde un mapa JSON (útil para APIs genéricas).
@@ -42,6 +44,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
       urlFichaTecnica: json['urlFichaTecnica']?.toString(),
       responsable: json['responsable']?.toString(),
       inscripcionHasta: json['inscripcionHasta']?.toString(),
+      imagenPortada: json['imagenPortada']?.toString(),
+      celularSoporte: json['celularSoporte']?.toString(),
     );
   }
 
@@ -96,6 +100,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
       urlFichaTecnica: portada?.trim().isNotEmpty == true ? portada : null,
       responsable: responsable,
       inscripcionHasta: inscripcionHasta,
+      imagenPortada: portada?.trim().isNotEmpty == true ? portada : null,
+      celularSoporte: json['responsableInterno']?['celular']?.toString(),
     );
   }
 
@@ -151,6 +157,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
       urlFichaTecnica: urlFichaTecnica,
       responsable: responsable,
       inscripcionHasta: inscripcionHasta,
+      imagenPortada: urlFichaTecnica,
+      celularSoporte: null,
     );
   }
 
@@ -173,6 +181,8 @@ class ProgramaPosgradoModel extends ProgramaPosgrado {
       'urlFichaTecnica': urlFichaTecnica,
       'responsable': responsable,
       'inscripcionHasta': inscripcionHasta,
+      'imagenPortada': imagenPortada,
+      'celularSoporte': celularSoporte,
     };
   }
 }

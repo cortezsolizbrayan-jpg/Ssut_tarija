@@ -1,10 +1,10 @@
-import 'dart:ui' as ui;
+﻿import 'dart:ui' as ui;
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/core/utils/premium_alerts.dart';
 
 class PantallaFirma extends StatefulWidget {
@@ -16,7 +16,7 @@ class PantallaFirma extends StatefulWidget {
 }
 
 class _PantallaFirmaState extends State<PantallaFirma> {
-  List<Offset?> _points = [];
+  final List<Offset?> _points = [];
   bool _isSaving = false;
 
   void _clearSignature() {

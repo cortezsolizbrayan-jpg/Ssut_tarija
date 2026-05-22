@@ -1,0 +1,2 @@
+export 'pantallas/pantallas.dart';
+

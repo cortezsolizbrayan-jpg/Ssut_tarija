@@ -18,6 +18,8 @@ class ProgramaPosgrado {
   final String? responsable;
   /// Fecha límite de inscripción (ej. "09-01-2026").
   final String? inscripcionHasta;
+  final String? imagenPortada;
+  final String? celularSoporte;
 
   ProgramaPosgrado({
     required this.id,
@@ -36,5 +38,7 @@ class ProgramaPosgrado {
     this.urlFichaTecnica,
     this.responsable,
     this.inscripcionHasta,
+    this.imagenPortada,
+    this.celularSoporte,
   });
 }

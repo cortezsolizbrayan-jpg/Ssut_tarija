@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
@@ -8,8 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:refactor_template/core/animations/enhanced_animations.dart';
 import 'package:refactor_template/core/utils/premium_alerts.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
-import 'package:refactor_template/core/services/servicio_procesador_imagen_perfil.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/image_processing/servicio_procesador_imagen_perfil.dart';
 import 'package:refactor_template/core/widgets/ios_date_picker.dart';
 
 class MisDatosPersonalesScreen extends StatefulWidget {
@@ -92,6 +92,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     super.didChangeDependencies();
     // Recargar imagen cuando se vuelve a la pantalla
     _refreshProfileImageIfNeeded();
+    _refreshIdentityBackupIfNeeded();
   }
 
   /// Carga los datos guardados previamente
@@ -101,39 +102,39 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     final session = await LocalStorageService.getSessionData();
 
     if (savedData != null) {
-      String _str(dynamic v) => (v?.toString() ?? '').trim();
-      String? _strOrNull(dynamic v) {
+      String str(dynamic v) => (v?.toString() ?? '').trim();
+      String? strOrNull(dynamic v) {
         if (v == null) return null;
         final s = v.toString().trim();
         return s.isEmpty ? null : s;
       }
       setState(() {
-        _nombreController.text = _str(savedData['nombre']);
-        _apPaternoController.text = _str(savedData['apPaterno']);
-        _apMaternoController.text = _str(savedData['apMaterno']);
-        _fechaNacimientoController.text = _str(savedData['fechaNacimiento']);
-        _numeroCIController.text = _str(savedData['numeroCI']);
-        _complementoController.text = _str(savedData['complemento']);
-        _expedidoEnController.text = _str(savedData['expedidoEn']);
-        _selectedExpedidoEn = _strOrNull(savedData['expedidoEn']);
-        _nacionalidadController.text = _str(savedData['nacionalidad']);
-        _selectedNacionalidad = _strOrNull(savedData['nacionalidad']);
-        _ciudadNacimientoController.text = _str(savedData['ciudadNacimiento']);
-        _selectedCiudadNacimiento = _strOrNull(savedData['ciudadNacimiento']);
-        _ciudadResidenciaController.text = _str(savedData['ciudadResidencia']);
-        _direccionController.text = _str(savedData['direccion']);
-        _nroCasaController.text = _str(savedData['nroCasa']);
-        _celularController.text = _str(savedData['celular']);
-        _correoController.text = _str(savedData['correo']);
-        _telefonoAlternativoController.text = _str(savedData['telefonoAlternativo']);
-        _telefonoTrabajoController.text = _str(savedData['telefonoTrabajo']);
-        _nitController.text = _str(savedData['nit']);
-        _razonSocialController.text = _str(savedData['razonSocial']);
-        _selectedGenero = _strOrNull(savedData['genero']);
-        _selectedCiudadResidencia = _strOrNull(savedData['ciudadResidencia']);
-        _selectedEstadoCivil = _strOrNull(savedData['estadoCivil']);
-      _fechaEmisionController.text = _str(savedData['fechaEmision']);
-      _fechaExpiracionController.text = _str(savedData['fechaExpiracion']);
+        _nombreController.text = str(savedData['nombre']);
+        _apPaternoController.text = str(savedData['apPaterno']);
+        _apMaternoController.text = str(savedData['apMaterno']);
+        _fechaNacimientoController.text = str(savedData['fechaNacimiento']);
+        _numeroCIController.text = str(savedData['numeroCI']);
+        _complementoController.text = str(savedData['complemento']);
+        _expedidoEnController.text = str(savedData['expedidoEn']);
+        _selectedExpedidoEn = strOrNull(savedData['expedidoEn']);
+        _nacionalidadController.text = str(savedData['nacionalidad']);
+        _selectedNacionalidad = strOrNull(savedData['nacionalidad']);
+        _ciudadNacimientoController.text = str(savedData['ciudadNacimiento']);
+        _selectedCiudadNacimiento = strOrNull(savedData['ciudadNacimiento']);
+        _ciudadResidenciaController.text = str(savedData['ciudadResidencia']);
+        _direccionController.text = str(savedData['direccion']);
+        _nroCasaController.text = str(savedData['nroCasa']);
+        _celularController.text = str(savedData['celular']);
+        _correoController.text = str(savedData['correo']);
+        _telefonoAlternativoController.text = str(savedData['telefonoAlternativo']);
+        _telefonoTrabajoController.text = str(savedData['telefonoTrabajo']);
+        _nitController.text = str(savedData['nit']);
+        _razonSocialController.text = str(savedData['razonSocial']);
+        _selectedGenero = strOrNull(savedData['genero']);
+        _selectedCiudadResidencia = strOrNull(savedData['ciudadResidencia']);
+        _selectedEstadoCivil = strOrNull(savedData['estadoCivil']);
+      _fechaEmisionController.text = str(savedData['fechaEmision']);
+      _fechaExpiracionController.text = str(savedData['fechaExpiracion']);
     });
     }
 
@@ -605,7 +606,9 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
           }
         }
       }
-      PremiumAlerts.showError(context, 'Error al seleccionar imagen: $e');
+      if (mounted) {
+        PremiumAlerts.showError(context, 'Error al seleccionar imagen: $e');
+      }
     }
   }
 
@@ -683,7 +686,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF005BAC),
+                color: Color(0xFF005BAC),
               ),
             ),
           ),
@@ -1366,7 +1369,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1521,7 +1524,6 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
   Widget _buildResponsiveGroup({
     required List<Widget> children,
     required double width,
-    int columns = 2,
   }) {
     // Si la pantalla es pequeña, siempre una columna
     if (width < 500) {
@@ -1620,7 +1622,7 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFE8EEF7)),
         boxShadow: [
@@ -1654,14 +1656,14 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
                 extra: {'ci': _numeroCIController.text},
               );
             },
-            borderRadius: const BorderRadius.only(
+            borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(24),
               bottomRight: Radius.circular(24),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(24),
@@ -2110,3 +2112,5 @@ class _MisDatosPersonalesScreenState extends State<MisDatosPersonalesScreen> {
     );
   }
 }
+
+

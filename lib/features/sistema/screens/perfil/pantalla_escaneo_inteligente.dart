@@ -1,15 +1,15 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:refactor_template/core/services/servicio_ocr_ia_avanzado.dart';
+import 'package:refactor_template/core/services/ocr/servicio_ocr_ia_avanzado.dart';
 
 /// Pantalla de Escaneo Inteligente con IA
 class PantallaEscaneoInteligente extends StatefulWidget {
   static const name = 'pantalla-escaneo-inteligente';
-  
+
   final TipoDocumento? tipoEsperado;
   final Function(ResultadoOcrIA)? onResultado;
 
@@ -24,8 +24,8 @@ class PantallaEscaneoInteligente extends StatefulWidget {
       _PantallaEscaneoInteligenteState();
 }
 
-class _PantallaEscaneoInteligenteState
-    extends State<PantallaEscaneoInteligente> with SingleTickerProviderStateMixin {
+class _PantallaEscaneoInteligenteState extends State<PantallaEscaneoInteligente>
+    with SingleTickerProviderStateMixin {
   // --- Colores ---
   static const Color kPrimaryColor = Color(0xFF2563EB);
   static const Color kPrimaryDark = Color(0xFF1E3A8A);
@@ -54,9 +54,7 @@ class _PantallaEscaneoInteligenteState
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    _textRecognizer = TextRecognizer(
-      script: TextRecognitionScript.latin,
-    );
+    _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
   }
 
   @override
@@ -230,9 +228,7 @@ class _PantallaEscaneoInteligenteState
             padding: const EdgeInsets.all(20),
             children: [
               // Instrucciones
-              FadeInDown(
-                child: _buildInstruccionesCard(),
-              ),
+              FadeInDown(child: _buildInstruccionesCard()),
               const SizedBox(height: 24),
               if (_mostrarReverso &&
                   _imagenFrente != null &&
@@ -243,9 +239,7 @@ class _PantallaEscaneoInteligenteState
                     decoration: BoxDecoration(
                       color: kWarningColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: kWarningColor.withOpacity(0.4),
-                      ),
+                      border: Border.all(color: kWarningColor.withOpacity(0.4)),
                     ),
                     child: Row(
                       children: const [
@@ -254,10 +248,7 @@ class _PantallaEscaneoInteligenteState
                         Expanded(
                           child: Text(
                             'Captura el reverso para continuar el escaneo.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: kTextColor,
-                            ),
+                            style: TextStyle(fontSize: 13, color: kTextColor),
                           ),
                         ),
                       ],
@@ -292,7 +283,9 @@ class _PantallaEscaneoInteligenteState
                     '¿Tiene reverso?',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Activa si el documento tiene dos caras'),
+                  subtitle: const Text(
+                    'Activa si el documento tiene dos caras',
+                  ),
                   activeColor: kPrimaryColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -356,9 +349,7 @@ class _PantallaEscaneoInteligenteState
               // Resultado previo
               if (_resultado != null) ...[
                 const SizedBox(height: 24),
-                FadeInUp(
-                  child: _buildResumenResultado(_resultado!),
-                ),
+                FadeInUp(child: _buildResumenResultado(_resultado!)),
               ],
 
               const SizedBox(height: 40),
@@ -400,10 +391,7 @@ class _PantallaEscaneoInteligenteState
                         const SizedBox(height: 8),
                         const Text(
                           'Extrayendo y organizando información',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: kTextSecondary,
-                          ),
+                          style: TextStyle(fontSize: 14, color: kTextSecondary),
                         ),
                       ],
                     ),
@@ -421,7 +409,10 @@ class _PantallaEscaneoInteligenteState
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [kPrimaryColor.withOpacity(0.1), kInfoColor.withOpacity(0.05)],
+          colors: [
+            kPrimaryColor.withOpacity(0.1),
+            kInfoColor.withOpacity(0.05),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -466,10 +457,7 @@ class _PantallaEscaneoInteligenteState
           Expanded(
             child: Text(
               texto,
-              style: const TextStyle(
-                fontSize: 13,
-                color: kTextSecondary,
-              ),
+              style: const TextStyle(fontSize: 13, color: kTextSecondary),
             ),
           ),
         ],
@@ -673,10 +661,7 @@ class _PantallaEscaneoInteligenteState
             'Confianza',
             '${(resultado.confianza * 100).toStringAsFixed(0)}%',
           ),
-          _buildInfoRow(
-            'Campos extraídos',
-            '${resultado.campos.length}',
-          ),
+          _buildInfoRow('Campos extraídos', '${resultado.campos.length}'),
         ],
       ),
     );
@@ -690,10 +675,7 @@ class _PantallaEscaneoInteligenteState
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: kTextSecondary,
-            ),
+            style: const TextStyle(fontSize: 13, color: kTextSecondary),
           ),
           Text(
             value,
@@ -852,10 +834,7 @@ class _ResultadoModal extends StatelessWidget {
                 ),
                 child: const Text(
                   'Aceptar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -912,10 +891,7 @@ class _ResultadoModal extends StatelessWidget {
               children: [
                 const Text(
                   'Nivel de Confianza',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: kTextSecondary,
-                  ),
+                  style: TextStyle(fontSize: 14, color: kTextSecondary),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -972,7 +948,10 @@ class _ResultadoModal extends StatelessWidget {
               ),
               if (campo.corregido)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: kWarningColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -1018,10 +997,7 @@ class _ResultadoModal extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Confianza: ${(campo.confianza * 100).toStringAsFixed(0)}%',
-            style: const TextStyle(
-              fontSize: 11,
-              color: kTextSecondary,
-            ),
+            style: const TextStyle(fontSize: 11, color: kTextSecondary),
           ),
         ],
       ),
@@ -1040,15 +1016,16 @@ class _ResultadoModal extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_amber_rounded, color: kWarningColor, size: 20),
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: kWarningColor,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               advertencia,
-              style: const TextStyle(
-                fontSize: 13,
-                color: kTextColor,
-              ),
+              style: const TextStyle(fontSize: 13, color: kTextColor),
             ),
           ),
         ],
@@ -1073,10 +1050,7 @@ class _ResultadoModal extends StatelessWidget {
           Expanded(
             child: Text(
               sugerencia,
-              style: const TextStyle(
-                fontSize: 13,
-                color: kTextColor,
-              ),
+              style: const TextStyle(fontSize: 13, color: kTextColor),
             ),
           ),
         ],
@@ -1089,9 +1063,13 @@ class _ResultadoModal extends StatelessWidget {
     final palabras = nombre
         .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(0)}')
         .split(RegExp(r'[_\s]+'));
-    
+
     return palabras
-        .map((p) => p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1).toLowerCase())
+        .map(
+          (p) => p.isEmpty
+              ? ''
+              : p[0].toUpperCase() + p.substring(1).toLowerCase(),
+        )
         .join(' ')
         .trim();
   }

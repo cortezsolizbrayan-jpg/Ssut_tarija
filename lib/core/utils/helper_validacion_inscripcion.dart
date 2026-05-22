@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:refactor_template/core/services/servicio_inscripcion.dart';
-import 'package:refactor_template/core/services/servicio_validacion_requisitos.dart';
-import 'package:refactor_template/core/services/servicio_notificaciones.dart';
+import 'package:refactor_template/core/services/otros/servicio_inscripcion.dart';
+import 'package:refactor_template/core/services/validation/servicio_validacion_requisitos.dart';
+import 'package:refactor_template/core/services/otros/servicio_notificaciones.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
 import 'package:refactor_template/features/sistema/screens/inscripcion/pantalla_validacion_requisitos.dart';
 
 /// Helper para validar requisitos antes de permitir inscripción
 class HelperValidacionInscripcion {
   /// Valida los requisitos y muestra la pantalla correspondiente
-  /// 
+  ///
   /// Si todos los requisitos están completos, ejecuta la inscripción
   /// Si faltan requisitos, muestra la pantalla de validación
-  /// 
+  ///
   /// Retorna true si se puede continuar con la inscripción
   static Future<bool> validarYContinuar({
     required BuildContext context,
@@ -22,7 +23,19 @@ class HelperValidacionInscripcion {
     VoidCallback? onRequisitosCompletos,
   }) async {
     final servicio = ServicioValidacionRequisitos();
-    
+
+    // Guardar el nombre y tipo del programa en datos personales para que
+    // la generación de carta use el programa correcto.
+    try {
+      final personalData = await LocalStorageService.getPersonalData() ?? {};
+      personalData['nombreProgramaCarta'] = nombrePrograma;
+      personalData['tipoProgramaCarta'] = tipoPrograma;
+      personalData['modalidadProgramaCarta'] = modalidad;
+      await LocalStorageService.savePersonalData(personalData);
+    } catch (_) {
+      // No bloquear el flujo si falla el guardado
+    }
+
     // Mostrar indicador de carga
     showDialog(
       context: context,
@@ -37,10 +50,14 @@ class HelperValidacionInscripcion {
     try {
       // Validar requisitos
       final puedeInscribirse = await servicio.puedeInscribirse(tipoPrograma);
-      
-      // Cerrar indicador de carga
+
+      // Cerrar indicador de carga con seguridad
       if (context.mounted) {
-        Navigator.pop(context);
+        await Future.microtask(() {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        });
       }
 
       if (puedeInscribirse) {
@@ -69,23 +86,29 @@ class HelperValidacionInscripcion {
               ),
             ),
           );
-          
+
           return resultado ?? false;
         }
         return false;
       }
     } catch (e) {
-      // Cerrar indicador de carga
+      // Cerrar indicador de carga con seguridad
       if (context.mounted) {
-        Navigator.pop(context);
-        
+        await Future.microtask(() {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        });
+
         // Mostrar error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al validar requisitos: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al validar requisitos: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
       return false;
     }
@@ -99,10 +122,12 @@ class HelperValidacionInscripcion {
     String modalidad = 'Virtual',
   }) async {
     final servicio = ServicioValidacionRequisitos();
-    
+
     try {
-      final documentosFaltantes = await servicio.obtenerDocumentosFaltantes(tipoPrograma);
-      
+      final documentosFaltantes = await servicio.obtenerDocumentosFaltantes(
+        tipoPrograma,
+      );
+
       if (!context.mounted) return;
 
       if (documentosFaltantes.isEmpty) {
@@ -254,12 +279,9 @@ class HelperValidacionInscripcion {
       }
     } catch (e) {
       if (!context.mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -270,11 +292,11 @@ class HelperValidacionInscripcion {
     required int total,
   }) {
     final todosCompletos = completados == total;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: todosCompletos 
+        color: todosCompletos
             ? Colors.green.withOpacity(0.2)
             : Colors.orange.withOpacity(0.2),
         borderRadius: BorderRadius.circular(20),
@@ -342,10 +364,7 @@ class HelperValidacionInscripcion {
                 SizedBox(height: 8),
                 Text(
                   'Por favor espera',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF666666),
-                  ),
+                  style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
                 ),
               ],
             ),
@@ -356,14 +375,14 @@ class HelperValidacionInscripcion {
 
     try {
       final servicioInscripcion = ServicioInscripcion();
-      
+
       // Convertir ID de String a int
       final idProgramaInt = int.tryParse(idPrograma) ?? 0;
-      
+
       if (idProgramaInt == 0) {
         throw Exception('ID de programa inválido');
       }
-      
+
       // Enviar inscripción
       final resultado = await servicioInscripcion.enviarInscripcionCompleta(
         idPrograma: idProgramaInt,
@@ -371,26 +390,31 @@ class HelperValidacionInscripcion {
 
       // Cerrar loader
       if (context.mounted) {
-        Navigator.pop(context);
+        await Future.microtask(() {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        });
       }
 
       // Extraer datos del resultado
-      final numeroInscripcion = resultado['id']?.toString() ?? 
-                                resultado['inscripcionId']?.toString() ?? 
-                                DateTime.now().millisecondsSinceEpoch.toString();
-      
-      final mensaje = resultado['mensaje']?.toString() ?? 
-                      resultado['message']?.toString();
+      final numeroInscripcion =
+          resultado['id']?.toString() ??
+          resultado['inscripcionId']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+
+      final mensaje =
+          resultado['mensaje']?.toString() ?? resultado['message']?.toString();
 
       // 🔔 ENVIAR NOTIFICACIONES
       final servicioNotificaciones = ServicioNotificaciones();
-      
+
       // Notificación inmediata de éxito
       await servicioNotificaciones.notificarInscripcionExitosa(
         nombrePrograma: nombrePrograma,
         numeroInscripcion: numeroInscripcion,
       );
-      
+
       // Recordatorio para subir comprobante (24 horas después)
       await servicioNotificaciones.recordatorioSubirComprobante(
         nombrePrograma: nombrePrograma,
@@ -408,47 +432,52 @@ class HelperValidacionInscripcion {
         );
       }
     } catch (e) {
-      // Cerrar loader
+      // Cerrar loader con seguridad
       if (context.mounted) {
-        Navigator.pop(context);
-        
+        await Future.microtask(() {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        });
+
         // Mostrar error
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Row(
-              children: const [
-                Icon(Icons.error_outline, color: Colors.red, size: 28),
-                SizedBox(width: 12),
-                Text('Error en Inscripción'),
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 28),
+                  SizedBox(width: 12),
+                  Text('Error en Inscripción'),
+                ],
+              ),
+              content: Text(
+                e.toString().replaceFirst('Exception: ', ''),
+                style: const TextStyle(fontSize: 14),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cerrar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/mis-datos-personales');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF005BAC),
+                  ),
+                  child: const Text('Completar Datos'),
+                ),
               ],
             ),
-            content: Text(
-              e.toString().replaceFirst('Exception: ', ''),
-              style: const TextStyle(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cerrar'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Ir a completar datos
-                  context.push('/mis-datos-personales');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF005BAC),
-                ),
-                child: const Text('Completar Datos'),
-              ),
-            ],
-          ),
-        );
+          );
+        }
       }
     }
   }

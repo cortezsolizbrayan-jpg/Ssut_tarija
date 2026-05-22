@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -6,9 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:refactor_template/core/animations/enhanced_animations.dart';
-import 'package:refactor_template/core/services/servicio_almacenamiento_local.dart';
-import 'package:refactor_template/features/sistema/widgets/notification_icon_widget.dart';
-import 'package:refactor_template/features/sistema/widgets/profile_avatar_widget.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/features/sistema/widgets/navegacion/icono_notificaciones_widget.dart';
+import 'package:refactor_template/features/sistema/widgets/perfil/avatar_perfil_widget.dart';
 
 class PerfilScreen extends ConsumerStatefulWidget {
   const PerfilScreen({super.key});
@@ -230,10 +230,10 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen>
     final session = await LocalStorageService.getSessionData();
     if (!mounted) return;
 
-    String _str(dynamic v) => (v?.toString() ?? '').trim();
-    final nombre = _str(personal?['nombre']);
-    final apPaterno = _str(personal?['apPaterno']);
-    final apMaterno = _str(personal?['apMaterno']);
+    String str(dynamic v) => (v?.toString() ?? '').trim();
+    final nombre = str(personal?['nombre']);
+    final apPaterno = str(personal?['apPaterno']);
+    final apMaterno = str(personal?['apMaterno']);
 
     final nombreCompleto = [
       if (nombre.isNotEmpty) nombre,
@@ -241,7 +241,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen>
       if (apMaterno.isNotEmpty) apMaterno,
     ].join(' ').trim();
 
-    final sessionNombre = _str(session?['nombreUsuario']);
+    final sessionNombre = str(session?['nombreUsuario']);
     setState(() {
       _nombreUsuario = nombreCompleto.isNotEmpty
           ? nombreCompleto
@@ -272,7 +272,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen>
 
     return Scaffold(
       // Forzar fondo claro para evitar el "fondo negro" detrás del círculo
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SizedBox(
         width: screenWidth,
         height: screenHeight,
@@ -378,10 +378,13 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen>
             painter: _PintorEncabezado(),
             child: SafeArea(
               bottom: false,
+              top: false,
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 2,
-                  vertical: math.min(16, height * 0.05),
+                padding: EdgeInsets.fromLTRB(
+                  2,
+                  math.min(16, height * 0.05) + MediaQuery.of(context).padding.top,
+                  2,
+                  math.min(16, height * 0.05),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -444,7 +447,7 @@ class _PerfilScreenState extends ConsumerState<PerfilScreen>
                           onTap: () async {
                             HapticFeedback.selectionClick();
                             await context.push('/mis-datos-personales');
-                            if (mounted) setState(() {}); // Forzar el refresco de componentes como el avatar
+                            if (mounted) setState(() {}); // Forzar el refresco de Widgets como el avatar
                           },
                           borderRadius: BorderRadius.circular(20),
                           child: ProfileAvatarWidget(
@@ -1319,3 +1322,4 @@ class _PintorEncabezado extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
