@@ -24,6 +24,7 @@ public class UsuariosController : ControllerBase
         nameof(UsuarioRol.AdministradorDocumentos),
         nameof(UsuarioRol.Contador),
         nameof(UsuarioRol.Gerente),
+        nameof(UsuarioRol.Auditor),
     ];
 
     public UsuariosController(ApplicationDbContext context, IConfiguration configuration)

@@ -271,6 +271,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                                   icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
                                   items: [
                                     {'val': 'Contador', 'label': 'Contador'},
+                                    {'val': 'Auditor', 'label': 'Auditor'},
                                     {'val': 'Gerente', 'label': 'Gerente'},
                                     {'val': 'AdministradorDocumentos', 'label': 'Admin. Documentos'},
                                   ].map((item) {

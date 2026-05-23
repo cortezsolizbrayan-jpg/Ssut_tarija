@@ -27,7 +27,7 @@ class _ReportePersonalizadoScreenState
     extends State<ReportePersonalizadoScreen> {
   // Columnas disponibles
   final Map<String, ColumnConfig> _columnasDisponibles = {
-    'codigo': ColumnConfig('Código', true, 120),
+    'codigo': ColumnConfig('Código', true, 180),
     'numeroCorrelativo': ColumnConfig('Nº Correlativo', true, 120),
     'tipoDocumento': ColumnConfig('Tipo Documento', true, 150),
     'areaOrigen': ColumnConfig('Área Origen', false, 150),
@@ -932,6 +932,7 @@ class _ReportePersonalizadoScreenState
             ],
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
@@ -945,7 +946,7 @@ class _ReportePersonalizadoScreenState
                   size: 28,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -968,7 +969,14 @@ class _ReportePersonalizadoScreenState
                   ],
                 ),
               ),
-              FilledButton.icon(
+              const SizedBox(width: 8),
+              Flexible(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    FilledButton.icon(
                 onPressed:
                     _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
                         ? null
@@ -978,10 +986,9 @@ class _ReportePersonalizadoScreenState
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
                   disabledBackgroundColor: theme.colorScheme.outline,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 12),
               FilledButton.icon(
                 onPressed:
                     _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
@@ -992,14 +999,19 @@ class _ReportePersonalizadoScreenState
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.green.shade600,
                   disabledBackgroundColor: theme.colorScheme.outline,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
         _buildFilterBar(theme),
-        Expanded(child: _buildDataTable(theme)),
+        Expanded(
+          child: ClipRect(child: _buildDataTable(theme)),
+        ),
       ],
     );
   }
@@ -1063,46 +1075,10 @@ class _ReportePersonalizadoScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText:
-                        'Buscar por código, correlativo, descripción, tipo o área...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    suffixIcon:
-                        _filtroTexto.isNotEmpty
-                            ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _filtroTexto = '';
-                                  _aplicarFiltros();
-                                });
-                              },
-                            )
-                            : null,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _filtroTexto = value;
-                      _aplicarFiltros();
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              IconButton.filled(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 520;
+              final filterBtn = IconButton.filled(
                 onPressed: () {
                   setState(() => _mostrarFiltros = !_mostrarFiltros);
                 },
@@ -1117,54 +1093,88 @@ class _ReportePersonalizadoScreenState
                           : theme.colorScheme.primaryContainer,
                   foregroundColor:
                       hasActiveFilters
-                          ? Colors.white
+                          ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onPrimaryContainer,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+              );
+              final countBadge = Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: theme.colorScheme.primary.withOpacity(0.3),
-                    width: 1.5,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Text(
+                  '${_documentosFiltrados.length}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              );
+              final searchField = TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText:
+                      'Buscar por código, correlativo, descripción, tipo o área...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  suffixIcon:
+                      _filtroTexto.isNotEmpty
+                          ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _filtroTexto = '';
+                                _aplicarFiltros();
+                              });
+                            },
+                          )
+                          : null,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _filtroTexto = value;
+                    _aplicarFiltros();
+                  });
+                },
+              );
+
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.description_outlined,
-                      size: 18,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_documentosFiltrados.length}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'registros',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
+                    searchField,
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [filterBtn, const SizedBox(width: 8), countBadge],
                     ),
                   ],
-                ),
-              ),
-            ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: searchField),
+                  const SizedBox(width: 8),
+                  filterBtn,
+                  const SizedBox(width: 8),
+                  countBadge,
+                ],
+              );
+            },
           ),
           if (hasActiveFilters && !_mostrarFiltros) ...[
             const SizedBox(height: 12),
@@ -1236,237 +1246,250 @@ class _ReportePersonalizadoScreenState
           ],
           if (_mostrarFiltros) ...[
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                SizedBox(
-                  width: 200,
-                  child: DropdownButtonFormField<String>(
-                    value: _filtroEstado,
-                    decoration: InputDecoration(
-                      labelText: 'Estado',
-                      prefixIcon: const Icon(Icons.info_outline, size: 18),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final maxW = constraints.maxWidth;
+                final columns = maxW >= 900
+                    ? 3
+                    : maxW >= 520
+                    ? 2
+                    : 1;
+                final gap = 12.0 * (columns - 1);
+                final fieldWidth = maxW > 0
+                    ? ((maxW - gap) / columns).clamp(160.0, 320.0)
+                    : 220.0;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: fieldWidth,
+                      child: DropdownButtonFormField<String>(
+                        value: _filtroEstado,
+                        isExpanded: true,
+                        isDense: true,
+                        decoration: InputDecoration(
+                          labelText: 'Estado',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: null,
+                            child: Text('Todos', overflow: TextOverflow.ellipsis),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Activo',
+                            child: Text('Activo', overflow: TextOverflow.ellipsis),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Prestado',
+                            child: Text('Prestado', overflow: TextOverflow.ellipsis),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Archivado',
+                            child: Text('Archivado', overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _filtroEstado = value;
+                            _aplicarFiltros();
+                          });
+                        },
                       ),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('Todos')),
-                      DropdownMenuItem(value: 'Activo', child: Text('Activo')),
-                      DropdownMenuItem(
-                        value: 'Prestado',
-                        child: Text('Prestado'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Archivado',
-                        child: Text('Archivado'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _filtroEstado = value;
-                        _aplicarFiltros();
-                      });
-                    },
-                  ),
-                ),
-                if (_tiposDocumentoDisponibles.isNotEmpty)
-                  SizedBox(
-                    width: 200,
-                    child: DropdownButtonFormField<String>(
-                      value: _filtroTipo,
-                      decoration: InputDecoration(
-                        labelText: 'Tipo Documento',
-                        prefixIcon: const Icon(
-                          Icons.description_outlined,
-                          size: 18,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                    if (_tiposDocumentoDisponibles.isNotEmpty)
+                      SizedBox(
+                        width: fieldWidth,
+                        child: DropdownButtonFormField<String>(
+                          value: _filtroTipo,
+                          isExpanded: true,
+                          isDense: true,
+                          decoration: InputDecoration(
+                            labelText: 'Tipo Documento',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('Todos', overflow: TextOverflow.ellipsis),
+                            ),
+                            ..._tiposDocumentoDisponibles.map((tipo) {
+                              return DropdownMenuItem(
+                                value: tipo,
+                                child: Text(tipo, overflow: TextOverflow.ellipsis),
+                              );
+                            }),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _filtroTipo = value;
+                              _aplicarFiltros();
+                            });
+                          },
                         ),
                       ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('Todos'),
+                    if (_areasDisponibles.isNotEmpty)
+                      SizedBox(
+                        width: fieldWidth,
+                        child: DropdownButtonFormField<String>(
+                          value: _filtroArea,
+                          isExpanded: true,
+                          isDense: true,
+                          decoration: InputDecoration(
+                            labelText: 'Área',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('Todas', overflow: TextOverflow.ellipsis),
+                            ),
+                            ..._areasDisponibles.map((area) {
+                              return DropdownMenuItem(
+                                value: area,
+                                child: Text(area, overflow: TextOverflow.ellipsis),
+                              );
+                            }),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _filtroArea = value;
+                              _aplicarFiltros();
+                            });
+                          },
                         ),
-                        ..._tiposDocumentoDisponibles.map((tipo) {
-                          return DropdownMenuItem(
-                            value: tipo,
-                            child: Text(tipo),
+                      ),
+                    SizedBox(
+                      width: fieldWidth,
+                      child: TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Fecha Desde',
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          suffixIcon:
+                              _filtroFechaDesde != null
+                                  ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () {
+                                      setState(() {
+                                        _filtroFechaDesde = null;
+                                        _aplicarFiltros();
+                                      });
+                                    },
+                                  )
+                                  : null,
+                        ),
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text:
+                              _filtroFechaDesde != null
+                                  ? DateFormat('dd/MM/yyyy').format(_filtroFechaDesde!)
+                                  : '',
+                        ),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _filtroFechaDesde ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
                           );
-                        }),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _filtroTipo = value;
-                          _aplicarFiltros();
-                        });
-                      },
-                    ),
-                  ),
-                if (_areasDisponibles.isNotEmpty)
-                  SizedBox(
-                    width: 200,
-                    child: DropdownButtonFormField<String>(
-                      value: _filtroArea,
-                      decoration: InputDecoration(
-                        labelText: 'Área',
-                        prefixIcon: const Icon(
-                          Icons.business_outlined,
-                          size: 18,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                          if (date != null) {
+                            setState(() {
+                              _filtroFechaDesde = date;
+                              _aplicarFiltros();
+                            });
+                          }
+                        },
                       ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('Todas'),
+                    ),
+                    SizedBox(
+                      width: fieldWidth,
+                      child: TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Fecha Hasta',
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          suffixIcon:
+                              _filtroFechaHasta != null
+                                  ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () {
+                                      setState(() {
+                                        _filtroFechaHasta = null;
+                                        _aplicarFiltros();
+                                      });
+                                    },
+                                  )
+                                  : null,
                         ),
-                        ..._areasDisponibles.map((area) {
-                          return DropdownMenuItem(
-                            value: area,
-                            child: Text(area),
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text:
+                              _filtroFechaHasta != null
+                                  ? DateFormat('dd/MM/yyyy').format(_filtroFechaHasta!)
+                                  : '',
+                        ),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _filtroFechaHasta ?? DateTime.now(),
+                            firstDate: _filtroFechaDesde ?? DateTime(2000),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
                           );
-                        }),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _filtroArea = value;
-                          _aplicarFiltros();
-                        });
-                      },
-                    ),
-                  ),
-                SizedBox(
-                  width: 200,
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Fecha Desde',
-                      prefixIcon: const Icon(Icons.calendar_today, size: 18),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                          if (date != null) {
+                            setState(() {
+                              _filtroFechaHasta = date;
+                              _aplicarFiltros();
+                            });
+                          }
+                        },
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _limpiarFiltros,
+                      icon: const Icon(Icons.clear_all, size: 18),
+                      label: const Text('Limpiar filtros'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
-                      suffixIcon:
-                          _filtroFechaDesde != null
-                              ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  setState(() {
-                                    _filtroFechaDesde = null;
-                                    _aplicarFiltros();
-                                  });
-                                },
-                              )
-                              : null,
                     ),
-                    readOnly: true,
-                    controller: TextEditingController(
-                      text:
-                          _filtroFechaDesde != null
-                              ? DateFormat(
-                                'dd/MM/yyyy',
-                              ).format(_filtroFechaDesde!)
-                              : '',
-                    ),
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _filtroFechaDesde ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (date != null) {
-                        setState(() {
-                          _filtroFechaDesde = date;
-                          _aplicarFiltros();
-                        });
-                      }
-                    },
-                  ),
-                ),
-                SizedBox(
-                  width: 200,
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Fecha Hasta',
-                      prefixIcon: const Icon(Icons.calendar_today, size: 18),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      suffixIcon:
-                          _filtroFechaHasta != null
-                              ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  setState(() {
-                                    _filtroFechaHasta = null;
-                                    _aplicarFiltros();
-                                  });
-                                },
-                              )
-                              : null,
-                    ),
-                    readOnly: true,
-                    controller: TextEditingController(
-                      text:
-                          _filtroFechaHasta != null
-                              ? DateFormat(
-                                'dd/MM/yyyy',
-                              ).format(_filtroFechaHasta!)
-                              : '',
-                    ),
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _filtroFechaHasta ?? DateTime.now(),
-                        firstDate: _filtroFechaDesde ?? DateTime(2000),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (date != null) {
-                        setState(() {
-                          _filtroFechaHasta = date;
-                          _aplicarFiltros();
-                        });
-                      }
-                    },
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _limpiarFiltros,
-                  icon: const Icon(Icons.clear_all, size: 18),
-                  label: const Text('Limpiar filtros'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ],
         ],
@@ -1543,18 +1566,21 @@ class _ReportePersonalizadoScreenState
       (sum, col) => sum + _columnasDisponibles[col]!.width + 32,
     );
 
-    return Scrollbar(
-      thumbVisibility: true,
-      notificationPredicate: (notification) => notification.depth == 0,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Scrollbar(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scrollbar(
           thumbVisibility: true,
-          notificationPredicate: (notification) => notification.depth == 1,
           child: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: tableMinWidth),
-              child: DataTable(
+            child: Scrollbar(
+              thumbVisibility: true,
+              notificationPredicate: (notification) => notification.depth == 1,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: tableMinWidth.clamp(constraints.maxWidth, double.infinity),
+                  ),
+                  child: DataTable(
                 headingRowColor: WidgetStateProperty.all(
                   theme.colorScheme.primaryContainer.withOpacity(0.3),
                 ),
@@ -1593,24 +1619,32 @@ class _ReportePersonalizadoScreenState
                       return DataRow(
                         cells:
                             columnas.map((col) {
+                              final value = _getColumnValue(doc, col);
                               return DataCell(
-                                SizedBox(
-                                  width: _columnasDisponibles[col]!.width,
-                                  child: Text(
-                                    _getColumnValue(doc, col),
-                                    style: GoogleFonts.inter(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
+                                Tooltip(
+                                  message: value,
+                                  waitDuration: const Duration(milliseconds: 400),
+                                  child: SizedBox(
+                                    width: _columnasDisponibles[col]!.width,
+                                    child: Text(
+                                      value,
+                                      style: GoogleFonts.inter(fontSize: 12),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ),
                               );
                             }).toList(),
                       );
                     }).toList(),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

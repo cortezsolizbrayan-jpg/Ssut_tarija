@@ -12,6 +12,7 @@ String _getRolDisplayName(String rol) {
     case 'Administrador': return 'Administrador del Sistema';
     case 'AdministradorDocumentos': return 'Administrador de Documentos';
     case 'Contador': return 'Contador';
+    case 'Auditor': return 'Auditor';
     case 'Gerente': return 'Gerente';
     default: return rol;
   }
@@ -23,6 +24,7 @@ IconData _getRolIcon(String rol) {
       case 'Administrador': return Icons.security;
       case 'AdministradorDocumentos': return Icons.folder_shared;
       case 'Contador': return Icons.calculate;
+      case 'Auditor': return Icons.fact_check_outlined;
       case 'Gerente': return Icons.business;
       default: return Icons.person_outline;
     }
@@ -34,6 +36,7 @@ Color _getRolColor(String rol) {
       case 'Administrador': return Colors.deepPurple;
       case 'AdministradorDocumentos': return Colors.orange;
       case 'Contador': return Colors.blue;
+      case 'Auditor': return Colors.teal;
       case 'Gerente': return Colors.green;
       default: return Colors.grey;
     }

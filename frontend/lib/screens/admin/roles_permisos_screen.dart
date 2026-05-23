@@ -42,12 +42,13 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  /// Solo los roles que acepta el backend (AdministradorSistema, AdministradorDocumentos, Contador, Gerente).
+  /// Roles que acepta el backend.
   final List<String> _roles = [
     'AdministradorSistema',
     'AdministradorDocumentos',
     'Contador',
     'Gerente',
+    'Auditor',
   ];
 
   @override
@@ -376,6 +377,8 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
         return 'Administrador de Documentos';
       case 'Contador':
         return 'Contador';
+      case 'Auditor':
+        return 'Auditor';
       case 'Gerente':
         return 'Gerente';
       default:
@@ -392,6 +395,8 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
         return Icons.folder_shared;
       case 'Contador':
         return Icons.calculate;
+      case 'Auditor':
+        return Icons.fact_check_outlined;
       case 'Gerente':
         return Icons.business;
       default:
@@ -408,6 +413,8 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
         return Colors.orange;
       case 'Contador':
         return Colors.blue;
+      case 'Auditor':
+        return Colors.teal;
       case 'Gerente':
         return Colors.green;
       default:

@@ -102,5 +102,6 @@ public enum UsuarioRol
     AdministradorDocumentos,  // Administrador de Documentos
     Contador,                 // Contador
     Gerente,                  // Gerente
+    Auditor,                  // Auditor (mismas funciones que Contador)
 }
 

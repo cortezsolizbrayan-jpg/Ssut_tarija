@@ -225,7 +225,7 @@ class _PrestamoFormScreenState extends State<PrestamoFormScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Como Administrador de Documentos, debes asignar el préstamo a un Contador o Gerente.',
+                                'Como Administrador de Documentos, debes asignar el préstamo a un Contador, Gerente o Auditor.',
                                 style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
                               ),
                             ),
@@ -253,7 +253,10 @@ class _PrestamoFormScreenState extends State<PrestamoFormScreen> {
                           .map((u) {
                             // Determinar si el usuario puede recibir préstamos
                             final rolNombre = u.rol.toString().split('.').last;
-                            final puedeRecibirPrestamo = rolNombre == 'Contador' || rolNombre == 'Gerente';
+                            final puedeRecibirPrestamo =
+                                rolNombre == 'Contador' ||
+                                rolNombre == 'Gerente' ||
+                                rolNombre == 'Auditor';
                             
                             // Icono según el rol
                             IconData icono;
@@ -265,6 +268,11 @@ class _PrestamoFormScreenState extends State<PrestamoFormScreen> {
                                 icono = Icons.check_circle;
                                 colorIcono = Colors.green;
                                 rolDisplay = 'Contador';
+                                break;
+                              case 'Auditor':
+                                icono = Icons.check_circle;
+                                colorIcono = Colors.teal;
+                                rolDisplay = 'Auditor';
                                 break;
                               case 'Gerente':
                                 icono = Icons.check_circle;

@@ -125,7 +125,7 @@ public class PermisosController : ControllerBase
     [Authorize(Roles = "AdministradorSistema")]
     public async Task<ActionResult<object>> GetRolesPermisos()
     {
-        var roles = new[] { "AdministradorSistema", "AdministradorDocumentos", "Contador", "Gerente" };
+        var roles = new[] { "AdministradorSistema", "AdministradorDocumentos", "Contador", "Gerente", "Auditor" };
         
         // Respuesta vacía por defecto
         var emptyResponse = new 
@@ -405,7 +405,7 @@ public class PermisosController : ControllerBase
                await _context.SaveChangesAsync();
             }
 
-            var rolesTarget = new[] { "AdministradorDocumentos", "Contador", "Gerente" };
+            var rolesTarget = new[] { "AdministradorDocumentos", "Contador", "Gerente", "Auditor" };
             
             var rolPermisos = await _context.RolPermisos
                 .Where(rp => rolesTarget.Contains(rp.Rol) && rp.PermisoId == permiso.Id)

@@ -33,9 +33,9 @@ public class MovimientosController : ControllerBase
             !string.IsNullOrEmpty(rolClaim))
         {
             // Filtrar según el rol:
-            // - Contador y Gerente: solo ven sus propios préstamos
+            // - Contador, Gerente y Auditor: solo ven sus propios préstamos
             // - Administradores: ven todos
-            if (rolClaim == "Contador" || rolClaim == "Gerente")
+            if (rolClaim == "Contador" || rolClaim == "Gerente" || rolClaim == "Auditor")
             {
                 movimientos = movimientos.Where(m => m.UsuarioId == userId).ToList();
             }
@@ -89,7 +89,7 @@ public class MovimientosController : ControllerBase
                 // Validación: Administrador de Documentos no puede prestarse a sí mismo
                 if (rolClaim == "AdministradorDocumentos" && dto.UsuarioId == currentUserId)
                 {
-                    return BadRequest(new { message = "El Administrador de Documentos no puede registrar préstamos para sí mismo. Debe asignar el préstamo a un Contador o Gerente." });
+                    return BadRequest(new { message = "El Administrador de Documentos no puede registrar préstamos para sí mismo. Debe asignar el préstamo a un Contador, Gerente o Auditor." });
                 }
             }
 

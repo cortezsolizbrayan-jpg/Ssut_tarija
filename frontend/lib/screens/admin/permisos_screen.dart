@@ -43,6 +43,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
       'ver_movimientos',
     ],
     UserRole.contador: ['ver_documento', 'subir_documento', 'ver_movimientos'],
+    UserRole.auditor: ['ver_documento', 'subir_documento', 'ver_movimientos'],
     UserRole.gerente: ['ver_documento', 'ver_movimientos'],
   };
 
@@ -229,6 +230,9 @@ class _PermisosScreenState extends State<PermisosScreen> {
       case 'contador':
         print('DEBUG PERMISOS: Mapeado a Contador');
         return UserRole.contador;
+      case 'auditor':
+        print('DEBUG PERMISOS: Mapeado a Auditor');
+        return UserRole.auditor;
       case 'gerente':
         print('DEBUG PERMISOS: Mapeado a Gerente');
         return UserRole.gerente;
@@ -819,6 +823,8 @@ class _PermisosScreenState extends State<PermisosScreen> {
         return Colors.blue;
       case 'Contador':
         return Colors.green;
+      case 'Auditor':
+        return Colors.teal;
       case 'Gerente':
         return Colors.orange;
       default:
@@ -834,6 +840,8 @@ class _PermisosScreenState extends State<PermisosScreen> {
         return 'Admin Documentos';
       case 'Contador':
         return 'Contador';
+      case 'Auditor':
+        return 'Auditor';
       case 'Gerente':
         return 'Gerente';
       default:

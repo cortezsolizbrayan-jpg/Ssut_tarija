@@ -2,7 +2,8 @@ enum UserRole {
   administradorSistema,
   administradorDocumentos,
   contador,
-  gerente;
+  gerente,
+  auditor;
 
   String get displayName {
     switch (this) {
@@ -14,6 +15,8 @@ enum UserRole {
         return 'Contador';
       case UserRole.gerente:
         return 'Gerente';
+      case UserRole.auditor:
+        return 'Auditor';
     }
   }
 
@@ -27,6 +30,18 @@ enum UserRole {
         return 'Contador';
       case UserRole.gerente:
         return 'Gerente';
+      case UserRole.auditor:
+        return 'Auditor';
     }
   }
+
+  /// Mismas pantallas y permisos base que Contador.
+  bool get mismasFuncionesQueContador =>
+      this == UserRole.contador || this == UserRole.auditor;
+
+  /// Solo ve sus propios préstamos en movimientos.
+  bool get veSoloPropiosMovimientos =>
+      this == UserRole.contador ||
+      this == UserRole.gerente ||
+      this == UserRole.auditor;
 }

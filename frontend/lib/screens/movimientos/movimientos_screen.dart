@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/movimiento.dart';
+import '../../models/rol_usuario.dart';
 import '../../providers/autenticacion_provider.dart';
 import '../../services/documento_service.dart';
 import '../../services/movimiento_service.dart';
@@ -373,8 +374,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                     ),
                   ],
                 ),
-                // Mensaje informativo para Contador/Gerente
-                if (authProvider.user?['rol'] == 'Contador' || authProvider.user?['rol'] == 'Gerente') ...[
+                // Mensaje informativo para roles que solo ven sus movimientos
+                if (authProvider.role.veSoloPropiosMovimientos) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -423,7 +424,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                         child: Text(
                           'Los documentos NO se devuelven automáticamente al vencer el plazo. '
                           'Cuando la fecha límite se cumpla el préstamo quedará marcado como vencido y '
-                          'el Contador o Gerente deben registrar la devolución manualmente.',
+                          'el Contador, Gerente o Auditor deben registrar la devolución manualmente.',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: theme.colorScheme.onSurfaceVariant,
@@ -434,54 +435,45 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                     ],
                   ),
                 ),
-                // Filtros de tipo
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _FilterChip(
-                        label: 'Todos',
-                        selected: _filtro == _FiltroMovimiento.todos,
-                        onSelected:
-                            () => setState(
-                              () => _filtro = _FiltroMovimiento.todos,
-                            ),
-                        theme: theme,
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Préstamos',
-                        selected: _filtro == _FiltroMovimiento.prestamos,
-                        onSelected:
-                            () => setState(
-                              () => _filtro = _FiltroMovimiento.prestamos,
-                            ),
-                        theme: theme,
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Devoluciones',
-                        selected: _filtro == _FiltroMovimiento.devoluciones,
-                        onSelected:
-                            () => setState(
-                              () => _filtro = _FiltroMovimiento.devoluciones,
-                            ),
-                        theme: theme,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Filtros de periodo
-                Row(
+                // Filtros (Wrap evita que "Préstamos" se corte en pantallas angostas)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    _FilterChip(
+                      label: 'Todos',
+                      selected: _filtro == _FiltroMovimiento.todos,
+                      onSelected:
+                          () => setState(
+                            () => _filtro = _FiltroMovimiento.todos,
+                          ),
+                      theme: theme,
+                    ),
+                    _FilterChip(
+                      label: 'Préstamos',
+                      selected: _filtro == _FiltroMovimiento.prestamos,
+                      onSelected:
+                          () => setState(
+                            () => _filtro = _FiltroMovimiento.prestamos,
+                          ),
+                      theme: theme,
+                    ),
+                    _FilterChip(
+                      label: 'Devoluciones',
+                      selected: _filtro == _FiltroMovimiento.devoluciones,
+                      onSelected:
+                          () => setState(
+                            () => _filtro = _FiltroMovimiento.devoluciones,
+                          ),
+                      theme: theme,
+                    ),
                     _FilterChip(
                       label: 'Hoy',
                       selected: _filtroPeriodo == _FiltroPeriodo.hoy,
                       onSelected: () => setState(() => _filtroPeriodo = _FiltroPeriodo.hoy),
                       theme: theme,
                     ),
-                    const SizedBox(width: 8),
                     // Dropdown de meses
                     Container(
                       height: 36,
@@ -537,7 +529,6 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     // Dropdown de años
                     Container(
                       height: 36,

@@ -113,14 +113,15 @@ class AuthProvider extends ChangeNotifier {
         return hasPermission;
         
       case UserRole.contador:
-        // Puede ver y subir documentos y ver movimientos
+      case UserRole.auditor:
+        // Auditor: mismas funciones que Contador
         final allowedPermissions = [
           'ver_documento',
           'subir_documento',
           'ver_movimientos'
         ];
         final hasPermission = allowedPermissions.contains(permissionCode);
-        print('DEBUG: Contador - Permiso "$permissionCode": $hasPermission');
+        print('DEBUG: ${_role.name} - Permiso "$permissionCode": $hasPermission');
         return hasPermission;
         
       case UserRole.gerente:
@@ -494,6 +495,9 @@ class AuthProvider extends ChangeNotifier {
       case 'accountant':
         print('DEBUG: Rol mapeado a Contador');
         return UserRole.contador;
+      case 'auditor':
+        print('DEBUG: Rol mapeado a Auditor');
+        return UserRole.auditor;
       case 'gerente':
       case 'manager':
         print('DEBUG: Rol mapeado a Gerente');
