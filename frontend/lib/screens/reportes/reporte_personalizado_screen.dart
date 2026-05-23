@@ -60,11 +60,26 @@ class _ReportePersonalizadoScreenState
   bool _sortAscending = true;
 
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _fechaDesdeController = TextEditingController();
+  final TextEditingController _fechaHastaController = TextEditingController();
 
   @override
   void dispose() {
     _searchController.dispose();
+    _fechaDesdeController.dispose();
+    _fechaHastaController.dispose();
     super.dispose();
+  }
+
+  void _syncFechaControllers() {
+    _fechaDesdeController.text =
+        _filtroFechaDesde != null
+            ? DateFormat('dd/MM/yyyy').format(_filtroFechaDesde!)
+            : '';
+    _fechaHastaController.text =
+        _filtroFechaHasta != null
+            ? DateFormat('dd/MM/yyyy').format(_filtroFechaHasta!)
+            : '';
   }
 
   Future<void> _cargarDocumentos() async {
@@ -173,6 +188,7 @@ class _ReportePersonalizadoScreenState
       _filtroFechaDesde = null;
       _filtroFechaHasta = null;
       _searchController.clear();
+      _syncFechaControllers();
       _aplicarFiltros();
     });
   }
@@ -1057,6 +1073,246 @@ class _ReportePersonalizadoScreenState
     );
   }
 
+  Widget _buildFiltroDropdown({
+    required ThemeData theme,
+    required String label,
+    required String? value,
+    required List<DropdownMenuItem<String>> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      isExpanded: true,
+      borderRadius: BorderRadius.circular(12),
+      menuMaxHeight: 320,
+      icon: Icon(
+        Icons.keyboard_arrow_down_rounded,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.onSurface,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+      ),
+      selectedItemBuilder: (context) {
+        return items.map((item) {
+          final child = item.child;
+          final text = child is Text ? (child.data ?? '') : '';
+          return Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              text,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          );
+        }).toList();
+      },
+      items: items,
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildFiltrosAvanzados(ThemeData theme, double maxWidth) {
+    final stacked = maxWidth < 640;
+    const gap = 12.0;
+
+    final estadoDropdown = _buildFiltroDropdown(
+      theme: theme,
+      label: 'Estado',
+      value: _filtroEstado,
+      items: const [
+        DropdownMenuItem(value: null, child: Text('Todos')),
+        DropdownMenuItem(value: 'Activo', child: Text('Activo')),
+        DropdownMenuItem(value: 'Prestado', child: Text('Prestado')),
+        DropdownMenuItem(value: 'Archivado', child: Text('Archivado')),
+      ],
+      onChanged: (value) {
+        setState(() {
+          _filtroEstado = value;
+          _aplicarFiltros();
+        });
+      },
+    );
+
+    final tipoDropdown =
+        _tiposDocumentoDisponibles.isNotEmpty
+            ? _buildFiltroDropdown(
+              theme: theme,
+              label: 'Tipo documento',
+              value: _filtroTipo,
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Todos')),
+                ..._tiposDocumentoDisponibles.map(
+                  (tipo) => DropdownMenuItem(value: tipo, child: Text(tipo)),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _filtroTipo = value;
+                  _aplicarFiltros();
+                });
+              },
+            )
+            : null;
+
+    final areaDropdown =
+        _areasDisponibles.isNotEmpty
+            ? _buildFiltroDropdown(
+              theme: theme,
+              label: 'Área',
+              value: _filtroArea,
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Todas')),
+                ..._areasDisponibles.map(
+                  (area) => DropdownMenuItem(value: area, child: Text(area)),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _filtroArea = value;
+                  _aplicarFiltros();
+                });
+              },
+            )
+            : null;
+
+    final fechaDesde = TextFormField(
+      controller: _fechaDesdeController,
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: 'Fecha desde',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        suffixIcon:
+            _filtroFechaDesde != null
+                ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    setState(() {
+                      _filtroFechaDesde = null;
+                      _syncFechaControllers();
+                      _aplicarFiltros();
+                    });
+                  },
+                )
+                : null,
+      ),
+      onTap: () async {
+        final date = await showDatePicker(
+          context: context,
+          initialDate: _filtroFechaDesde ?? DateTime.now(),
+          firstDate: DateTime(2000),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+        );
+        if (date != null) {
+          setState(() {
+            _filtroFechaDesde = date;
+            _syncFechaControllers();
+            _aplicarFiltros();
+          });
+        }
+      },
+    );
+
+    final fechaHasta = TextFormField(
+      controller: _fechaHastaController,
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: 'Fecha hasta',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        suffixIcon:
+            _filtroFechaHasta != null
+                ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    setState(() {
+                      _filtroFechaHasta = null;
+                      _syncFechaControllers();
+                      _aplicarFiltros();
+                    });
+                  },
+                )
+                : null,
+      ),
+      onTap: () async {
+        final date = await showDatePicker(
+          context: context,
+          initialDate: _filtroFechaHasta ?? DateTime.now(),
+          firstDate: _filtroFechaDesde ?? DateTime(2000),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+        );
+        if (date != null) {
+          setState(() {
+            _filtroFechaHasta = date;
+            _syncFechaControllers();
+            _aplicarFiltros();
+          });
+        }
+      },
+    );
+
+    final limpiarBtn = OutlinedButton.icon(
+      onPressed: _limpiarFiltros,
+      icon: const Icon(Icons.clear_all, size: 18),
+      label: const Text('Limpiar filtros'),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+    );
+
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          estadoDropdown,
+          if (tipoDropdown != null) ...[const SizedBox(height: gap), tipoDropdown],
+          if (areaDropdown != null) ...[const SizedBox(height: gap), areaDropdown],
+          const SizedBox(height: gap),
+          fechaDesde,
+          const SizedBox(height: gap),
+          fechaHasta,
+          const SizedBox(height: gap),
+          Align(alignment: Alignment.centerLeft, child: limpiarBtn),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: estadoDropdown),
+            if (tipoDropdown != null) ...[
+              const SizedBox(width: gap),
+              Expanded(child: tipoDropdown),
+            ],
+            if (areaDropdown != null) ...[
+              const SizedBox(width: gap),
+              Expanded(child: areaDropdown),
+            ],
+          ],
+        ),
+        const SizedBox(height: gap),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: fechaDesde),
+            const SizedBox(width: gap),
+            Expanded(child: fechaHasta),
+            const SizedBox(width: gap),
+            limpiarBtn,
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildFilterBar(ThemeData theme) {
     final hasActiveFilters =
         _filtroTexto.isNotEmpty ||
@@ -1248,247 +1504,7 @@ class _ReportePersonalizadoScreenState
             const SizedBox(height: 16),
             LayoutBuilder(
               builder: (context, constraints) {
-                final maxW = constraints.maxWidth;
-                final columns = maxW >= 900
-                    ? 3
-                    : maxW >= 520
-                    ? 2
-                    : 1;
-                final gap = 12.0 * (columns - 1);
-                final fieldWidth = maxW > 0
-                    ? ((maxW - gap) / columns).clamp(160.0, 320.0)
-                    : 220.0;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    SizedBox(
-                      width: fieldWidth,
-                      child: DropdownButtonFormField<String>(
-                        value: _filtroEstado,
-                        isExpanded: true,
-                        isDense: true,
-                        decoration: InputDecoration(
-                          labelText: 'Estado',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: null,
-                            child: Text('Todos', overflow: TextOverflow.ellipsis),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Activo',
-                            child: Text('Activo', overflow: TextOverflow.ellipsis),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Prestado',
-                            child: Text('Prestado', overflow: TextOverflow.ellipsis),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Archivado',
-                            child: Text('Archivado', overflow: TextOverflow.ellipsis),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _filtroEstado = value;
-                            _aplicarFiltros();
-                          });
-                        },
-                      ),
-                    ),
-                    if (_tiposDocumentoDisponibles.isNotEmpty)
-                      SizedBox(
-                        width: fieldWidth,
-                        child: DropdownButtonFormField<String>(
-                          value: _filtroTipo,
-                          isExpanded: true,
-                          isDense: true,
-                          decoration: InputDecoration(
-                            labelText: 'Tipo Documento',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                          ),
-                          items: [
-                            const DropdownMenuItem(
-                              value: null,
-                              child: Text('Todos', overflow: TextOverflow.ellipsis),
-                            ),
-                            ..._tiposDocumentoDisponibles.map((tipo) {
-                              return DropdownMenuItem(
-                                value: tipo,
-                                child: Text(tipo, overflow: TextOverflow.ellipsis),
-                              );
-                            }),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _filtroTipo = value;
-                              _aplicarFiltros();
-                            });
-                          },
-                        ),
-                      ),
-                    if (_areasDisponibles.isNotEmpty)
-                      SizedBox(
-                        width: fieldWidth,
-                        child: DropdownButtonFormField<String>(
-                          value: _filtroArea,
-                          isExpanded: true,
-                          isDense: true,
-                          decoration: InputDecoration(
-                            labelText: 'Área',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                          ),
-                          items: [
-                            const DropdownMenuItem(
-                              value: null,
-                              child: Text('Todas', overflow: TextOverflow.ellipsis),
-                            ),
-                            ..._areasDisponibles.map((area) {
-                              return DropdownMenuItem(
-                                value: area,
-                                child: Text(area, overflow: TextOverflow.ellipsis),
-                              );
-                            }),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _filtroArea = value;
-                              _aplicarFiltros();
-                            });
-                          },
-                        ),
-                      ),
-                    SizedBox(
-                      width: fieldWidth,
-                      child: TextFormField(
-                        decoration: InputDecoration(
-                          labelText: 'Fecha Desde',
-                          isDense: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          suffixIcon:
-                              _filtroFechaDesde != null
-                                  ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 18),
-                                    onPressed: () {
-                                      setState(() {
-                                        _filtroFechaDesde = null;
-                                        _aplicarFiltros();
-                                      });
-                                    },
-                                  )
-                                  : null,
-                        ),
-                        readOnly: true,
-                        controller: TextEditingController(
-                          text:
-                              _filtroFechaDesde != null
-                                  ? DateFormat('dd/MM/yyyy').format(_filtroFechaDesde!)
-                                  : '',
-                        ),
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: _filtroFechaDesde ?? DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
-                          );
-                          if (date != null) {
-                            setState(() {
-                              _filtroFechaDesde = date;
-                              _aplicarFiltros();
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    SizedBox(
-                      width: fieldWidth,
-                      child: TextFormField(
-                        decoration: InputDecoration(
-                          labelText: 'Fecha Hasta',
-                          isDense: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          suffixIcon:
-                              _filtroFechaHasta != null
-                                  ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 18),
-                                    onPressed: () {
-                                      setState(() {
-                                        _filtroFechaHasta = null;
-                                        _aplicarFiltros();
-                                      });
-                                    },
-                                  )
-                                  : null,
-                        ),
-                        readOnly: true,
-                        controller: TextEditingController(
-                          text:
-                              _filtroFechaHasta != null
-                                  ? DateFormat('dd/MM/yyyy').format(_filtroFechaHasta!)
-                                  : '',
-                        ),
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: _filtroFechaHasta ?? DateTime.now(),
-                            firstDate: _filtroFechaDesde ?? DateTime(2000),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
-                          );
-                          if (date != null) {
-                            setState(() {
-                              _filtroFechaHasta = date;
-                              _aplicarFiltros();
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _limpiarFiltros,
-                      icon: const Icon(Icons.clear_all, size: 18),
-                      label: const Text('Limpiar filtros'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
+                return _buildFiltrosAvanzados(theme, constraints.maxWidth);
               },
             ),
           ],
@@ -1568,19 +1584,19 @@ class _ReportePersonalizadoScreenState
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final minTableWidth = tableMinWidth < constraints.maxWidth
+            ? constraints.maxWidth
+            : tableMinWidth;
         return Scrollbar(
           thumbVisibility: true,
           child: SingleChildScrollView(
-            child: Scrollbar(
-              thumbVisibility: true,
-              notificationPredicate: (notification) => notification.depth == 1,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: tableMinWidth.clamp(constraints.maxWidth, double.infinity),
-                  ),
-                  child: DataTable(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minTableWidth),
+                child: DataTable(
+                columnSpacing: 20,
+                horizontalMargin: 12,
                 headingRowColor: WidgetStateProperty.all(
                   theme.colorScheme.primaryContainer.withOpacity(0.3),
                 ),
@@ -1638,7 +1654,6 @@ class _ReportePersonalizadoScreenState
                             }).toList(),
                       );
                     }).toList(),
-                  ),
                 ),
               ),
             ),
