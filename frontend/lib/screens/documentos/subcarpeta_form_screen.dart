@@ -252,7 +252,6 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
           style: GoogleFonts.inter(
             fontSize: 14,
             height: 1.4,
-            color: Colors.grey.shade700,
           ),
         ),
         actions: [
@@ -303,16 +302,15 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Nueva Carpeta',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: Colors.grey.shade800,
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
@@ -331,12 +329,12 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.blue.shade50,
-                          Colors.indigo.shade50,
+                          theme.colorScheme.primaryContainer,
+                          theme.colorScheme.secondaryContainer,
                         ],
                       ),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.blue.shade100),
+                      border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.blue.withOpacity(0.1),
@@ -381,7 +379,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.surface,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: Colors.blue.shade200),
                                 ),
@@ -399,7 +397,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                                 'Referencia: Comprobantes de Egreso / Comprobantes de Ingreso. Rango y Gestión (año).',
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  color: Colors.grey.shade700,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                             ],
@@ -415,7 +413,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -445,7 +443,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                               style: GoogleFonts.poppins(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -474,14 +472,14 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                           value: _tipoSeleccionado,
                           decoration: InputDecoration(
                             hintText: 'Seleccione el tipo',
-                            prefixIcon: Icon(Icons.list_alt_rounded, size: 20, color: Colors.grey.shade600),
+                            prefixIcon: Icon(Icons.list_alt_rounded, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                           ),
                           items: const [
                             DropdownMenuItem(
@@ -541,15 +539,15 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                           child: InputDecorator(
                             decoration: InputDecoration(
                               hintText: 'Seleccionar fecha (opcional)',
-                              prefixIcon: Icon(Icons.calendar_month, size: 20, color: Colors.grey.shade600),
+                              prefixIcon: Icon(Icons.calendar_month, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
                               ),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               filled: true,
-                              fillColor: Colors.grey.shade50,
+                              fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                             ),
                             child: Text(
                               _fecha == null
@@ -557,7 +555,9 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
                                   : DateFormat('dd/MM/yyyy').format(_fecha!),
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                color: _fecha == null ? Colors.grey : Colors.grey.shade800,
+                                color: _fecha == null
+                                    ? theme.colorScheme.onSurface.withOpacity(0.4)
+                                    : theme.colorScheme.onSurface,
                               ),
                             ),
                           ),
@@ -618,6 +618,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
   }
 
   Widget _buildSectionHeader(String title, IconData icon, Color color) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         Container(
@@ -634,7 +635,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade800,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],
@@ -651,6 +652,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
     TextCapitalization? textCapitalization,
     int maxLines = 1,
   }) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -659,7 +661,7 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
           style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
         const SizedBox(height: 8),
@@ -671,14 +673,14 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade600),
+            prefixIcon: Icon(icon, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.5)),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: theme.colorScheme.outline),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -694,19 +696,19 @@ class _SubcarpetaFormScreenState extends State<SubcarpetaFormScreen> {
             ),
             errorStyle: TextStyle(color: Colors.red.shade700, fontSize: 13),
             contentPadding: EdgeInsets.symmetric(
-              horizontal: 16, 
+              horizontal: 16,
               vertical: maxLines > 1 ? 16 : 16,
             ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
             hintStyle: GoogleFonts.inter(
-              color: Colors.grey.shade500,
+              color: theme.colorScheme.onSurface.withOpacity(0.4),
               fontSize: 14,
             ),
           ),
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Colors.grey.shade800,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],

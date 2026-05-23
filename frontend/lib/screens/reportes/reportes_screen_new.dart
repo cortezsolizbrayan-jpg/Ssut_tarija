@@ -325,12 +325,13 @@ class _ReportesScreenNewState extends State<ReportesScreenNew> {
     Color color,
     String trend,
   ) {
+    final theme = Theme.of(context);
     return AnimatedCard(
       delay: const Duration(milliseconds: 100),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -393,7 +394,7 @@ class _ReportesScreenNewState extends State<ReportesScreenNew> {
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ],
@@ -413,7 +414,7 @@ class _ReportesScreenNewState extends State<ReportesScreenNew> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -481,7 +482,7 @@ class _ReportesScreenNewState extends State<ReportesScreenNew> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -536,7 +537,7 @@ class _ReportesScreenNewState extends State<ReportesScreenNew> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -579,7 +580,7 @@ class _ReportesScreenNewState extends State<ReportesScreenNew> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(

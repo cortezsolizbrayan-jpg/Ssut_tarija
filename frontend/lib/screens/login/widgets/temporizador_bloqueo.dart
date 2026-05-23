@@ -55,12 +55,13 @@ class _TemporizadorBloqueoState extends State<TemporizadorBloqueo> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
+        color: theme.colorScheme.errorContainer.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.shade300, width: 2),
+        border: Border.all(color: theme.colorScheme.error.withOpacity(0.5), width: 2),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -91,9 +92,9 @@ class _TemporizadorBloqueoState extends State<TemporizadorBloqueo> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.shade200),
+              border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
             ),
             child: Column(
               children: [
@@ -101,7 +102,7 @@ class _TemporizadorBloqueoState extends State<TemporizadorBloqueo> {
                   'Tiempo restante',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -120,7 +121,7 @@ class _TemporizadorBloqueoState extends State<TemporizadorBloqueo> {
                   'minutos : segundos',
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.grey.shade500,
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
               ],
@@ -132,7 +133,7 @@ class _TemporizadorBloqueoState extends State<TemporizadorBloqueo> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade600,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
         ],

@@ -300,7 +300,9 @@ class _PrestamoFormScreenState extends State<PrestamoFormScreen> {
                                       '${u.nombreCompleto} ($rolDisplay)',
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
-                                        color: puedeRecibirPrestamo ? Colors.black87 : Colors.grey,
+                                        color: puedeRecibirPrestamo
+                                            ? Theme.of(context).colorScheme.onSurface
+                                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),

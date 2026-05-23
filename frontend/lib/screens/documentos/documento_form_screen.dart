@@ -580,7 +580,10 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.blue.shade50.withOpacity(0.7), Colors.white],
+                              colors: [
+                                theme.colorScheme.primaryContainer.withOpacity(0.7),
+                                theme.colorScheme.surface,
+                              ],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             ),
@@ -1025,7 +1028,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                         'PDF actual',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.grey.shade700,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1073,7 +1076,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                         'Nuevo archivo seleccionado',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.grey.shade700,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1125,7 +1128,10 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '(Opcional) El archivo se subirá al guardar el documento',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -1137,12 +1143,13 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
   }
 
   InputDecoration _inputDecoration(String label) {
+    final theme = Theme.of(context);
     return InputDecoration(
       labelText: label,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),

@@ -93,6 +93,7 @@ class _CarpetasViewState extends State<CarpetasView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<DataProvider>(
       builder: (context, dataProvider, child) {
         return AnimatedBuilder(
@@ -110,9 +111,9 @@ class _CarpetasViewState extends State<CarpetasView> {
                           _gestionesVisibles.contains(_controller.gestion)
                               ? _controller.gestion
                               : _gestionesVisibles.first,
-                      dropdownColor: Colors.white,
+                      dropdownColor: theme.colorScheme.surface,
                       style: GoogleFonts.poppins(
-                        color: Colors.blue.shade900,
+                        color: theme.colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                       ),
                       underline: Container(),
@@ -167,6 +168,7 @@ class _CarpetasViewState extends State<CarpetasView> {
   }
 
   Widget _buildModularView() {
+    final theme = Theme.of(context);
     final carpetas = _carpetasVisibles;
 
     // Separate by modules
@@ -210,14 +212,14 @@ class _CarpetasViewState extends State<CarpetasView> {
                     style: GoogleFonts.poppins(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     'Organización por tipo de comprobante',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -268,6 +270,7 @@ class _CarpetasViewState extends State<CarpetasView> {
   }
 
   Widget _buildStatsHeader(List<Carpeta> carpetas) {
+    final theme = Theme.of(context);
     final totalSubcarpetas = carpetas.fold<int>(
       0,
       (sum, c) => sum + c.subcarpetas.length,
@@ -283,10 +286,13 @@ class _CarpetasViewState extends State<CarpetasView> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.blue.shade50, Colors.indigo.shade50],
+          colors: [
+            theme.colorScheme.primaryContainer,
+            theme.colorScheme.secondaryContainer,
+          ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
       ),
       child: Column(
         children: [
@@ -350,10 +356,11 @@ class _CarpetasViewState extends State<CarpetasView> {
     IconData icon,
     Color color,
   ) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -379,12 +386,15 @@ class _CarpetasViewState extends State<CarpetasView> {
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           Text(
             label,
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
           ),
         ],
       ),
@@ -398,12 +408,13 @@ class _CarpetasViewState extends State<CarpetasView> {
     IconData icon,
     String descripcion,
   ) {
+    final theme = Theme.of(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final canDelete = authProvider.hasPermission('borrar_carpeta');
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -473,7 +484,7 @@ class _CarpetasViewState extends State<CarpetasView> {
                             descripcion,
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: theme.colorScheme.onSurface.withOpacity(0.6),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -600,6 +611,7 @@ class _CarpetasViewState extends State<CarpetasView> {
     IconData icon,
     Color color,
   ) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -616,12 +628,15 @@ class _CarpetasViewState extends State<CarpetasView> {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           Text(
             label,
-            style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade600),
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -631,26 +646,27 @@ class _CarpetasViewState extends State<CarpetasView> {
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(48),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: theme.colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
               Icons.folder_off_outlined,
               size: 64,
-              color: Colors.grey.shade400,
+              color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
           ),
           const SizedBox(height: 24),
@@ -659,13 +675,16 @@ class _CarpetasViewState extends State<CarpetasView> {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Crea tu primer módulo para comenzar a organizar documentos',
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade500),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
+            ),
             textAlign: TextAlign.center,
           ),
         ],

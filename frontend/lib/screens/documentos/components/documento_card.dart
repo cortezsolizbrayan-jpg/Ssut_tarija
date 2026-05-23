@@ -40,9 +40,9 @@ class DocumentoCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.shade100, width: 1),
+          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2), width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -100,7 +100,7 @@ class DocumentoCard extends StatelessWidget {
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -120,7 +120,7 @@ class DocumentoCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: Colors.grey.shade700,
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
                       height: 1.5,
                     ),
                   ),
@@ -131,7 +131,7 @@ class DocumentoCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
@@ -147,14 +147,14 @@ class DocumentoCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Icon(Icons.event_note_rounded, size: 14, color: Colors.grey.shade500),
+                        Icon(Icons.event_note_rounded, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                         const SizedBox(width: 4),
                         Text(
                           _formatearFecha(doc.fechaRegistro),
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade600,
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                       ],
@@ -181,7 +181,7 @@ class DocumentoCard extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade800,
+                            color: theme.colorScheme.onSurface.withOpacity(0.8),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

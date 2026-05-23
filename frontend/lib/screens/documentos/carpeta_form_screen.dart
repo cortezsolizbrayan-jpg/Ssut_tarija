@@ -124,16 +124,17 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Nueva Carpeta',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
-        foregroundColor: Colors.grey.shade800,
+        foregroundColor: theme.colorScheme.onSurface,
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
@@ -148,9 +149,9 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
+                      color: theme.colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.blue.shade200),
+                      border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
@@ -170,7 +171,10 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                               ),
                               Text(
                                 'Complete los siguientes campos para crear una nueva carpeta',
-                                style: GoogleFonts.inter(fontSize: 14, color: Colors.black87),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                ),
                               ),
                             ],
                           ),
@@ -187,7 +191,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      color: theme.colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -199,7 +203,11 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Ej: Comprobante de Egreso, Facturas 2025, Documentos Administrativos, etc.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                   
                   const SizedBox(height: 24),
@@ -210,7 +218,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      color: theme.colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -223,7 +231,11 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Período administrativo o fiscal (2020-2030)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                   
                   const SizedBox(height: 24),
@@ -234,7 +246,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      color: theme.colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -247,7 +259,11 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Año fiscal o calendario (2020-2030)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
 
                   const SizedBox(height: 24),
@@ -258,7 +274,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      color: theme.colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -270,7 +286,11 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Información adicional sobre el contenido o propósito de la carpeta (opcional)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
 
                   const SizedBox(height: 40),
@@ -302,13 +322,16 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
   }
 
   InputDecoration _inputDecoration(String label, {IconData? icon}) {
+    final theme = Theme.of(context);
     return InputDecoration(
       labelText: label,
-      prefixIcon: icon != null ? Icon(icon, size: 22, color: Colors.grey.shade600) : null,
+      prefixIcon: icon != null
+          ? Icon(icon, size: 22, color: theme.colorScheme.onSurface.withOpacity(0.5))
+          : null,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: theme.colorScheme.outline.withOpacity(0.5)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -325,7 +348,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
       errorStyle: TextStyle(color: Colors.red.shade700, fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
     );
   }
 }

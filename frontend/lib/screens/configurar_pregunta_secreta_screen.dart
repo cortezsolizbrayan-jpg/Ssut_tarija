@@ -144,7 +144,10 @@ class _ConfigurarPreguntaSecretaScreenState extends State<ConfigurarPreguntaSecr
                       const SizedBox(height: 8),
                       Text(
                         'Elige una pregunta y escribe tu respuesta. Solo tú la conocerás.',
-                        style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade700),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        ),
                       ),
                     ],
                   ),
