@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+﻿import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as excel_lib;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
@@ -27,15 +27,15 @@ class _ReportePersonalizadoScreenState
     extends State<ReportePersonalizadoScreen> {
   // Columnas disponibles
   final Map<String, ColumnConfig> _columnasDisponibles = {
-    'codigo': ColumnConfig('Código', true, 120),
-    'numeroCorrelativo': ColumnConfig('Nº Correlativo', true, 120),
+    'codigo': ColumnConfig('CÃ³digo', true, 120),
+    'numeroCorrelativo': ColumnConfig('NÂº Correlativo', true, 120),
     'tipoDocumento': ColumnConfig('Tipo Documento', true, 150),
-    'areaOrigen': ColumnConfig('Área Origen', false, 150),
-    'gestion': ColumnConfig('Gestión', true, 100),
+    'areaOrigen': ColumnConfig('Ãrea Origen', false, 150),
+    'gestion': ColumnConfig('GestiÃ³n', true, 100),
     'fechaDocumento': ColumnConfig('Fecha Documento', false, 130),
-    'descripcion': ColumnConfig('Descripción', false, 200),
+    'descripcion': ColumnConfig('DescripciÃ³n', false, 200),
     'responsable': ColumnConfig('Responsable', false, 150),
-    'ubicacionFisica': ColumnConfig('Ubicación Física', false, 150),
+    'ubicacionFisica': ColumnConfig('UbicaciÃ³n FÃ­sica', false, 150),
     'estado': ColumnConfig('Estado', true, 100),
     'carpeta': ColumnConfig('Carpeta', false, 150),
     'nivelConfidencialidad': ColumnConfig('Nivel Confid.', false, 120),
@@ -124,7 +124,7 @@ class _ReportePersonalizadoScreenState
               .toList();
     }
 
-    // Filtro de área
+    // Filtro de Ã¡rea
     if (_filtroArea != null && _filtroArea!.isNotEmpty) {
       filtrados =
           filtrados
@@ -302,12 +302,12 @@ class _ReportePersonalizadoScreenState
       if (kIsWeb) {
         _downloadFile(bytes, filename, 'application/pdf');
       } else {
-        // Para plataformas móviles/desktop, mostrar mensaje
+        // Para plataformas mÃ³viles/desktop, mostrar mensaje
         if (mounted) {
           AppAlert.error(
             context,
-            'Información',
-            'La descarga de PDF solo está disponible en la versión web',
+            'InformaciÃ³n',
+            'La descarga de PDF solo estÃ¡ disponible en la versiÃ³n web',
           );
         }
         return;
@@ -405,8 +405,8 @@ class _ReportePersonalizadoScreenState
         if (mounted) {
           AppAlert.error(
             context,
-            'Información',
-            'La descarga de Excel solo está disponible en la versión web',
+            'InformaciÃ³n',
+            'La descarga de Excel solo estÃ¡ disponible en la versiÃ³n web',
           );
         }
         return;
@@ -445,7 +445,7 @@ class _ReportePersonalizadoScreenState
         html.document.body?.append(anchor);
         anchor.click();
 
-        // Limpiar después de un pequeño delay
+        // Limpiar despuÃ©s de un pequeÃ±o delay
         Future.delayed(const Duration(milliseconds: 100), () {
           anchor.remove();
           html.Url.revokeObjectUrl(url);
@@ -490,508 +490,307 @@ class _ReportePersonalizadoScreenState
     }
   }
 
-  bool _mostrarSelectorColumnas = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDesktop = MediaQuery.of(context).size.width > 1200;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Column(
+      body: Row(
         children: [
-          // Header principal con título, selector de columnas y exportación
-          _buildTopBar(theme),
-          // Selector de columnas horizontal (colapsable)
-          if (_mostrarSelectorColumnas) _buildColumnSelector(theme),
-          // Área principal con tabla
+          Container(
+            width: isDesktop ? 320 : 280,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(2, 0),
+                ),
+              ],
+            ),
+            child: _buildConfigPanel(theme),
+          ),
           Expanded(child: _buildMainArea(theme)),
         ],
       ),
     );
   }
 
-  /// Barra superior horizontal con título, selector de columnas y exportación
-  Widget _buildTopBar(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withOpacity(0.85),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Icono + título
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.table_chart_rounded,
-              color: Colors.white,
-              size: 22,
+  Widget _buildConfigPanel(ThemeData theme) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.primary.withOpacity(0.8),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Reportes',
-                style: GoogleFonts.poppins(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onPrimary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.table_chart_rounded,
+                      color: theme.colorScheme.onPrimary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Reportes',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 8),
               Text(
                 'Personaliza tu reporte',
                 style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.white.withOpacity(0.85),
+                  fontSize: 13,
+                  color: theme.colorScheme.onPrimary.withOpacity(0.9),
                 ),
               ),
             ],
           ),
-          const SizedBox(width: 20),
-          // Botón selector de columnas
-          OutlinedButton.icon(
-            onPressed: () {
-              setState(
-                () => _mostrarSelectorColumnas = !_mostrarSelectorColumnas,
-              );
-            },
-            icon: Icon(
-              _mostrarSelectorColumnas
-                  ? Icons.view_column
-                  : Icons.view_column_outlined,
-              size: 18,
-              color: Colors.white,
-            ),
-            label: Text(
-              'Columnas (${_columnasSeleccionadas.length}/13)',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(
-                color:
-                    _mostrarSelectorColumnas
-                        ? Colors.white
-                        : Colors.white.withOpacity(0.5),
-                width: 1.5,
-              ),
-              backgroundColor:
-                  _mostrarSelectorColumnas
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.transparent,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Menú configuraciones rápidas
-          PopupMenuButton<String>(
-            tooltip: 'Configuraciones rápidas',
-            onSelected: (value) {
-              setState(() {
-                switch (value) {
-                  case 'basica':
-                    _columnasDisponibles.forEach((key, v) {
-                      v.selected = [
-                        'codigo',
-                        'numeroCorrelativo',
-                        'tipoDocumento',
-                        'gestion',
-                        'estado',
-                      ].contains(key);
-                    });
-                    break;
-                  case 'completa':
-                    for (var col in _columnasDisponibles.values)
-                      col.selected = true;
-                    break;
-                  case 'ubicacion':
-                    _columnasDisponibles.forEach((key, v) {
-                      v.selected = [
-                        'codigo',
-                        'numeroCorrelativo',
-                        'ubicacionFisica',
-                        'carpeta',
-                        'estado',
-                      ].contains(key);
-                    });
-                    break;
-                  case 'temporal':
-                    _columnasDisponibles.forEach((key, v) {
-                      v.selected = [
-                        'codigo',
-                        'numeroCorrelativo',
-                        'fechaDocumento',
-                        'fechaRegistro',
-                        'gestion',
-                        'estado',
-                      ].contains(key);
-                    });
-                    break;
-                }
-              });
-            },
-            itemBuilder:
-                (_) => [
-                  const PopupMenuItem(
-                    value: 'basica',
-                    child: Row(
-                      children: [
-                        Icon(Icons.summarize_outlined, size: 16),
-                        SizedBox(width: 8),
-                        Text('Vista Básica'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'completa',
-                    child: Row(
-                      children: [
-                        Icon(Icons.article_outlined, size: 16),
-                        SizedBox(width: 8),
-                        Text('Vista Completa'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'ubicacion',
-                    child: Row(
-                      children: [
-                        Icon(Icons.location_on_outlined, size: 16),
-                        SizedBox(width: 8),
-                        Text('Vista Ubicación'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'temporal',
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined, size: 16),
-                        SizedBox(width: 8),
-                        Text('Vista Temporal'),
-                      ],
-                    ),
-                  ),
-                ],
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.tune_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 6),
                   Text(
-                    'Vistas',
+                    'Columnas a mostrar',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Text(
+                    '${_columnasSeleccionadas.length}/13',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: theme.colorScheme.primary.withOpacity(0.7),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.white,
-                    size: 18,
                   ),
                 ],
               ),
-            ),
-          ),
-          const Spacer(),
-          // Botón generar / actualizar
-          if (_documentos.isEmpty)
-            FilledButton.icon(
-              onPressed: _isLoading ? null : _cargarDocumentos,
-              icon:
-                  _isLoading
-                      ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                      : const Icon(Icons.search_rounded, size: 18),
-              label: Text(_isLoading ? 'Cargando...' : 'Generar Reporte'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: theme.colorScheme.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-              ),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: _isLoading ? null : _cargarDocumentos,
-              icon:
-                  _isLoading
-                      ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                      : const Icon(
-                        Icons.refresh_rounded,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-              label: Text(
-                _isLoading ? 'Cargando...' : 'Actualizar',
-                style: const TextStyle(color: Colors.white),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white, width: 1.5),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          const SizedBox(width: 12),
-          // Exportar PDF
-          FilledButton.icon(
-            onPressed:
-                _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
-                    ? null
-                    : _exportarPDF,
-            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-            label: const Text('PDF'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              disabledBackgroundColor: Colors.grey.shade500,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Exportar Excel
-          FilledButton.icon(
-            onPressed:
-                _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
-                    ? null
-                    : _exportarExcel,
-            icon: const Icon(Icons.table_chart_rounded, size: 18),
-            label: const Text('Excel'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              disabledBackgroundColor: Colors.grey.shade500,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Panel horizontal de selección de columnas (colapsable)
-  Widget _buildColumnSelector(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor, width: 1.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Fila de título + botones Todas/Ninguna
-          Row(
-            children: [
-              Text(
-                'Columnas visibles',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.primary,
-                  letterSpacing: 0.4,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Botón Todas
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    for (var col in _columnasDisponibles.values)
-                      col.selected = true;
-                  });
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+              const SizedBox(height: 12),
+              ..._columnasDisponibles.entries.map((entry) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withOpacity(0.4),
-                    ),
-                    borderRadius: BorderRadius.circular(6),
+                    color: entry.value.selected
+                        ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.check_box,
-                        size: 14,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Todas',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Botón Ninguna
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    for (var col in _columnasDisponibles.values)
-                      col.selected = false;
-                  });
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: theme.dividerColor),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.check_box_outline_blank,
-                        size: 14,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Ninguna',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Spacer(),
-              // Cerrar panel
-              IconButton(
-                onPressed:
-                    () => setState(() => _mostrarSelectorColumnas = false),
-                icon: const Icon(Icons.close, size: 18),
-                tooltip: 'Cerrar',
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Chips de columnas en fila horizontal
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children:
-                _columnasDisponibles.entries.map((entry) {
-                  final selected = entry.value.selected;
-                  return FilterChip(
-                    label: Text(
+                  child: CheckboxListTile(
+                    dense: true,
+                    title: Text(
                       entry.value.label,
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.w400,
-                        color:
-                            selected
-                                ? theme.colorScheme.onPrimary
-                                : theme.colorScheme.onSurfaceVariant,
+                            entry.value.selected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                       ),
                     ),
-                    selected: selected,
-                    onSelected: (value) {
-                      setState(() => entry.value.selected = value);
+                    value: entry.value.selected,
+                    onChanged: (value) {
+                      setState(() {
+                        entry.value.selected = value ?? false;
+                      });
                     },
-                    selectedColor: theme.colorScheme.primary,
-                    checkmarkColor: theme.colorScheme.onPrimary,
-                    backgroundColor: theme.colorScheme.surfaceVariant
-                        .withOpacity(0.5),
-                    side: BorderSide(
-                      color:
-                          selected
-                              ? theme.colorScheme.primary
-                              : theme.dividerColor,
-                      width: 1.2,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    activeColor: theme.colorScheme.primary,
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          for (var col in _columnasDisponibles.values) {
+                            col.selected = true;
+                          }
+                        });
+                      },
+                      icon: const Icon(Icons.check_box, size: 18),
+                      label: const Text('Todas'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          for (var col in _columnasDisponibles.values) {
+                            col.selected = false;
+                          }
+                        });
+                      },
+                      icon: const Icon(Icons.check_box_outline_blank, size: 18),
+                      label: const Text('Ninguna'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
-                    visualDensity: VisualDensity.compact,
-                  );
-                }).toList(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ExpansionTile(
+                title: Text(
+                  'Configuraciones rÃ¡pidas',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                dense: true,
+                childrenPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                children: [
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.summarize_outlined, size: 18),
+                    title: const Text('Vista BÃ¡sica', style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      setState(() {
+                        _columnasDisponibles.forEach((key, value) {
+                          value.selected = [
+                            'codigo',
+                            'numeroCorrelativo',
+                            'tipoDocumento',
+                            'gestion',
+                            'estado',
+                          ].contains(key);
+                        });
+                      });
+                    },
+                  ),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.article_outlined, size: 18),
+                    title: const Text('Vista Completa', style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      setState(() {
+                        for (var col in _columnasDisponibles.values) {
+                          col.selected = true;
+                        }
+                      });
+                    },
+                  ),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.location_on_outlined, size: 18),
+                    title: const Text('Vista UbicaciÃ³n', style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      setState(() {
+                        _columnasDisponibles.forEach((key, value) {
+                          value.selected = [
+                            'codigo',
+                            'numeroCorrelativo',
+                            'ubicacionFisica',
+                            'carpeta',
+                            'estado',
+                          ].contains(key);
+                        });
+                      });
+                    },
+                  ),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.calendar_today_outlined, size: 18),
+                    title: const Text('Vista Temporal', style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      setState(() {
+                        _columnasDisponibles.forEach((key, value) {
+                          value.selected = [
+                            'codigo',
+                            'numeroCorrelativo',
+                            'fechaDocumento',
+                            'fechaRegistro',
+                            'gestion',
+                            'estado',
+                          ].contains(key);
+                        });
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _documentos.isEmpty && !_isLoading ? _cargarDocumentos : null,
+                icon:
+                    _isLoading
+                        ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        )
+                        : const Icon(Icons.search_rounded),
+                label: Text(_isLoading ? 'Cargando...' : 'Generar Reporte'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: theme.colorScheme.primary,
+                ),
+              ),
+              if (_documentos.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _cargarDocumentos,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Actualizar Datos'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ],
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1068,7 +867,7 @@ class _ReportePersonalizadoScreenState
                     _buildFeatureItem(
                       Icons.check_circle_outline,
                       'Selecciona columnas',
-                      'Elige qué información mostrar',
+                      'Elige quÃ© informaciÃ³n mostrar',
                       theme,
                     ),
                     const SizedBox(height: 16),
@@ -1120,9 +919,86 @@ class _ReportePersonalizadoScreenState
 
     return Column(
       children: [
-        // Barra de filtros
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.table_view_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Reporte de Documentos',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      'Visualiza y exporta tus datos',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              FilledButton.icon(
+                onPressed:
+                    _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
+                        ? null
+                        : _exportarPDF,
+                icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                label: const Text('PDF'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  disabledBackgroundColor: theme.colorScheme.outline,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed:
+                    _columnasSeleccionadas.isEmpty || _documentosFiltrados.isEmpty
+                        ? null
+                        : _exportarExcel,
+                icon: const Icon(Icons.table_chart_rounded, size: 20),
+                label: const Text('Excel'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  disabledBackgroundColor: theme.colorScheme.outline,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
         _buildFilterBar(theme),
-        // Tabla de resultados
         Expanded(child: _buildDataTable(theme)),
       ],
     );
@@ -1194,7 +1070,7 @@ class _ReportePersonalizadoScreenState
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText:
-                        'Buscar por código, correlativo, descripción, tipo o área...',
+                        'Buscar por cÃ³digo, correlativo, descripciÃ³n, tipo o Ã¡rea...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1320,7 +1196,7 @@ class _ReportePersonalizadoScreenState
                   ),
                 if (_filtroArea != null)
                   Chip(
-                    label: Text('Área: $_filtroArea'),
+                    label: Text('Ãrea: $_filtroArea'),
                     onDeleted: () {
                       setState(() {
                         _filtroArea = null;
@@ -1444,7 +1320,7 @@ class _ReportePersonalizadoScreenState
                     child: DropdownButtonFormField<String>(
                       value: _filtroArea,
                       decoration: InputDecoration(
-                        labelText: 'Área',
+                        labelText: 'Ãrea',
                         prefixIcon: const Icon(
                           Icons.business_outlined,
                           size: 18,
@@ -1645,7 +1521,7 @@ class _ReportePersonalizadoScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              'Intenta ajustar los filtros de búsqueda',
+              'Intenta ajustar los filtros de bÃºsqueda',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -1662,61 +1538,77 @@ class _ReportePersonalizadoScreenState
       );
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    final tableMinWidth = columnas.fold<double>(
+      48,
+      (sum, col) => sum + _columnasDisponibles[col]!.width + 32,
+    );
+
+    return Scrollbar(
+      thumbVisibility: true,
+      notificationPredicate: (notification) => notification.depth == 0,
       child: SingleChildScrollView(
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(
-            theme.colorScheme.primaryContainer.withOpacity(0.3),
-          ),
-          sortColumnIndex:
-              _sortColumn != null ? columnas.indexOf(_sortColumn!) : null,
-          sortAscending: _sortAscending,
-          columns:
-              columnas.map((col) {
-                return DataColumn(
-                  label: Row(
-                    children: [
-                      Text(
-                        _columnasDisponibles[col]!.label,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (_sortColumn == col) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          _sortAscending
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward,
-                          size: 16,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ],
-                    ],
-                  ),
-                  onSort: (columnIndex, ascending) => _sortBy(col),
-                );
-              }).toList(),
-          rows:
-              _documentosFiltrados.map((doc) {
-                return DataRow(
-                  cells:
-                      columnas.map((col) {
-                        return DataCell(
-                          SizedBox(
-                            width: _columnasDisponibles[col]!.width,
-                            child: Text(
-                              _getColumnValue(doc, col),
-                              style: GoogleFonts.inter(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
+        scrollDirection: Axis.horizontal,
+        child: Scrollbar(
+          thumbVisibility: true,
+          notificationPredicate: (notification) => notification.depth == 1,
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: tableMinWidth),
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(
+                  theme.colorScheme.primaryContainer.withOpacity(0.3),
+                ),
+                sortColumnIndex:
+                    _sortColumn != null ? columnas.indexOf(_sortColumn!) : null,
+                sortAscending: _sortAscending,
+                columns:
+                    columnas.map((col) {
+                      return DataColumn(
+                        label: Row(
+                          children: [
+                            Text(
+                              _columnasDisponibles[col]!.label,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
-                );
-              }).toList(),
+                            if (_sortColumn == col) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                _sortAscending
+                                    ? Icons.arrow_upward
+                                    : Icons.arrow_downward,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ],
+                          ],
+                        ),
+                        onSort: (columnIndex, ascending) => _sortBy(col),
+                      );
+                    }).toList(),
+                rows:
+                    _documentosFiltrados.map((doc) {
+                      return DataRow(
+                        cells:
+                            columnas.map((col) {
+                              return DataCell(
+                                SizedBox(
+                                  width: _columnasDisponibles[col]!.width,
+                                  child: Text(
+                                    _getColumnValue(doc, col),
+                                    style: GoogleFonts.inter(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                      );
+                    }).toList(),
+              ),
+            ),
+          ),
         ),
       ),
     );
