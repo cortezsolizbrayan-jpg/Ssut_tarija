@@ -109,11 +109,12 @@ class _UsersSyncScreenState extends State<UsersSyncScreen> {
 
   Widget _buildFilterChip(String label, {Color? color}) {
     final isSelected = _filterStatus == label;
+    final theme = Theme.of(context);
     return FilterChip(
       label: Text(
         label, 
         style: TextStyle(
-          color: isSelected ? Colors.white : (color ?? Colors.black87),
+          color: isSelected ? Colors.white : (color ?? theme.colorScheme.onSurface),
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
@@ -123,12 +124,11 @@ class _UsersSyncScreenState extends State<UsersSyncScreen> {
            setState(() => _filterStatus = label);
         }
       },
-      backgroundColor: Colors.white,
       selectedColor: color ?? Colors.blue.shade600,
       checkmarkColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.shade300),
+        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.4)),
       ),
     );
   }
@@ -144,7 +144,7 @@ class _UsersSyncScreenState extends State<UsersSyncScreen> {
         const SizedBox(height: 8),
         const Text(
           'Sincronización: actualiza usuarios, roles y permisos desde la base de datos institucional. Use el botón "Sincronizar" para ejecutar la importación o actualización de perfiles.',
-          style: TextStyle(color: Colors.grey, fontSize: 16),
+          style: TextStyle(fontSize: 16),
         ),
       ],
     );
@@ -161,7 +161,7 @@ class _UsersSyncScreenState extends State<UsersSyncScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(Icons.cloud_sync_rounded, size: 40, color: Colors.blue.shade700),
@@ -178,7 +178,7 @@ class _UsersSyncScreenState extends State<UsersSyncScreen> {
                   const SizedBox(height: 4),
                   const Text(
                     'Actualiza usuarios, roles y permisos ahora.',
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                    style: TextStyle(fontSize: 13),
                   ),
                 ],
               ),

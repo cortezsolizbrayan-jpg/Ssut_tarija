@@ -478,7 +478,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
               Text(
                 'Administre roles y permisos de usuarios del sistema',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
                   fontSize: isDesktop ? 16 : 14,
                 ),
               ),
@@ -616,7 +616,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
               title,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade600,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -793,7 +793,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
               Text(
                 'Mostrando ${_usuariosFiltrados.length} de ${_usuarios.length} usuarios',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
                 ),
@@ -863,9 +863,9 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
       child: Container(
         decoration: inactivo
             ? BoxDecoration(
-                color: Colors.grey.shade300,
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade500, width: 1.5),
+                border: Border.all(color: theme.colorScheme.outline.withOpacity(0.5), width: 1.5),
               )
             : null,
         child: ListTile(
@@ -907,13 +907,13 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
                   margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.outline,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Inactivo',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -925,7 +925,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: inactivo ? Colors.grey.shade800 : null,
+                    color: inactivo ? theme.colorScheme.onSurface.withOpacity(0.5) : null,
                   ),
                 ),
               ),
@@ -1082,10 +1082,10 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
     final inactivo = !usuario.activo;
     final card = Card(
       elevation: inactivo ? 0 : 2,
-      color: inactivo ? Colors.grey.shade300 : null,
+      color: inactivo ? theme.colorScheme.surfaceContainerHighest : null,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: inactivo ? BorderSide(color: Colors.grey.shade500, width: 1.5) : BorderSide.none,
+        side: inactivo ? BorderSide(color: theme.colorScheme.outline.withOpacity(0.5), width: 1.5) : BorderSide.none,
       ),
       child: InkWell(
         onTap: () => _showRolDialog(usuario),
@@ -1102,7 +1102,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
                     backgroundColor:
                         usuario.activo
                             ? theme.colorScheme.primary
-                            : Colors.grey.shade600,
+                            : theme.colorScheme.outline,
                     child: Text(
                       usuario.nombreCompleto[0].toUpperCase(),
                       style: const TextStyle(
@@ -1138,13 +1138,13 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade600,
+                      color: theme.colorScheme.outline,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'Inactivo',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: theme.colorScheme.surface,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1156,7 +1156,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
-                  color: inactivo ? Colors.grey.shade700 : null,
+                  color: inactivo ? theme.colorScheme.onSurface.withOpacity(0.5) : null,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -1215,14 +1215,15 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
+    final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 14, color: Colors.grey.shade600),
+        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.5)),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
             overflow: TextOverflow.ellipsis,
           ),
         ),
