@@ -1,7 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
 import '../../models/permiso.dart';
 import '../../models/rol_usuario.dart';
 import '../../models/usuario.dart';
@@ -571,7 +570,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
 
   Widget _buildPermisosPanel() {
     if (_usuarioSeleccionado == null) {
-      return const Center(
+      return Center(
         child: Text(
           'Selecciona un usuario para gestionar sus permisos',
           style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
