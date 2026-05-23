@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "name": "SSUT frontend",
+      "path": "frontend"
+    },
+    {
+      "name": "UPEA refactor_template",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "dart.projectDetection": "both",
+    "dart.pubGetOnStartup": true
+  }
+}

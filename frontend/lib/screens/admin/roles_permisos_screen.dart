@@ -542,6 +542,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
           AppTheme.colorPrimario,
           cardWidth,
           index++,
+          theme,
         ),
         _buildStatCard(
           'Activos',
@@ -550,6 +551,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
           Colors.green,
           cardWidth,
           index++,
+          theme,
         ),
         _buildStatCard(
           'Inactivos',
@@ -558,6 +560,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
           Colors.red,
           cardWidth,
           index++,
+          theme,
         ),
         ..._roles.map(
           (rol) => _buildStatCard(
@@ -567,6 +570,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
             _getRolColor(rol),
             cardWidth,
             index++,
+            theme,
           ),
         ),
       ],
@@ -580,6 +584,7 @@ class _RolesPermisosScreenState extends State<RolesPermisosScreen> {
     Color color,
     double width,
     int animIndex,
+    ThemeData theme,
   ) {
     return AnimatedCard(
       delay: Duration(milliseconds: animIndex * 100),

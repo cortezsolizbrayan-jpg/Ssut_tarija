@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
-import 'package:refactor_template/core/services/servicio_remover_fondo.dart';
+import 'package:refactor_template/core/services/image_processing/servicio_remover_fondo.dart';
 import 'package:path_provider/path_provider.dart';
 import 'storage/servicio_almacenamiento_local.dart';
 
