@@ -1,4 +1,5 @@
-﻿import 'dart:typed_data';
+﻿import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as excel_lib;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
@@ -77,11 +78,93 @@ class _ReportePersonalizadoScreenState
 
   double _anchoMinimoTabla(List<String> columnas) {
     if (columnas.isEmpty) return 0;
-    final anchoColumnas = columnas.fold<double>(
-      0,
-      (sum, col) => sum + _columnasDisponibles[col]!.width,
+    var total = 0.0;
+    for (final col in columnas) {
+      final cfg = _columnasDisponibles[col]!;
+      final anchoEtiqueta = cfg.label.length * 8.0 + 40;
+      total += math.max(cfg.width, anchoEtiqueta);
+    }
+    return total;
+  }
+
+  Widget _buildTablaFija(List<String> columnas, ThemeData theme) {
+    final columnWidths = <int, TableColumnWidth>{
+      for (var i = 0; i < columnas.length; i++)
+        i: FixedColumnWidth(_columnasDisponibles[columnas[i]]!.width),
+    };
+
+    final headerColor = theme.colorScheme.primaryContainer.withOpacity(0.35);
+    final borderColor = theme.dividerColor.withOpacity(0.6);
+
+    return Table(
+      columnWidths: columnWidths,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      border: TableBorder(
+        horizontalInside: BorderSide(color: borderColor, width: 0.5),
+        verticalInside: BorderSide(color: borderColor, width: 0.5),
+        bottom: BorderSide(color: borderColor),
+        top: BorderSide(color: borderColor),
+      ),
+      children: [
+        TableRow(
+          decoration: BoxDecoration(color: headerColor),
+          children:
+              columnas.map((col) => _buildCeldaEncabezado(col, theme)).toList(),
+        ),
+        ..._documentosFiltrados.map((doc) {
+          return TableRow(
+            children:
+                columnas.map((col) {
+                  final value = _getColumnValue(doc, col);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    child: Tooltip(
+                      message: value,
+                      waitDuration: const Duration(milliseconds: 400),
+                      child: Text(
+                        value,
+                        style: GoogleFonts.inter(fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  );
+                }).toList(),
+          );
+        }),
+      ],
     );
-    return anchoColumnas + (columnas.length * 20) + 24;
+  }
+
+  Widget _buildCeldaEncabezado(String col, ThemeData theme) {
+    final sorted = _sortColumn == col;
+    return InkWell(
+      onTap: () => _sortBy(col),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _columnasDisponibles[col]!.label,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (sorted)
+              Icon(
+                _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _syncFechaControllers() {
@@ -1588,88 +1671,71 @@ class _ReportePersonalizadoScreenState
       );
     }
 
-    final tableMinWidth = _anchoMinimoTabla(columnas);
+    final anchoTabla = _anchoMinimoTabla(columnas);
+    final tabla = _buildTablaFija(columnas, theme);
 
-    return Scrollbar(
-      controller: _tablaVerticalController,
-      thumbVisibility: true,
-      child: SingleChildScrollView(
-        controller: _tablaVerticalController,
-        child: Scrollbar(
-          controller: _tablaHorizontalController,
-          thumbVisibility: true,
-          notificationPredicate: (notification) => notification.depth == 1,
-          child: SingleChildScrollView(
-            controller: _tablaHorizontalController,
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: tableMinWidth,
-              child: DataTable(
-                columnSpacing: 20,
-                horizontalMargin: 12,
-                headingRowColor: WidgetStateProperty.all(
-                  theme.colorScheme.primaryContainer.withOpacity(0.3),
-                ),
-                sortColumnIndex:
-                    _sortColumn != null ? columnas.indexOf(_sortColumn!) : null,
-                sortAscending: _sortAscending,
-                columns:
-                    columnas.map((col) {
-                      return DataColumn(
-                        label: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _columnasDisponibles[col]!.label,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            if (_sortColumn == col) ...[
-                              const SizedBox(width: 4),
-                              Icon(
-                                _sortAscending
-                                    ? Icons.arrow_upward
-                                    : Icons.arrow_downward,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ],
-                          ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final requiereScrollH = anchoTabla > constraints.maxWidth;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (requiereScrollH)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.swipe_left_alt,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Desliza horizontalmente para ver todas las columnas',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: theme.colorScheme.primary,
                         ),
-                        onSort: (columnIndex, ascending) => _sortBy(col),
-                      );
-                    }).toList(),
-                rows:
-                    _documentosFiltrados.map((doc) {
-                      return DataRow(
-                        cells:
-                            columnas.map((col) {
-                              final value = _getColumnValue(doc, col);
-                              return DataCell(
-                                Tooltip(
-                                  message: value,
-                                  waitDuration: const Duration(milliseconds: 400),
-                                  child: SizedBox(
-                                    width: _columnasDisponibles[col]!.width,
-                                    child: Text(
-                                      value,
-                                      style: GoogleFonts.inter(fontSize: 12),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                      );
-                    }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: Scrollbar(
+                controller: _tablaVerticalController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _tablaVerticalController,
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: constraints.maxWidth,
+                      child: Scrollbar(
+                        controller: _tablaHorizontalController,
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _tablaHorizontalController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: SizedBox(
+                            width: anchoTabla,
+                            child: tabla,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 }
