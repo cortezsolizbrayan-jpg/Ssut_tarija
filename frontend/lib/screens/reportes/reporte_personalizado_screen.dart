@@ -62,13 +62,26 @@ class _ReportePersonalizadoScreenState
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _fechaDesdeController = TextEditingController();
   final TextEditingController _fechaHastaController = TextEditingController();
+  final ScrollController _tablaVerticalController = ScrollController();
+  final ScrollController _tablaHorizontalController = ScrollController();
 
   @override
   void dispose() {
     _searchController.dispose();
     _fechaDesdeController.dispose();
     _fechaHastaController.dispose();
+    _tablaVerticalController.dispose();
+    _tablaHorizontalController.dispose();
     super.dispose();
+  }
+
+  double _anchoMinimoTabla(List<String> columnas) {
+    if (columnas.isEmpty) return 0;
+    final anchoColumnas = columnas.fold<double>(
+      0,
+      (sum, col) => sum + _columnasDisponibles[col]!.width,
+    );
+    return anchoColumnas + (columnas.length * 20) + 24;
   }
 
   void _syncFechaControllers() {
@@ -1025,9 +1038,7 @@ class _ReportePersonalizadoScreenState
           ),
         ),
         _buildFilterBar(theme),
-        Expanded(
-          child: ClipRect(child: _buildDataTable(theme)),
-        ),
+        Expanded(child: _buildDataTable(theme)),
       ],
     );
   }
@@ -1577,24 +1588,23 @@ class _ReportePersonalizadoScreenState
       );
     }
 
-    final tableMinWidth = columnas.fold<double>(
-      48,
-      (sum, col) => sum + _columnasDisponibles[col]!.width + 32,
-    );
+    final tableMinWidth = _anchoMinimoTabla(columnas);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final minTableWidth = tableMinWidth < constraints.maxWidth
-            ? constraints.maxWidth
-            : tableMinWidth;
-        return Scrollbar(
+    return Scrollbar(
+      controller: _tablaVerticalController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _tablaVerticalController,
+        child: Scrollbar(
+          controller: _tablaHorizontalController,
           thumbVisibility: true,
+          notificationPredicate: (notification) => notification.depth == 1,
           child: SingleChildScrollView(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: minTableWidth),
-                child: DataTable(
+            controller: _tablaHorizontalController,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableMinWidth,
+              child: DataTable(
                 columnSpacing: 20,
                 horizontalMargin: 12,
                 headingRowColor: WidgetStateProperty.all(
@@ -1607,6 +1617,7 @@ class _ReportePersonalizadoScreenState
                     columnas.map((col) {
                       return DataColumn(
                         label: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               _columnasDisponibles[col]!.label,
@@ -1654,12 +1665,11 @@ class _ReportePersonalizadoScreenState
                             }).toList(),
                       );
                     }).toList(),
-                ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
