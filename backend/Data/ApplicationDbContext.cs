@@ -120,6 +120,11 @@ public class ApplicationDbContext : DbContext
                 .WithMany(u => u.Movimientos)
                 .HasForeignKey(m => m.UsuarioId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(m => m.UsuarioRegistro)
+                .WithMany(u => u.MovimientosRegistrados)
+                .HasForeignKey(m => m.UsuarioRegistroId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Configuración de Usuario

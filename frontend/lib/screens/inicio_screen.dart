@@ -151,8 +151,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // Notificaciones y Mi perfil: acceso desde icono superior (notificaciones) y sección usuario (perfil); no duplicar en menú lateral.
 
-    // Gestión de Permisos: asignar permisos (ver, subir, editar, borrar) por usuario. Visible para Admin Sistema y Admin Documentos.
-    final canSeePermisos = authProvider.isSystemAdmin || role == UserRole.administradorDocumentos;
+    // Gestión de Permisos: visible para Admin Sistema, Admin Documentos, Contador y Auditor.
+    final canSeePermisos =
+        authProvider.isSystemAdmin ||
+        role == UserRole.administradorDocumentos ||
+        role == UserRole.contador ||
+        role == UserRole.auditor;
     if (canSeePermisos) {
       _navItems.add(
         NavigationItem(

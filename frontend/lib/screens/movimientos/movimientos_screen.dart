@@ -41,7 +41,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     List<Movimiento> lista;
     switch (_filtro) {
       case _FiltroMovimiento.prestamos:
-        lista = _movimientos.where((m) => m.tipoMovimiento == 'Salida').toList();
+        lista = _movimientos
+            .where((m) => m.tipoMovimiento == 'Salida')
+            .toList();
         break;
       case _FiltroMovimiento.devoluciones:
         lista = _movimientos
@@ -52,7 +54,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
         lista = _movimientos;
         break;
     }
-    
+
     // Aplicar filtro de periodo
     final ahora = DateTime.now();
     switch (_filtroPeriodo) {
@@ -77,7 +79,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
         }).toList();
         break;
     }
-    
+
     // Ordenar: préstamos (Salida) primero, luego devoluciones (Entrada)
     // Dentro de cada grupo, ordenar por fecha más reciente primero
     lista.sort((a, b) {
@@ -89,7 +91,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       // Luego por fecha descendente (más reciente primero)
       return b.fechaMovimiento.compareTo(a.fechaMovimiento);
     });
-    
+
     return lista;
   }
 
@@ -124,30 +126,29 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(
-              'Registrar devolución',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-            content: Text(
-              '¿Registrar la devolución del documento "${mov.documentoCodigo ?? 'Sin código'}"? El estado del documento pasará a Disponible.',
-              style: GoogleFonts.inter(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
-                ),
-                child: const Text('Devolver'),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Registrar devolución',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          '¿Registrar la devolución del documento "${mov.documentoCodigo ?? 'Sin código'}"? El estado del documento pasará a Disponible.',
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
           ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+            ),
+            child: const Text('Devolver'),
+          ),
+        ],
+      ),
     );
     if (confirm != true || !mounted) return;
     try {
@@ -190,7 +191,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
             backgroundColor: Colors.green.shade600,
             duration: const Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -222,7 +225,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       }
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => DocumentoDetalleScreen(documento: doc)),
+        MaterialPageRoute(
+          builder: (_) => DocumentoDetalleScreen(documento: doc),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -380,18 +385,29 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                      color: theme.colorScheme.primaryContainer.withOpacity(
+                        0.3,
+                      ),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withOpacity(0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, size: 18, color: theme.colorScheme.primary),
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Solo puedes ver tus propios préstamos y devoluciones.',
-                            style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ],
@@ -403,7 +419,10 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
@@ -444,34 +463,30 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                     _FilterChip(
                       label: 'Todos',
                       selected: _filtro == _FiltroMovimiento.todos,
-                      onSelected:
-                          () => setState(
-                            () => _filtro = _FiltroMovimiento.todos,
-                          ),
+                      onSelected: () =>
+                          setState(() => _filtro = _FiltroMovimiento.todos),
                       theme: theme,
                     ),
                     _FilterChip(
                       label: 'Préstamos',
                       selected: _filtro == _FiltroMovimiento.prestamos,
-                      onSelected:
-                          () => setState(
-                            () => _filtro = _FiltroMovimiento.prestamos,
-                          ),
+                      onSelected: () =>
+                          setState(() => _filtro = _FiltroMovimiento.prestamos),
                       theme: theme,
                     ),
                     _FilterChip(
                       label: 'Devoluciones',
                       selected: _filtro == _FiltroMovimiento.devoluciones,
-                      onSelected:
-                          () => setState(
-                            () => _filtro = _FiltroMovimiento.devoluciones,
-                          ),
+                      onSelected: () => setState(
+                        () => _filtro = _FiltroMovimiento.devoluciones,
+                      ),
                       theme: theme,
                     ),
                     _FilterChip(
                       label: 'Hoy',
                       selected: _filtroPeriodo == _FiltroPeriodo.hoy,
-                      onSelected: () => setState(() => _filtroPeriodo = _FiltroPeriodo.hoy),
+                      onSelected: () =>
+                          setState(() => _filtroPeriodo = _FiltroPeriodo.hoy),
                       theme: theme,
                     ),
                     // Dropdown de meses
@@ -481,7 +496,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                       decoration: BoxDecoration(
                         color: _filtroPeriodo == _FiltroPeriodo.mes
                             ? theme.colorScheme.primaryContainer
-                            : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                            : theme.colorScheme.surfaceContainerHighest
+                                  .withOpacity(0.5),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: _filtroPeriodo == _FiltroPeriodo.mes
@@ -495,7 +511,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                           value: _mesSeleccionado,
                           isDense: true,
                           style: GoogleFonts.inter(
-                            fontWeight: _filtroPeriodo == _FiltroPeriodo.mes ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: _filtroPeriodo == _FiltroPeriodo.mes
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             fontSize: 13,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -513,10 +531,19 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                             DropdownMenuItem(value: 6, child: Text('Junio')),
                             DropdownMenuItem(value: 7, child: Text('Julio')),
                             DropdownMenuItem(value: 8, child: Text('Agosto')),
-                            DropdownMenuItem(value: 9, child: Text('Septiembre')),
+                            DropdownMenuItem(
+                              value: 9,
+                              child: Text('Septiembre'),
+                            ),
                             DropdownMenuItem(value: 10, child: Text('Octubre')),
-                            DropdownMenuItem(value: 11, child: Text('Noviembre')),
-                            DropdownMenuItem(value: 12, child: Text('Diciembre')),
+                            DropdownMenuItem(
+                              value: 11,
+                              child: Text('Noviembre'),
+                            ),
+                            DropdownMenuItem(
+                              value: 12,
+                              child: Text('Diciembre'),
+                            ),
                           ],
                           onChanged: (mes) {
                             if (mes != null) {
@@ -536,13 +563,16 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                       decoration: BoxDecoration(
                         color: _filtroPeriodo == _FiltroPeriodo.anio
                             ? theme.colorScheme.primaryContainer
-                            : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                            : theme.colorScheme.surfaceContainerHighest
+                                  .withOpacity(0.5),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: _filtroPeriodo == _FiltroPeriodo.anio
                               ? theme.colorScheme.primary
                               : theme.colorScheme.outline.withOpacity(0.3),
-                          width: _filtroPeriodo == _FiltroPeriodo.anio ? 1.5 : 1,
+                          width: _filtroPeriodo == _FiltroPeriodo.anio
+                              ? 1.5
+                              : 1,
                         ),
                       ),
                       child: DropdownButtonHideUnderline(
@@ -550,7 +580,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                           value: _anioSeleccionado,
                           isDense: true,
                           style: GoogleFonts.inter(
-                            fontWeight: _filtroPeriodo == _FiltroPeriodo.anio ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: _filtroPeriodo == _FiltroPeriodo.anio
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             fontSize: 13,
                             color: theme.colorScheme.onSurface,
                           ),
@@ -584,66 +616,64 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
           ),
           // Lista
           Expanded(
-            child:
-                _isLoading
-                    ? _buildLoading(theme)
-                    : _movimientosFiltrados.isEmpty
-                    ? _buildEmpty(theme)
-                    : _buildList(theme, dateFormat, onSurfaceVariant),
+            child: _isLoading
+                ? _buildLoading(theme)
+                : _movimientosFiltrados.isEmpty
+                ? _buildEmpty(theme)
+                : _buildList(theme, dateFormat, onSurfaceVariant),
           ),
         ],
       ),
-      floatingActionButton:
-          _filtro == _FiltroMovimiento.prestamos
-              ? FloatingActionButton.extended(
-                onPressed: () async {
-                  final result = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => const PrestamoFormScreen(),
-                    ),
-                  );
-                  if (result == true) {
-                    await _loadMovimientos();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              const Icon(Icons.check_circle, color: Colors.white),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Préstamo registrado exitosamente',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
+      floatingActionButton: _filtro == _FiltroMovimiento.prestamos
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const PrestamoFormScreen()),
+                );
+                if (result == true) {
+                  await _loadMovimientos();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Colors.white),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Préstamo registrado exitosamente',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ],
-                          ),
-                          backgroundColor: Colors.green.shade600,
-                          duration: const Duration(seconds: 3),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ],
                         ),
-                      );
-                    }
+                        backgroundColor: Colors.green.shade600,
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
                   }
-                },
-                icon: const Icon(Icons.add_rounded, size: 24),
-                label: Text(
-                  'Registrar préstamo',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
+                }
+              },
+              icon: const Icon(Icons.add_rounded, size: 24),
+              label: Text(
+                'Registrar préstamo',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
                 ),
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                elevation: 4,
-              )
-              : null,
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              elevation: 4,
+            )
+          : null,
     );
   }
 
@@ -782,10 +812,9 @@ class _FilterChip extends StatelessWidget {
       selectedColor: theme.colorScheme.primaryContainer,
       checkmarkColor: theme.colorScheme.onPrimaryContainer,
       side: BorderSide(
-        color:
-            selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withOpacity(0.3),
+        color: selected
+            ? theme.colorScheme.primary
+            : theme.colorScheme.outline.withOpacity(0.3),
         width: selected ? 1.5 : 1,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -828,10 +857,9 @@ class _MovementCard extends StatelessWidget {
         movimiento.areaOrigenNombre != null &&
         movimiento.areaDestinoNombre != null &&
         movimiento.areaOrigenNombre == movimiento.areaDestinoNombre;
-    final originDestiny =
-        sameArea
-            ? (movimiento.areaOrigenNombre ?? '—')
-            : '${movimiento.areaOrigenNombre ?? '—'} → ${movimiento.areaDestinoNombre ?? '—'}';
+    final originDestiny = sameArea
+        ? (movimiento.areaOrigenNombre ?? '—')
+        : '${movimiento.areaOrigenNombre ?? '—'} → ${movimiento.areaDestinoNombre ?? '—'}';
 
     return Container(
       decoration: BoxDecoration(
@@ -892,11 +920,16 @@ class _MovementCard extends StatelessWidget {
                           // Botón para ver documento
                           IconButton(
                             onPressed: onDocumentTap,
-                            icon: const Icon(Icons.visibility_rounded, size: 20),
+                            icon: const Icon(
+                              Icons.visibility_rounded,
+                              size: 20,
+                            ),
                             tooltip: 'Ver documento',
                             style: IconButton.styleFrom(
-                              backgroundColor: theme.colorScheme.primaryContainer,
-                              foregroundColor: theme.colorScheme.onPrimaryContainer,
+                              backgroundColor:
+                                  theme.colorScheme.primaryContainer,
+                              foregroundColor:
+                                  theme.colorScheme.onPrimaryContainer,
                               padding: const EdgeInsets.all(8),
                             ),
                           ),
@@ -975,21 +1008,42 @@ class _MovementCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (movimiento.usuarioNombre != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline_rounded,
+                            size: 14,
+                            color: onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Responsable: ${movimiento.usuarioNombre?.trim().isNotEmpty == true ? movimiento.usuarioNombre : "Sin asignar"}',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (movimiento.usuarioRegistroNombre != null &&
+                          movimiento.usuarioRegistroNombre!.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Row(
                           children: [
                             Icon(
-                              Icons.person_outline_rounded,
+                              Icons.verified_user_outlined,
                               size: 14,
                               color: onSurfaceVariant,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                esPrestamo 
-                                  ? 'Prestado a: ${movimiento.usuarioNombre}' 
-                                  : 'Responsable: ${movimiento.usuarioNombre}',
+                                'Registrado por: ${movimiento.usuarioRegistroNombre}',
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
                                   color: onSurfaceVariant,
@@ -1004,16 +1058,25 @@ class _MovementCard extends StatelessWidget {
                       if (esPrestamo && movimiento.estado == 'Devuelto') ...[
                         const SizedBox(height: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.withOpacity(0.2)),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.2),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.check_circle_outline_rounded, size: 14, color: Colors.green),
+                              const Icon(
+                                Icons.check_circle_outline_rounded,
+                                size: 14,
+                                color: Colors.green,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Documento devuelto ${movimiento.fechaDevolucion != null ? dateFormat.format(movimiento.fechaDevolucion!) : ""}',

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaGestionDocumental.DTOs;
 using SistemaGestionDocumental.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace SistemaGestionDocumental.Controllers;
 
@@ -78,7 +80,9 @@ public class MovimientosController : ControllerBase
         try
         {
             // Intentar obtener el usuario actual del token JWT para validaciones
-            var userIdClaim = User.FindFirst("userId")?.Value;
+            var userIdClaim = User.FindFirst("userId")?.Value
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
             var rolClaim = User.FindFirst("rol")?.Value;
             
             // Solo validar si tenemos información del usuario
@@ -86,6 +90,7 @@ public class MovimientosController : ControllerBase
                 int.TryParse(userIdClaim, out int currentUserId) &&
                 !string.IsNullOrEmpty(rolClaim))
             {
+                dto.UsuarioRegistroId = currentUserId;
                 // Validación: Administrador de Documentos no puede prestarse a sí mismo
                 if (rolClaim == "AdministradorDocumentos" && dto.UsuarioId == currentUserId)
                 {
@@ -115,6 +120,12 @@ public class MovimientosController : ControllerBase
 
         try
         {
+            var userIdClaim = User.FindFirst("userId")?.Value
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var currentUserId))
+                dto.UsuarioRegistroId = currentUserId;
+
             var movimiento = await _movimientoService.DevolverDocumentoAsync(dto);
             if (movimiento == null)
                 return BadRequest(new { message = "No se pudo procesar la devolución. Verifique que el movimiento exista y esté en estado Activo." });

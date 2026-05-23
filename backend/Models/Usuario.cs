@@ -93,6 +93,7 @@ public class Usuario
     // Relaciones
     public virtual ICollection<Documento> DocumentosResponsable { get; set; } = new List<Documento>();
     public virtual ICollection<Movimiento> Movimientos { get; set; } = new List<Movimiento>();
+    public virtual ICollection<Movimiento> MovimientosRegistrados { get; set; } = new List<Movimiento>();
     public virtual ICollection<Alerta> Alertas { get; set; } = new List<Alerta>();
 }
 

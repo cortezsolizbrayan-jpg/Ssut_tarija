@@ -40,6 +40,12 @@ public class Movimiento
     [ForeignKey("UsuarioId")]
     public virtual Usuario? Usuario { get; set; }
 
+    [Column("usuario_registro_id")]
+    public int? UsuarioRegistroId { get; set; }
+
+    [ForeignKey("UsuarioRegistroId")]
+    public virtual Usuario? UsuarioRegistro { get; set; }
+
     [Column("observaciones")]
     [StringLength(500)]
     public string? Observaciones { get; set; }

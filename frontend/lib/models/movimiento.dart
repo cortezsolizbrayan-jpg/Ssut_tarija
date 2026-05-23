@@ -7,8 +7,12 @@ class Movimiento {
   final String? areaOrigenNombre;
   final int? areaDestinoId;
   final String? areaDestinoNombre;
+  /// Usuario responsable (a quién se asignó el movimiento/préstamo).
   final int? usuarioId;
   final String? usuarioNombre;
+  /// Usuario autenticado que registró la acción.
+  final int? usuarioRegistroId;
+  final String? usuarioRegistroNombre;
   final String? observaciones;
   final DateTime fechaMovimiento;
   final DateTime? fechaDevolucion;
@@ -26,6 +30,8 @@ class Movimiento {
     this.areaDestinoNombre,
     this.usuarioId,
     this.usuarioNombre,
+    this.usuarioRegistroId,
+    this.usuarioRegistroNombre,
     this.observaciones,
     required this.fechaMovimiento,
     this.fechaDevolucion,
@@ -45,6 +51,8 @@ class Movimiento {
       areaDestinoNombre: json['areaDestinoNombre'],
       usuarioId: json['usuarioId'],
       usuarioNombre: json['usuarioNombre'],
+      usuarioRegistroId: json['usuarioRegistroId'],
+      usuarioRegistroNombre: json['usuarioRegistroNombre'],
       observaciones: json['observaciones'],
       fechaMovimiento: DateTime.parse(json['fechaMovimiento']),
       fechaDevolucion:

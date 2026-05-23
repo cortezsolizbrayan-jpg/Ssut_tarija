@@ -21,6 +21,7 @@ public class MovimientoService : IMovimientoService
             .Include(m => m.AreaOrigen)
             .Include(m => m.AreaDestino)
             .Include(m => m.Usuario)
+            .Include(m => m.UsuarioRegistro)
             .Select(m => MapToDTO(m))
             .ToListAsync();
     }
@@ -32,6 +33,7 @@ public class MovimientoService : IMovimientoService
             .Include(m => m.AreaOrigen)
             .Include(m => m.AreaDestino)
             .Include(m => m.Usuario)
+            .Include(m => m.UsuarioRegistro)
             .FirstOrDefaultAsync(m => m.Id == id);
 
         return movimiento != null ? MapToDTO(movimiento) : null;
@@ -44,6 +46,7 @@ public class MovimientoService : IMovimientoService
             .Include(m => m.AreaOrigen)
             .Include(m => m.AreaDestino)
             .Include(m => m.Usuario)
+            .Include(m => m.UsuarioRegistro)
             .Where(m => m.DocumentoId == documentoId)
             .OrderByDescending(m => m.FechaMovimiento)
             .Select(m => MapToDTO(m))
@@ -57,6 +60,7 @@ public class MovimientoService : IMovimientoService
             .Include(m => m.AreaOrigen)
             .Include(m => m.AreaDestino)
             .Include(m => m.Usuario)
+            .Include(m => m.UsuarioRegistro)
             .Where(m => m.FechaMovimiento >= fechaDesde && m.FechaMovimiento <= fechaHasta)
             .OrderByDescending(m => m.FechaMovimiento)
             .Select(m => MapToDTO(m))
@@ -93,6 +97,7 @@ public class MovimientoService : IMovimientoService
             AreaOrigenId = dto.AreaOrigenId,
             AreaDestinoId = dto.AreaDestinoId,
             UsuarioId = dto.UsuarioId,
+            UsuarioRegistroId = dto.UsuarioRegistroId,
             Observaciones = dto.Observaciones,
             FechaMovimiento = DateTime.UtcNow,
             FechaLimiteDevolucion = dto.FechaLimiteDevolucion,
@@ -185,6 +190,7 @@ public class MovimientoService : IMovimientoService
             AreaOrigenId = movimiento.AreaDestinoId,
             AreaDestinoId = movimiento.AreaOrigenId,
             UsuarioId = movimiento.UsuarioId,
+            UsuarioRegistroId = dto.UsuarioRegistroId,
             Observaciones = dto.Observaciones ?? "Devolución de documento",
             FechaMovimiento = DateTime.UtcNow,
             Estado = "Activo"
@@ -220,6 +226,8 @@ public class MovimientoService : IMovimientoService
             AreaDestinoNombre = m.AreaDestino?.Nombre,
             UsuarioId = m.UsuarioId,
             UsuarioNombre = m.Usuario?.NombreCompleto,
+            UsuarioRegistroId = m.UsuarioRegistroId,
+            UsuarioRegistroNombre = m.UsuarioRegistro?.NombreCompleto,
             Observaciones = m.Observaciones,
             FechaMovimiento = m.FechaMovimiento,
             FechaDevolucion = m.FechaDevolucion,
