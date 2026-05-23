@@ -27,15 +27,15 @@ class _ReportePersonalizadoScreenState
     extends State<ReportePersonalizadoScreen> {
   // Columnas disponibles
   final Map<String, ColumnConfig> _columnasDisponibles = {
-    'codigo': ColumnConfig('CÃ³digo', true, 120),
-    'numeroCorrelativo': ColumnConfig('NÂº Correlativo', true, 120),
+    'codigo': ColumnConfig('Código', true, 120),
+    'numeroCorrelativo': ColumnConfig('Nº Correlativo', true, 120),
     'tipoDocumento': ColumnConfig('Tipo Documento', true, 150),
-    'areaOrigen': ColumnConfig('Ãrea Origen', false, 150),
-    'gestion': ColumnConfig('GestiÃ³n', true, 100),
+    'areaOrigen': ColumnConfig('Área Origen', false, 150),
+    'gestion': ColumnConfig('Gestión', true, 100),
     'fechaDocumento': ColumnConfig('Fecha Documento', false, 130),
-    'descripcion': ColumnConfig('DescripciÃ³n', false, 200),
+    'descripcion': ColumnConfig('Descripción', false, 200),
     'responsable': ColumnConfig('Responsable', false, 150),
-    'ubicacionFisica': ColumnConfig('UbicaciÃ³n FÃ­sica', false, 150),
+    'ubicacionFisica': ColumnConfig('Ubicación Física', false, 150),
     'estado': ColumnConfig('Estado', true, 100),
     'carpeta': ColumnConfig('Carpeta', false, 150),
     'nivelConfidencialidad': ColumnConfig('Nivel Confid.', false, 120),
@@ -124,7 +124,7 @@ class _ReportePersonalizadoScreenState
               .toList();
     }
 
-    // Filtro de Ã¡rea
+    // Filtro de área
     if (_filtroArea != null && _filtroArea!.isNotEmpty) {
       filtrados =
           filtrados
@@ -302,12 +302,12 @@ class _ReportePersonalizadoScreenState
       if (kIsWeb) {
         _downloadFile(bytes, filename, 'application/pdf');
       } else {
-        // Para plataformas mÃ³viles/desktop, mostrar mensaje
+        // Para plataformas móviles/desktop, mostrar mensaje
         if (mounted) {
           AppAlert.error(
             context,
-            'InformaciÃ³n',
-            'La descarga de PDF solo estÃ¡ disponible en la versiÃ³n web',
+            'Información',
+            'La descarga de PDF solo está disponible en la versión web',
           );
         }
         return;
@@ -405,8 +405,8 @@ class _ReportePersonalizadoScreenState
         if (mounted) {
           AppAlert.error(
             context,
-            'InformaciÃ³n',
-            'La descarga de Excel solo estÃ¡ disponible en la versiÃ³n web',
+            'Información',
+            'La descarga de Excel solo está disponible en la versión web',
           );
         }
         return;
@@ -445,7 +445,7 @@ class _ReportePersonalizadoScreenState
         html.document.body?.append(anchor);
         anchor.click();
 
-        // Limpiar despuÃ©s de un pequeÃ±o delay
+        // Limpiar después de un pequeño delay
         Future.delayed(const Duration(milliseconds: 100), () {
           anchor.remove();
           html.Url.revokeObjectUrl(url);
@@ -675,7 +675,7 @@ class _ReportePersonalizadoScreenState
               const SizedBox(height: 12),
               ExpansionTile(
                 title: Text(
-                  'Configuraciones rÃ¡pidas',
+                  'Configuraciones rápidas',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -690,7 +690,7 @@ class _ReportePersonalizadoScreenState
                   ListTile(
                     dense: true,
                     leading: const Icon(Icons.summarize_outlined, size: 18),
-                    title: const Text('Vista BÃ¡sica', style: TextStyle(fontSize: 12)),
+                    title: const Text('Vista Básica', style: TextStyle(fontSize: 12)),
                     onTap: () {
                       setState(() {
                         _columnasDisponibles.forEach((key, value) {
@@ -720,7 +720,7 @@ class _ReportePersonalizadoScreenState
                   ListTile(
                     dense: true,
                     leading: const Icon(Icons.location_on_outlined, size: 18),
-                    title: const Text('Vista UbicaciÃ³n', style: TextStyle(fontSize: 12)),
+                    title: const Text('Vista Ubicación', style: TextStyle(fontSize: 12)),
                     onTap: () {
                       setState(() {
                         _columnasDisponibles.forEach((key, value) {
@@ -867,7 +867,7 @@ class _ReportePersonalizadoScreenState
                     _buildFeatureItem(
                       Icons.check_circle_outline,
                       'Selecciona columnas',
-                      'Elige quÃ© informaciÃ³n mostrar',
+                      'Elige qué información mostrar',
                       theme,
                     ),
                     const SizedBox(height: 16),
@@ -1070,7 +1070,7 @@ class _ReportePersonalizadoScreenState
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText:
-                        'Buscar por cÃ³digo, correlativo, descripciÃ³n, tipo o Ã¡rea...',
+                        'Buscar por código, correlativo, descripción, tipo o área...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1196,7 +1196,7 @@ class _ReportePersonalizadoScreenState
                   ),
                 if (_filtroArea != null)
                   Chip(
-                    label: Text('Ãrea: $_filtroArea'),
+                    label: Text('Área: $_filtroArea'),
                     onDeleted: () {
                       setState(() {
                         _filtroArea = null;
@@ -1320,7 +1320,7 @@ class _ReportePersonalizadoScreenState
                     child: DropdownButtonFormField<String>(
                       value: _filtroArea,
                       decoration: InputDecoration(
-                        labelText: 'Ãrea',
+                        labelText: 'Área',
                         prefixIcon: const Icon(
                           Icons.business_outlined,
                           size: 18,
@@ -1521,7 +1521,7 @@ class _ReportePersonalizadoScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              'Intenta ajustar los filtros de bÃºsqueda',
+              'Intenta ajustar los filtros de búsqueda',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: theme.colorScheme.onSurfaceVariant,
