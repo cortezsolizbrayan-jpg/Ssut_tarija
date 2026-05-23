@@ -425,7 +425,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
               const SizedBox(height: 16),
               Text(
                 'Rol actual: ${authProvider.role.displayName}',
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
+                style: TextStyle(fontSize: 14, color: Colors.grey.withOpacity(0.7)),
               ),
             ],
           ),
@@ -433,11 +433,12 @@ class _PermisosScreenState extends State<PermisosScreen> {
       );
     }
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text('Gestión de Permisos', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
@@ -470,12 +471,11 @@ class _PermisosScreenState extends State<PermisosScreen> {
   }
 
   Widget _buildUsuariosList() {
-    return Theme(
-      data: ThemeData.light(useMaterial3: true).copyWith(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppTheme.colorPrimario),
-      ),
-      child: Container(
-      color: Colors.white,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      color: theme.colorScheme.surface,
       child: Column(
         children: [
           // Buscador
@@ -525,7 +525,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? AppTheme.colorPrimario
-                          : const Color(0xFF1A1A1A),
+                          : theme.colorScheme.onSurface,
                     ),
                   ),
                   subtitle: Column(
@@ -535,7 +535,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
                         '@${usuario.nombreUsuario}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
                       Container(
@@ -566,7 +566,6 @@ class _PermisosScreenState extends State<PermisosScreen> {
           ),
         ],
       ),
-    ),
     );
   }
 
@@ -575,20 +574,17 @@ class _PermisosScreenState extends State<PermisosScreen> {
       return const Center(
         child: Text(
           'Selecciona un usuario para gestionar sus permisos',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+          style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
         ),
       );
     }
 
     final usuario = _usuarioSeleccionado!;
     final permisosUsuario = _permisosActivos[usuario.nombreUsuario] ?? {};
+    final theme = Theme.of(context);
 
-    return Theme(
-      data: ThemeData.light(useMaterial3: true).copyWith(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppTheme.colorPrimario),
-      ),
-      child: Container(
-      color: Colors.white,
+    return Container(
+      color: theme.colorScheme.surface,
       child: Column(
         children: [
           // Header del usuario
@@ -596,7 +592,10 @@ class _PermisosScreenState extends State<PermisosScreen> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.colorPrimario.withOpacity(0.1), Colors.white],
+                colors: [
+                  AppTheme.colorPrimario.withOpacity(0.1),
+                  theme.colorScheme.surface,
+                ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -627,14 +626,14 @@ class _PermisosScreenState extends State<PermisosScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1A1A1A),
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '@${usuario.nombreUsuario}',
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          color: Colors.grey.shade700,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -675,7 +674,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1A1A1A),
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -683,7 +682,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
                     'Todos los permisos pueden activarse o desactivarse por usuario. Activa o desactiva según lo acordado con el seguro.',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -702,7 +701,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
                             return Center(
                               child: Text(
                                 'No hay permisos configurados.',
-                                style: GoogleFonts.inter(color: Colors.grey.shade600),
+                                style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withOpacity(0.5)),
                                 textAlign: TextAlign.center,
                               ),
                             );
@@ -737,7 +736,7 @@ class _PermisosScreenState extends State<PermisosScreen> {
                                 nombre,
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF1A1A1A),
+                                  color: theme.colorScheme.onSurface,
                                 ),
                               ),
                               subtitle: Text(
@@ -810,7 +809,6 @@ class _PermisosScreenState extends State<PermisosScreen> {
           ),
         ],
       ),
-    ),
     );
   }
 
