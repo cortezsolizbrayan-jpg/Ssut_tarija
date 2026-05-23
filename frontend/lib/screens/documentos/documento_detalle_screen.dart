@@ -1,4 +1,5 @@
-﻿import 'dart:io';
+﻿import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
@@ -53,12 +54,21 @@ class _DocumentoDetalleScreenState extends State<DocumentoDetalleScreen> {
   List<Movimiento> _movimientos = [];
   bool _movimientosLoaded = false;
 
+  /// Aviso rojo visible solo al entrar; se oculta tras unos segundos.
+  bool _mostrarAvisoProteccion = true;
+  Timer? _avisoProteccionTimer;
+  static const Duration _duracionAvisoProteccion = Duration(seconds: 6);
+
   @override
   void initState() {
     super.initState();
 
     // Activar TODAS las protecciones contra capturas
     _activarProteccionesCaptura();
+
+    _avisoProteccionTimer = Timer(_duracionAvisoProteccion, () {
+      if (mounted) setState(() => _mostrarAvisoProteccion = false);
+    });
 
     // Inicializar QR de forma independiente del puerto
     String? initialQrData = widget.documento.urlQR ?? widget.documento.codigoQR;
@@ -96,6 +106,7 @@ class _DocumentoDetalleScreenState extends State<DocumentoDetalleScreen> {
 
   @override
   void dispose() {
+    _avisoProteccionTimer?.cancel();
     // Desactivar protecciones al salir
     _desactivarProteccionesCaptura();
     super.dispose();
@@ -412,44 +423,49 @@ class _DocumentoDetalleScreenState extends State<DocumentoDetalleScreen> {
                 ),
               ),
             ),
-            // CAPA 2: Overlay de advertencia permanente en esquina superior
+            // CAPA 2: Aviso temporal al entrar (la protección sigue activa sin el cartel)
             Positioned(
               top: 12,
               left: 12,
               child: IgnorePointer(
                 ignoring: true,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade700,
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.lock_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'DOCUMENTO PROTEGIDO - PROHIBIDA CAPTURA',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
+                child: AnimatedOpacity(
+                  opacity: _mostrarAvisoProteccion ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOut,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade700,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.lock_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'DOCUMENTO PROTEGIDO - PROHIBIDA CAPTURA',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1317,76 +1333,10 @@ class _DocumentoDetalleScreenState extends State<DocumentoDetalleScreen> {
       builder: (dialogContext) {
         return Dialog.fullscreen(
           backgroundColor: Colors.black,
-          child: Stack(
-            children: [
-              // PDF en pantalla completa
-              PdfPreview(
-                build: (_) => _previewPdfBytes!,
-                allowPrinting: false,
-                allowSharing: false,
-                canChangeOrientation: false,
-                canChangePageFormat: false,
-                canDebug: false,
-                actions: [],
-              ),
-              // Watermark de seguridad sobre el PDF (se repite constantemente)
-              IgnorePointer(
-                ignoring: true,
-                child: _FullscreenSecurityWatermark(userName: userName),
-              ),
-              // Botón para cerrar
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Material(
-                  color: Colors.white,
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(30),
-                  child: InkWell(
-                    onTap: () => Navigator.of(dialogContext).pop(),
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      child: const Icon(Icons.close_rounded, size: 28),
-                    ),
-                  ),
-                ),
-              ),
-              // Indicador de documento protegido
-              Positioned(
-                top: 16,
-                left: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.lock_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Documento protegido - Prohibida captura',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          child: _PdfFullscreenViewer(
+            pdfBytes: _previewPdfBytes!,
+            userName: userName,
+            onClose: () => Navigator.of(dialogContext).pop(),
           ),
         );
       },
@@ -2808,6 +2758,116 @@ class _DocumentoDetalleScreenState extends State<DocumentoDetalleScreen> {
         ),
       );
     });
+  }
+}
+
+/// Visor PDF a pantalla completa con aviso de protección temporal.
+class _PdfFullscreenViewer extends StatefulWidget {
+  final Uint8List pdfBytes;
+  final String userName;
+  final VoidCallback onClose;
+
+  const _PdfFullscreenViewer({
+    required this.pdfBytes,
+    required this.userName,
+    required this.onClose,
+  });
+
+  @override
+  State<_PdfFullscreenViewer> createState() => _PdfFullscreenViewerState();
+}
+
+class _PdfFullscreenViewerState extends State<_PdfFullscreenViewer> {
+  bool _mostrarAviso = true;
+  Timer? _avisoTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _avisoTimer = Timer(
+      const Duration(seconds: 6),
+      () {
+        if (mounted) setState(() => _mostrarAviso = false);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _avisoTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        PdfPreview(
+          build: (_) => widget.pdfBytes,
+          allowPrinting: false,
+          allowSharing: false,
+          canChangeOrientation: false,
+          canChangePageFormat: false,
+          canDebug: false,
+          actions: const [],
+        ),
+        IgnorePointer(
+          ignoring: true,
+          child: _FullscreenSecurityWatermark(userName: widget.userName),
+        ),
+        Positioned(
+          top: 16,
+          right: 16,
+          child: Material(
+            color: Colors.white,
+            elevation: 4,
+            borderRadius: BorderRadius.circular(30),
+            child: InkWell(
+              onTap: widget.onClose,
+              borderRadius: BorderRadius.circular(30),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                child: const Icon(Icons.close_rounded, size: 28),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 16,
+          left: 16,
+          child: IgnorePointer(
+            ignoring: true,
+            child: AnimatedOpacity(
+              opacity: _mostrarAviso ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_rounded, color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Documento protegido - Prohibida captura',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
