@@ -65,6 +65,20 @@ class Documento {
     return null;
   }
 
+  static String? _parseResponsableNombre(Map<String, dynamic> json) {
+    final direct =
+        json['responsableNombre']?.toString() ?? json['ResponsableNombre']?.toString();
+    if (direct != null && direct.trim().isNotEmpty) return direct.trim();
+
+    final nested = json['responsable'] ?? json['Responsable'];
+    if (nested is Map) {
+      final nombre =
+          nested['nombreCompleto']?.toString() ?? nested['NombreCompleto']?.toString();
+      if (nombre != null && nombre.trim().isNotEmpty) return nombre.trim();
+    }
+    return null;
+  }
+
   factory Documento.fromJson(Map<String, dynamic> json) {
     final v = (String key, [String? key2]) => json[key] ?? (key2 != null ? json[key2] : null);
     return Documento(
@@ -82,7 +96,7 @@ class Documento {
       fechaDocumento: DateTime.tryParse((json['fechaDocumento'] ?? json['FechaDocumento'] ?? '').toString()) ?? DateTime.now(),
       descripcion: json['descripcion'] ?? json['Descripcion'],
       responsableId: _parseInt(v('responsableId', 'ResponsableId')),
-      responsableNombre: json['responsableNombre']?.toString() ?? json['ResponsableNombre']?.toString(),
+      responsableNombre: _parseResponsableNombre(json),
       codigoQR: json['codigoQR'],
       urlQR: json['urlQR'],
       ubicacionFisica: json['ubicacionFisica'],
@@ -295,12 +309,13 @@ class PaginatedResponse<T> {
   });
 
   factory PaginatedResponse.fromJson(Map<String, dynamic> json, T Function(Map<String, dynamic>) fromJson) {
+    final rawItems = json['items'] ?? json['Items'];
     return PaginatedResponse<T>(
-      items: (json['items'] as List).map((e) => fromJson(e)).toList(),
-      totalItems: json['totalItems'],
-      page: json['page'],
-      pageSize: json['pageSize'],
-      totalPages: json['totalPages'],
+      items: (rawItems as List).map((e) => fromJson(e as Map<String, dynamic>)).toList(),
+      totalItems: json['totalItems'] ?? json['TotalItems'] ?? 0,
+      page: json['page'] ?? json['Page'] ?? 1,
+      pageSize: json['pageSize'] ?? json['PageSize'] ?? 20,
+      totalPages: json['totalPages'] ?? json['TotalPages'] ?? 1,
     );
   }
 }

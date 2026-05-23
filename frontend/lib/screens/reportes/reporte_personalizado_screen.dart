@@ -586,7 +586,8 @@ class _ReportePersonalizadoScreenState
       case 'descripcion':
         return doc.descripcion ?? '-';
       case 'responsable':
-        return doc.responsableNombre ?? '-';
+        final nombre = doc.responsableNombre?.trim();
+        return (nombre != null && nombre.isNotEmpty) ? nombre : 'Sin asignar';
       case 'ubicacionFisica':
         return doc.ubicacionFisica ?? '-';
       case 'estado':

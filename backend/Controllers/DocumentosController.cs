@@ -98,7 +98,14 @@ public class DocumentosController : ControllerBase
                 AreaOrigenNombre = d.AreaOrigen != null ? d.AreaOrigen.Nombre : null,
                 AreaOrigenCodigo = d.AreaOrigen != null ? d.AreaOrigen.Codigo : null,
                 ResponsableId = d.ResponsableId,
-                ResponsableNombre = d.Responsable != null ? d.Responsable.NombreCompleto : null,
+                ResponsableNombre =
+                    d.Responsable != null
+                        ? d.Responsable.NombreCompleto
+                        : d.Movimientos
+                            .Where(m => m.TipoMovimiento == "Salida" && m.Usuario != null)
+                            .OrderByDescending(m => m.FechaMovimiento)
+                            .Select(m => m.Usuario!.NombreCompleto)
+                            .FirstOrDefault(),
                 CarpetaId = d.CarpetaId,
                 CarpetaNombre = d.Carpeta != null ? d.Carpeta.Nombre : null,
                 CarpetaPadreNombre = d.Carpeta != null && d.Carpeta.CarpetaPadre != null ? d.Carpeta.CarpetaPadre.Nombre : null,
@@ -153,7 +160,14 @@ public class DocumentosController : ControllerBase
                 AreaOrigenNombre = d.AreaOrigen != null ? d.AreaOrigen.Nombre : null,
                 AreaOrigenCodigo = d.AreaOrigen != null ? d.AreaOrigen.Codigo : null,
                 ResponsableId = d.ResponsableId,
-                ResponsableNombre = d.Responsable != null ? d.Responsable.NombreCompleto : null,
+                ResponsableNombre =
+                    d.Responsable != null
+                        ? d.Responsable.NombreCompleto
+                        : d.Movimientos
+                            .Where(m => m.TipoMovimiento == "Salida" && m.Usuario != null)
+                            .OrderByDescending(m => m.FechaMovimiento)
+                            .Select(m => m.Usuario!.NombreCompleto)
+                            .FirstOrDefault(),
                 CarpetaId = d.CarpetaId,
                 CarpetaNombre = d.Carpeta != null ? d.Carpeta.Nombre : null,
                 CarpetaPadreNombre = d.Carpeta != null && d.Carpeta.CarpetaPadre != null ? d.Carpeta.CarpetaPadre.Nombre : null,
@@ -176,6 +190,8 @@ public class DocumentosController : ControllerBase
             .Include(d => d.TipoDocumento)
             .Include(d => d.AreaOrigen)
             .Include(d => d.Responsable)
+            .Include(d => d.Movimientos)
+                .ThenInclude(m => m.Usuario)
             .Include(d => d.Carpeta)
                 .ThenInclude(c => c!.CarpetaPadre)
             .Include(d => d.DocumentoPalabrasClaves)
@@ -213,7 +229,7 @@ public class DocumentosController : ControllerBase
             AreaOrigenNombre = documento.AreaOrigen?.Nombre,
             AreaOrigenCodigo = documento.AreaOrigen?.Codigo,
             ResponsableId = documento.ResponsableId,
-            ResponsableNombre = documento.Responsable?.NombreCompleto,
+            ResponsableNombre = ResolverResponsableNombre(documento),
             CarpetaId = documento.CarpetaId,
             CarpetaNombre = documento.Carpeta?.Nombre,
             CarpetaPadreNombre = documento.Carpeta?.CarpetaPadre?.Nombre,
@@ -464,6 +480,8 @@ public class DocumentosController : ControllerBase
                 .Include(d => d.TipoDocumento)
                 .Include(d => d.AreaOrigen)
                 .Include(d => d.Responsable)
+                .Include(d => d.Movimientos)
+                    .ThenInclude(m => m.Usuario)
                 .Include(d => d.Carpeta)
                     .ThenInclude(c => c!.CarpetaPadre)
                 .Include(d => d.DocumentoPalabrasClaves)
@@ -522,7 +540,7 @@ public class DocumentosController : ControllerBase
                 AreaOrigenNombre = documentoCompleto.AreaOrigen != null ? documentoCompleto.AreaOrigen.Nombre : null,
                 AreaOrigenCodigo = documentoCompleto.AreaOrigen != null ? documentoCompleto.AreaOrigen.Codigo : null,
                 ResponsableId = documentoCompleto.ResponsableId,
-                ResponsableNombre = documentoCompleto.Responsable != null ? documentoCompleto.Responsable.NombreCompleto : null,
+                ResponsableNombre = ResolverResponsableNombre(documentoCompleto),
                 CarpetaId = documentoCompleto.CarpetaId,
                 CarpetaNombre = documentoCompleto.Carpeta != null ? documentoCompleto.Carpeta.Nombre : null,
                 CarpetaPadreNombre = documentoCompleto.Carpeta != null && documentoCompleto.Carpeta.CarpetaPadre != null ? documentoCompleto.Carpeta.CarpetaPadre.Nombre : null,
@@ -949,7 +967,14 @@ public class DocumentosController : ControllerBase
                 AreaOrigenNombre = d.AreaOrigen != null ? d.AreaOrigen.Nombre : null,
                 AreaOrigenCodigo = d.AreaOrigen != null ? d.AreaOrigen.Codigo : null,
                 ResponsableId = d.ResponsableId,
-                ResponsableNombre = d.Responsable != null ? d.Responsable.NombreCompleto : null,
+                ResponsableNombre =
+                    d.Responsable != null
+                        ? d.Responsable.NombreCompleto
+                        : d.Movimientos
+                            .Where(m => m.TipoMovimiento == "Salida" && m.Usuario != null)
+                            .OrderByDescending(m => m.FechaMovimiento)
+                            .Select(m => m.Usuario!.NombreCompleto)
+                            .FirstOrDefault(),
                 CarpetaId = d.CarpetaId,
                 CarpetaNombre = d.Carpeta != null ? d.Carpeta.Nombre : null,
                 CarpetaPadreNombre = d.Carpeta != null && d.Carpeta.CarpetaPadre != null ? d.Carpeta.CarpetaPadre.Nombre : null,
@@ -1404,6 +1429,18 @@ public class DocumentosController : ControllerBase
             }
         }
         return result;
+    }
+
+    private static string? ResolverResponsableNombre(Documento d)
+    {
+        if (d.Responsable != null && !string.IsNullOrWhiteSpace(d.Responsable.NombreCompleto))
+            return d.Responsable.NombreCompleto;
+
+        return d.Movimientos
+            .Where(m => m.TipoMovimiento == "Salida" && m.Usuario != null)
+            .OrderByDescending(m => m.FechaMovimiento)
+            .Select(m => m.Usuario!.NombreCompleto)
+            .FirstOrDefault();
     }
 
 }
