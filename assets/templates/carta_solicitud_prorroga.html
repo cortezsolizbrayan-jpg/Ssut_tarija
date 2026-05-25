@@ -1,0 +1,132 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="ProgId" content="Word.Document">
+    <meta name="Viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Prórroga - Entrega de Título</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            width: 100%;
+        }
+
+        .hoja {
+            background-color: white;
+            width: 100%;
+            max-width: 612px;
+            min-height: 792px;
+            margin: 16px auto;
+            padding: 60px 50px 50px 50px;
+            box-sizing: border-box;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .hoja {
+                width: 95%;
+                padding: 40px 25px 30px 25px;
+            }
+        }
+
+        .lugar-fecha {
+            text-align: right;
+            margin-bottom: 30pt;
+        }
+
+        .destinatario {
+            margin-bottom: 5pt;
+            font-weight: bold;
+        }
+
+        .presente {
+            margin-bottom: 25pt;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .referencia {
+            text-align: right;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 20pt;
+            text-transform: uppercase;
+        }
+
+        .saludo {
+            margin-bottom: 15pt;
+        }
+
+        .cuerpo {
+            text-align: justify;
+            margin-bottom: 20pt;
+        }
+
+        .firma {
+            margin-top: 50pt;
+            text-align: center;
+        }
+
+        .firma .imagen-firma {
+            max-width: 200px;
+            max-height: 80px;
+            margin: 0 auto 10pt;
+            display: block;
+        }
+
+        .firma .linea {
+            border-bottom: 1px solid #000;
+            width: 250px;
+            margin: 0 auto 8pt;
+        }
+
+        .firma .nombre {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="hoja">
+        <div class="lugar-fecha">La Paz, {{FECHA_ACTUAL}}</div>
+
+        <div class="destinatario">
+            <div>Señor:</div>
+            <div>Dr. Richard Jorge Torrez Juaniquina Ph. D.</div>
+            <div>DIRECTOR DE POSGRADO - UPEA</div>
+        </div>
+        <div class="presente">Presente.-</div>
+
+        <div class="referencia">REF.: SOLICITUD DE PRÓRROGA PARA ENTREGA DE TÍTULO ACADÉMICO</div>
+
+        <div class="saludo">Distinguido Director:</div>
+
+        <div class="cuerpo">
+            <p>Por intermedio de la presente, me es grato saludarle cordialmente y desearle éxitos en sus funciones diarias.</p>
+            
+            <p>El motivo de la presente es para solicitar a su autoridad una <strong>PRÓRROGA</strong> para la entrega de mi Título Académico original o fotocopia legalizada, requisito indispensable para mi inscripción en el programa: <strong>"{{NOMBRE_PROGRAMA}}"</strong>.</p>
+
+            <p>Esta solicitud se debe a que dicho documento se encuentra actualmente en trámite administrativo. Por tal motivo, me comprometo formalmente a hacer la entrega física del mismo en un plazo máximo de {{PLAZO_MESES}} meses a partir de la fecha, asumiendo la responsabilidad de que mi trámite de titulación de posgrado quedará pendiente hasta el cumplimiento de este requisito.</p>
+            
+            <p>Sin otro particular, agradezco de antemano su comprensión y me despido muy atentamente.</p>
+        </div>
+
+        <div class="firma">
+            <img src="data:image/png;base64,{{FIRMA_BASE64}}" alt="Firma" class="imagen-firma" {{FIRMA_VISIBILIDAD}} />
+            <div class="linea"></div>
+            <div class="nombre">{{NOMBRE_COMPLETO}}</div>
+            <div>C.I. {{NUMERO_CI}}{{EXPEDIDO_CI}}</div>
+            <div>POSTULANTE</div>
+        </div>
+    </div>
+</body>
+
+</html>

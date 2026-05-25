@@ -1,0 +1,2274 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+
+import 'package:animate_do/animate_do.dart';
+import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:refactor_template/core/services/storage/servicio_almacenamiento_local.dart';
+import 'package:refactor_template/core/services/image_processing/servicio_procesador_imagen_perfil.dart';
+import 'package:refactor_template/core/services/validation/servicio_validacion_facial_gemini.dart';
+import 'package:rive/rive.dart' hide LinearGradient, RadialGradient;
+
+enum FaceStep { center, completed }
+
+class FaceRecognitionPantalla extends StatefulWidget {
+  static const name = 'face-recognition-Pantalla';
+  final Map<String, String>? ocrData;
+
+  const FaceRecognitionPantalla({super.key, this.ocrData});
+
+  @override
+  State<FaceRecognitionPantalla> createState() =>
+      _FaceRecognitionPantallaState();
+}
+
+class _FaceRecognitionPantallaState extends State<FaceRecognitionPantalla>
+    with TickerProviderStateMixin {
+  CameraController? _cameraController;
+  FaceDetector? _faceDetector;
+  bool _isBusy = false;
+  int _frameCount = 0;
+  DateTime? _lastProcessTime; // Para throttle de procesamiento
+  // _ocrData removido - se usa widget.ocrData directamente
+  FaceStep _currentStep = FaceStep.center;
+  double _progress = 0.0;
+  double _stepProgress = 0.0; // Progreso del paso actual (0.0 a 1.0)
+  String _instruction = "Centra tu rostro en el círculo";
+  Timer? _stepTimer;
+  bool _isConditionMet = false; // Para feedback visual
+  bool _isFaceDetected = false; // Debug: ¿Hay un rostro?
+  String _errorMessage =
+      ""; // Mensaje de error de validación (ej: "Acércate más")
+  bool _isInitialDelayComplete = false; // Delay inicial de 2 segundos
+  int _consecutiveTimeouts = 0; // Contador de timeouts consecutivos
+  bool _isProcessingPaused =
+      false; // Si el procesamiento está pausado por timeouts
+
+  // Para animaciones y captura de fotos
+  final List<XFile> _capturedPhotos = [];
+  bool _isCapturing = false;
+  bool _showFlash = false;
+  bool _showSuccessAnimation = false;
+  RiveAnimationController? _checkAnimationController;
+  RiveAnimationController? _confettiController;
+  RiveAnimationController? _shapesController;
+  late AnimationController _pulseController;
+  late AnimationController _successController;
+  late AnimationController _flashController;
+  late AnimationController _headRotationController;
+  late AnimationController _arrowController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _successScaleAnimation;
+  late Animation<double> _headRotationAnimation;
+  late Animation<double> _arrowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+    // Importante: diferir la inicialización de cámara y diálogos
+    // hasta después del primer build, para que Localizations,
+    // Theme, etc. ya estén disponibles en el árbol de Widgets.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeCamera();
+      }
+    });
+    _faceDetector = FaceDetector(
+      options: FaceDetectorOptions(
+        enableLandmarks: false,
+        enableClassification: false, // Deshabilitado para mejor rendimiento
+        enableContours: false, // Deshabilitado para mejor rendimiento
+        enableTracking: false,
+        performanceMode: FaceDetectorMode.fast,
+        minFaceSize: 0.2, // Aumentado para detectar solo rostros más grandes
+      ),
+    );
+  }
+
+  void _initializeAnimations() {
+    // Animación de pulso para el borde
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    // Animación de éxito mejorada (más dinámica)
+    _successController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _successScaleAnimation = Tween<double>(begin: 0.0, end: 1.2).animate(
+      CurvedAnimation(parent: _successController, curve: Curves.elasticOut),
+    );
+
+    // Animación de flash
+    _flashController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    // Animación de rotación de cabeza
+    _headRotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _headRotationAnimation = Tween<double>(begin: -0.3, end: 0.3).animate(
+      CurvedAnimation(parent: _headRotationController, curve: Curves.easeInOut),
+    );
+
+    // Animación de flechas
+    _arrowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _arrowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _arrowController, curve: Curves.easeInOut),
+    );
+
+    // Controlador para animación Rive de check
+    _checkAnimationController = SimpleAnimation('Check', autoplay: false);
+    _confettiController = SimpleAnimation('Trigger victory', autoplay: false);
+    _shapesController = SimpleAnimation('Animation 1', autoplay: true);
+  }
+
+  Future<void> _initializeCamera() async {
+    // Mostrar aviso informativo antes de inicializar la cámara
+    await _showPhotoNoticeDialog();
+
+    final status = await Permission.camera.request();
+    if (status.isDenied) return;
+
+    final cameras = await availableCameras();
+    final frontCamera = cameras.firstWhere(
+      (camera) => camera.lensDirection == CameraLensDirection.front,
+    );
+
+    _cameraController = CameraController(
+      frontCamera,
+      ResolutionPreset
+          .low, // Cambiamos a LOW para máxima estabilidad en Android y evitar IllegalArgumentException por memoria
+      enableAudio: false,
+      imageFormatGroup: Platform.isAndroid
+          ? ImageFormatGroup.yuv420
+          : ImageFormatGroup.bgra8888,
+    );
+
+    try {
+      await _cameraController!.initialize();
+      if (!mounted) return;
+
+      // Listener para errores de cámara: detener stream y volver a la pantalla previa
+      _cameraController!.addListener(() {
+        if (_cameraController?.value.hasError == true) {
+          debugPrint(
+            "❌ Error de cámara: ${_cameraController?.value.errorDescription}",
+          );
+          _safeStopCamera(
+            "Ocurrió un problema con la cámara. Intenta de nuevo.",
+          );
+        }
+      });
+
+      // Actualizar estado para mostrar el preview de la cámara inmediatamente
+      setState(() {});
+      debugPrint("✓ Cámara inicializada. Mostrando preview...");
+
+      // Esperar 2 segundos antes de empezar a procesar imágenes
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _isInitialDelayComplete = true;
+            _instruction = "Centra tu rostro en el círculo";
+          });
+          debugPrint(
+            "✓ Delay inicial completado. Iniciando detección facial...",
+          );
+        }
+      });
+
+      _cameraController!.startImageStream((image) {
+        if (_isBusy) return;
+        // Solo procesar después del delay inicial
+        if (_isInitialDelayComplete) {
+          _processCameraImage(image);
+        }
+      });
+    } catch (e) {
+      debugPrint("Camera Error: $e");
+      if (mounted) {
+        setState(() {
+          _isInitialDelayComplete =
+              true; // Permitir continuar aunque haya error
+        });
+        _safeStopCamera("No se pudo iniciar la cámara. Reintenta.");
+      }
+    }
+  }
+
+  /// Muestra el aviso informativo sobre la captura de foto para el perfil
+  Future<void> _showPhotoNoticeDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.white,
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF005BAC).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Color(0xFF005BAC),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Identidad Académica',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF005BAC),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF005BAC).withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF005BAC).withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Color(0xFF005BAC),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Para completar tu registro de posgrado, requerimos una fotografía digital de frente para tu Identidad Académica.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF333333),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Esta fotografía será utilizada para:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF666666),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildBulletPoint(
+                'Tu ficha de inscripción y documentos académicos',
+              ),
+              _buildBulletPoint(
+                'Identificación digital dentro de la plataforma',
+              ),
+              _buildBulletPoint('Emisión de certificados y diplomas'),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.security, color: Color(0xFF4CAF50), size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tu privacidad está protegida',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF4CAF50),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Regresar a la pantalla anterior
+                context.pop();
+              },
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Color(0xFF666666), fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF005BAC),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Continuar',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '• ',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF005BAC),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF666666),
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processCameraImage(CameraImage image) async {
+    if (_cameraController == null || _faceDetector == null) return;
+    if (_isBusy) return;
+    if (!_isInitialDelayComplete) return;
+
+    // OPTIMIZACIÓN MEJORADA: procesar menos frames para evitar ANR.
+    _frameCount++;
+    if (_frameCount % 30 != 0) return;
+
+    // Throttle adicional: mínimo 800ms entre procesamiento
+    final now = DateTime.now();
+    if (_lastProcessTime != null &&
+        now.difference(_lastProcessTime!).inMilliseconds < 800) {
+      return;
+    }
+    _lastProcessTime = now;
+
+    // OPTIMIZACIÓN: Pausar procesamiento si hay demasiados timeouts consecutivos
+    if (_isProcessingPaused) {
+      debugPrint(
+        "⚠️ Procesamiento pausado por $_consecutiveTimeouts timeouts consecutivos",
+      );
+      return;
+    }
+
+    _isBusy = true;
+
+    try {
+      // OPTIMIZACIÓN: Procesar con timeout de 2 segundos
+      await _processImageWithTimeout(image, const Duration(seconds: 2));
+    } catch (e) {
+      _consecutiveTimeouts++;
+      debugPrint(
+        "❌ Timeout #$_consecutiveTimeouts en procesamiento de imagen: $e",
+      );
+
+      // OPTIMIZACIÓN: Pausar procesamiento después de 3 timeouts consecutivos
+      if (_consecutiveTimeouts >= 3) {
+        _isProcessingPaused = true;
+        debugPrint("⏸️ Procesamiento pausado por 3 timeouts consecutivos");
+
+        // Reanudar automáticamente después de 5 segundos
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted) {
+            _consecutiveTimeouts = 0;
+            _isProcessingPaused = false;
+            debugPrint("▶️ Procesamiento reanudado");
+          }
+        });
+      }
+
+      // OPTIMIZACIÓN: Detener stream de cámara después de 10 timeouts
+      if (_consecutiveTimeouts >= 10) {
+        debugPrint("🚫 Demasiados timeouts. Deteniendo stream de cámara.");
+        _stopCameraStream();
+      }
+    } finally {
+      _isBusy = false;
+    }
+  }
+
+  InputImage? _inputImageFromCameraImage(CameraImage image) {
+    if (_cameraController == null) return null;
+
+    final rotation = InputImageRotationValue.fromRawValue(
+      _cameraController!.description.sensorOrientation,
+    );
+    if (rotation == null) return null;
+
+    if (Platform.isAndroid) {
+      // Construir formato NV21 correctamente desde YUV420
+      // NV21 = Y plano + UV intercalado (VU orden)
+      if (image.format.group == ImageFormatGroup.yuv420) {
+        final yPlane = image.planes[0];
+
+        // Verificar si tenemos 2 o 3 planos
+        if (image.planes.length == 2) {
+          // Ya está en formato semi-planar (Y + UV)
+          final uvPlane = image.planes[1];
+          final ySize = yPlane.bytes.length;
+          final uvSize = uvPlane.bytes.length;
+          final totalSize = ySize + uvSize;
+
+          final nv21Buffer = Uint8List(totalSize);
+          nv21Buffer.setRange(0, ySize, yPlane.bytes);
+          nv21Buffer.setRange(ySize, totalSize, uvPlane.bytes);
+
+          return InputImage.fromBytes(
+            bytes: nv21Buffer,
+            metadata: InputImageMetadata(
+              size: Size(image.width.toDouble(), image.height.toDouble()),
+              rotation: rotation,
+              format: InputImageFormat.nv21,
+              bytesPerRow: yPlane.bytesPerRow,
+            ),
+          );
+        } else if (image.planes.length == 3) {
+          // YUV_420_888: necesitamos intercalar U y V
+          final uPlane = image.planes[1];
+          final vPlane = image.planes[2];
+
+          final ySize = yPlane.bytes.length;
+          // Calcular tamaño UV basado en los bytes reales (intercalado VU)
+          final minLength = uPlane.bytes.length < vPlane.bytes.length
+              ? uPlane.bytes.length
+              : vPlane.bytes.length;
+          final uvSize = minLength * 2; // Cada par es V+U
+          final totalSize = ySize + uvSize;
+
+          final nv21Buffer = Uint8List(totalSize);
+
+          // Copiar plano Y
+          nv21Buffer.setRange(0, ySize, yPlane.bytes);
+
+          // Intercalar U y V en orden VU para NV21
+          int uvIndex = ySize;
+          for (int i = 0; i < minLength; i++) {
+            nv21Buffer[uvIndex++] = vPlane.bytes[i];
+            nv21Buffer[uvIndex++] = uPlane.bytes[i];
+          }
+
+          return InputImage.fromBytes(
+            bytes: nv21Buffer,
+            metadata: InputImageMetadata(
+              size: Size(image.width.toDouble(), image.height.toDouble()),
+              rotation: rotation,
+              format: InputImageFormat.nv21,
+              bytesPerRow: yPlane.bytesPerRow,
+            ),
+          );
+        }
+      }
+
+      // Fallback: intentar usar el formato nativo
+      final format = InputImageFormatValue.fromRawValue(image.format.raw);
+      if (format != null) {
+        final allBytes = WriteBuffer();
+        for (final plane in image.planes) {
+          allBytes.putUint8List(plane.bytes);
+        }
+        final bytes = allBytes.done().buffer.asUint8List();
+
+        return InputImage.fromBytes(
+          bytes: bytes,
+          metadata: InputImageMetadata(
+            size: Size(image.width.toDouble(), image.height.toDouble()),
+            rotation: rotation,
+            format: format,
+            bytesPerRow: image.planes[0].bytesPerRow,
+          ),
+        );
+      }
+
+      return null;
+    }
+
+    // iOS y otros
+    final format = InputImageFormatValue.fromRawValue(image.format.raw);
+    if (format == null) return null;
+
+    final allBytes = WriteBuffer();
+    for (final plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
+
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: image.planes[0].bytesPerRow,
+      ),
+    );
+  }
+
+  Future<void> _processImageWithTimeout(
+    CameraImage image,
+    Duration timeout,
+  ) async {
+    if (image.planes.isEmpty) return;
+
+    final inputImage = _inputImageFromCameraImage(image);
+    if (inputImage == null) return;
+
+    final faces = await _faceDetector!
+        .processImage(inputImage)
+        .timeout(timeout);
+
+    // Resetear contador de timeouts en procesamiento exitoso
+    _consecutiveTimeouts = 0;
+
+    // --- OPTIMIZACIÓN DE REDIBUJADO ---
+    // Solo hacer setState si algo cambió para evitar "ciclado" excesivo en logs
+    bool newFaceDetected = faces.isNotEmpty;
+    String newError = "";
+
+    if (faces.length > 1) {
+      newError = "Solo una persona permitida";
+    } else if (faces.isEmpty) {
+      newError = "Buscando rostro...";
+    } else {
+      newError = "";
+    }
+
+    // Detectar cambios antes de redibujar
+    if (mounted &&
+        (_isFaceDetected != newFaceDetected || _errorMessage != newError)) {
+      setState(() {
+        _isFaceDetected = newFaceDetected;
+        _errorMessage = newError;
+
+        // Si hay más de una cara, resetear condición aquí
+        if (faces.length > 1) _isConditionMet = false;
+      });
+      if (faces.length > 1) _resetStepTimer();
+    }
+
+    if (faces.length == 1) {
+      _analyzeFace(faces.first, image.width.toDouble());
+    }
+  }
+
+  void _resetStepTimer() {
+    if (_stepTimer != null) {
+      _stepTimer!.cancel();
+      _stepTimer = null;
+    }
+    if (mounted) {
+      setState(() {
+        _stepProgress = 0.0;
+        _isConditionMet = false;
+      });
+    }
+  }
+
+  void _startStepTimer(VoidCallback onComplete) {
+    if (_stepTimer != null) return;
+
+    const duration = Duration(milliseconds: 50);
+    int elapsed = 0;
+    const total = 2000; // 2 segundos para dar tiempo prudente de detección
+
+    _stepTimer = Timer.periodic(duration, (timer) {
+      elapsed += 50;
+      if (mounted) {
+        setState(() {
+          _stepProgress = elapsed / total;
+        });
+      }
+
+      if (elapsed >= total) {
+        timer.cancel();
+        _stepTimer = null;
+        // Capturar foto antes de cambiar de paso
+        _capturePhoto().then((_) {
+          onComplete();
+        });
+      }
+    });
+  }
+
+  Future<void> _capturePhoto() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+
+    if (_isCapturing) return;
+    _isCapturing = true;
+
+    try {
+      // Efecto de flash
+      setState(() {
+        _showFlash = true;
+      });
+      _flashController.forward().then((_) {
+        _flashController.reverse();
+      });
+
+      // Capturar foto solo si no hemos alcanzado el límite (1 foto de frente)
+      if (_capturedPhotos.isEmpty) {
+        final photo = await _cameraController!.takePicture();
+        _capturedPhotos.add(photo);
+        debugPrint("✅ Foto de frente capturada");
+      } else {
+        // Ya tenemos la foto, no capturar más
+        debugPrint("Límite de 1 foto alcanzado");
+        return;
+      }
+
+      // Animación de éxito mejorada con Rive
+      setState(() {
+        _showSuccessAnimation = true;
+      });
+
+      // Iniciar animación Rive
+      if (_checkAnimationController != null) {
+        _checkAnimationController!.isActive = true;
+      }
+
+      // Iniciar animación de escala mejorada
+      _successController.forward().then((_) {
+        // Mantener la animación visible por más tiempo
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            _successController.reverse().then((_) {
+              if (mounted) {
+                setState(() {
+                  _showSuccessAnimation = false;
+                });
+                _successController.reset();
+                if (_checkAnimationController != null) {
+                  _checkAnimationController!.isActive = false;
+                }
+              }
+            });
+          }
+        });
+      });
+
+      // Vibración de feedback
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      debugPrint("Error capturando foto: $e");
+    } finally {
+      _isCapturing = false;
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) {
+          setState(() {
+            _showFlash = false;
+          });
+        }
+      });
+    }
+  }
+
+  void _analyzeFace(Face face, double frameWidth) {
+    if (_currentStep == FaceStep.completed) return;
+
+    // OPTIMIZACIÓN: Solo validar frente (sin rotación lateral)
+    final double? rotZ = face.headEulerAngleZ; // Inclinación
+
+    // Validación de Distancia (basada en el ancho del rostro relativo al frame)
+    final faceWidthRatio = face.boundingBox.width / frameWidth;
+    bool isDistanceOk = faceWidthRatio > 0.35 && faceWidthRatio < 0.75;
+
+    // Validación de Inclinación: Cabeza recta
+    bool isHeadStraight = rotZ != null && rotZ.abs() < 15;
+
+    bool currentCondition = false;
+    String validationError = "";
+
+    if (!isDistanceOk) {
+      validationError = faceWidthRatio < 0.35
+          ? "Acércate más a la cámara"
+          : "Aléjate un poco";
+    } else if (!isHeadStraight) {
+      validationError = "Mantén tu cabeza derecha";
+    } else {
+      // Solo validar que esté centrado y recto (sin validar rotación lateral)
+      switch (_currentStep) {
+        case FaceStep.center:
+          currentCondition = true; // Solo frente, sin validar rotY
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _errorMessage = validationError;
+      });
+    }
+
+    if (currentCondition && validationError.isEmpty) {
+      if (!_isConditionMet) {
+        setState(() => _isConditionMet = true);
+      }
+      _startStepTimer(() {
+        // La foto ya se capturó en _startStepTimer
+        setState(() {
+          switch (_currentStep) {
+            case FaceStep.center:
+              _progress = 1.0;
+              _currentStep = FaceStep.completed;
+              _instruction = "¡Verificación Completada!";
+              _finishVerification();
+              break;
+            default:
+              break;
+          }
+          _stepProgress = 0.0;
+          _isConditionMet = false;
+        });
+      });
+    } else {
+      if (_isConditionMet) {
+        setState(() => _isConditionMet = false);
+      }
+      _resetStepTimer();
+    }
+  }
+
+  void _finishVerification() {
+    // Capturar la última foto solo si no hemos alcanzado el límite (1 foto de frente)
+    if (_capturedPhotos.isEmpty) {
+      _capturePhoto();
+    }
+
+    // Procesar la foto capturada como 4x4 con fondo plomo y guardarla para todo el flujo
+    _processAndStoreProfilePhoto();
+
+    // Animación de éxito final con Confeti Rive
+    if (_confettiController != null) {
+      _confettiController!.isActive = true;
+    }
+
+    HapticFeedback.heavyImpact();
+
+    // Esperar un poco para mostrar la animación de éxito
+    Timer(const Duration(milliseconds: 2500), () async {
+      if (!mounted) return;
+
+      // Obtener datos OCR (de Widget o de localStorage)
+      Map<String, String>? data;
+      if (widget.ocrData != null) {
+        data = Map<String, String>.from(widget.ocrData!);
+      } else {
+        // Intentar obtener de localStorage si no vienen en Widget
+        final pendingData = await getPendingOcrData();
+        if (pendingData != null) {
+          data = Map<String, String>.from(
+            pendingData.map((key, value) => MapEntry(key, value.toString())),
+          );
+        }
+      }
+
+      // Validación final: mostrar advertencia si faltan datos críticos pero permitir continuar
+      if (data != null) {
+        final ci = data['ci'] ?? '';
+        final nombres = data['nombres'] ?? '';
+
+        if (ci.isEmpty || nombres.isEmpty) {
+          debugPrint('⚠️ Advertencia: Algunos datos del OCR están vacíos');
+          debugPrint('   CI: ${ci.isEmpty ? "FALTA" : "OK"}');
+          debugPrint('   Nombres: ${nombres.isEmpty ? "FALTA" : "OK"}');
+          // Mostrar mensaje informativo pero permitir continuar
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  ci.isEmpty && nombres.isEmpty
+                      ? 'Algunos datos no se detectaron. Podrás completarlos en el formulario.'
+                      : ci.isEmpty
+                      ? 'El CI no se detectó. Podrás ingresarlo manualmente.'
+                      : 'Los nombres no se detectaron. Podrás ingresarlos manualmente.',
+                ),
+                backgroundColor: Colors.orangeAccent,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+
+        // Pasar todos los datos al formulario de registro (aunque estén vacíos)
+        if (mounted) {
+          context.push('/registration-form', extra: data);
+        }
+      } else {
+        // Si no hay datos, crear estructura vacía y continuar
+        debugPrint(
+          '⚠️ No se encontraron datos OCR, continuando con datos vacíos',
+        );
+        if (mounted) {
+          context.push(
+            '/registration-form',
+            extra: {
+              'nombres': '',
+              'apellidos': '',
+              'ci': '',
+              'ciFromInitial': 'false',
+              'fechaEmision': '',
+              'fechaExpiracion': '',
+              'combinedCiPath': '',
+            },
+          );
+        }
+      }
+    });
+  }
+
+  void _stopCameraStream() {
+    debugPrint("🛑 Deteniendo stream de cámara por timeouts excesivos");
+    _cameraController?.stopImageStream();
+    _isProcessingPaused = true;
+    _consecutiveTimeouts = 0; // Reset para posible reinicio manual
+  }
+
+  void _safeStopCamera(String message) {
+    try {
+      _cameraController?.stopImageStream();
+      _cameraController?.dispose();
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.orangeAccent),
+      );
+      // Volver a la pantalla anterior en vez de reiniciar al inicio
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  Future<void> _processAndStoreProfilePhoto() async {
+    try {
+      if (_capturedPhotos.isEmpty) return;
+      final file = File(_capturedPhotos.first.path);
+      if (!await file.exists()) return;
+
+      // VALIDACIÓN CON GEMINI AI antes de procesar
+      debugPrint("🤖 Validando foto con Gemini AI...");
+      final validacion = await ServicioValidacionFacialGemini.validarFotoFacial(
+        file,
+      );
+
+      if (validacion != null && !validacion.esValida) {
+        // La foto NO cumple los requisitos
+        debugPrint("❌ Foto rechazada por Gemini: ${validacion.mensaje}");
+
+        if (!mounted) return;
+
+        // Mostrar diálogo con los problemas detectados
+        final retry = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange[700],
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Foto no válida',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'La foto capturada no cumple con los requisitos:',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!validacion.esDeFrente)
+                        _buildValidationItem(
+                          Icons.face,
+                          'Rostro debe estar de frente',
+                          false,
+                        ),
+                      if (!validacion.fondoPlomo)
+                        _buildValidationItem(
+                          Icons.wallpaper,
+                          'Fondo debe ser gris/plomo',
+                          false,
+                        ),
+                      if (!validacion.esNitida)
+                        _buildValidationItem(
+                          Icons.hd,
+                          'Imagen debe ser nítida',
+                          false,
+                        ),
+                      if (!validacion.soloUnaPersona)
+                        _buildValidationItem(
+                          Icons.person,
+                          'Solo una persona en la foto',
+                          false,
+                        ),
+                    ],
+                  ),
+                ),
+                if (validacion.mensaje.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    validacion.mensaje,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[700],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF305BA4),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Icon(Icons.camera_alt, size: 20),
+                label: const Text(
+                  'Tomar otra foto',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (retry == true && mounted) {
+          // Limpiar foto capturada y reiniciar
+          _capturedPhotos.clear();
+          setState(() {
+            _currentStep = FaceStep.center;
+            _progress = 0.0;
+            _instruction = "Centra tu rostro en el círculo";
+            _isConditionMet = false;
+            _stepProgress = 0.0;
+          });
+          return;
+        } else {
+          // Usuario canceló, volver atrás
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+          return;
+        }
+      }
+
+      // Foto válida, continuar con el procesamiento
+      debugPrint("✅ Foto validada por Gemini AI");
+
+      // ONNX deshabilitado en el flujo de registro — evita crash en Android 14+
+      final processed = await ProfileImageProcessorService.processProfileImage(
+        file,
+        isFirstPhoto: true,
+        removerFondo: false,
+      );
+      final toSave = processed ?? file;
+      final savedPath = await LocalStorageService.saveProfileImage(toSave);
+      if (savedPath == null) return;
+
+      final current =
+          await LocalStorageService.getParticipantDocumentsData() ??
+          <String, dynamic>{};
+      current['profile_photo_path'] = savedPath;
+      await LocalStorageService.saveParticipantDocumentsData(current);
+      debugPrint("✅ Foto 4x4 (rostro) guardada en $savedPath");
+    } catch (e) {
+      debugPrint("Error guardando foto 4x4 desde rostro: $e");
+    }
+  }
+
+  Widget _buildValidationItem(IconData icon, String text, bool isValid) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            isValid ? Icons.check_circle : Icons.cancel,
+            color: isValid ? Colors.green : Colors.red[700],
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: isValid ? Colors.green[800] : Colors.red[800],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _successController.dispose();
+    _flashController.dispose();
+    _headRotationController.dispose();
+    _arrowController.dispose();
+    _checkAnimationController?.dispose();
+    _confettiController?.dispose();
+    _shapesController?.dispose();
+    _cameraController?.dispose();
+    _faceDetector?.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryBlue = Color(0xFF305BA4);
+    const Color whiteBg = Colors.black;
+    const Color textDark = Colors.white;
+
+    // Hacer el layout responsive
+    final PantallaSize = MediaQuery.of(context).size;
+    final PantallaWidth = PantallaSize.width;
+    final PantallaHeight = PantallaSize.height;
+    final isSmallPantalla = PantallaHeight < 700;
+
+    // Tamaños responsive
+    final previewWidth = (PantallaWidth * 0.7).clamp(200.0, 280.0);
+    final previewHeight = (previewWidth * 1.3).clamp(260.0, 360.0);
+    final fontSize = isSmallPantalla ? 16.0 : 20.0;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Fondo Rive Animado (Ambiental)
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.15,
+              child: RiveAnimation.asset(
+                'assets/RiveAssets/shapes.riv',
+                fit: BoxFit.cover,
+                controllers: [_shapesController!],
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.black.withOpacity(0.8),
+                  Colors.black.withOpacity(0.9),
+                  primaryBlue.withOpacity(0.1),
+                  primaryBlue.withOpacity(0.15),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close, color: textDark),
+                          onPressed: () => context.pop(),
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'Verificación de Identidad',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textDark,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Mensaje de preparación durante el delay inicial
+                  if (!_isInitialDelayComplete)
+                    FadeInDown(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: primaryBlue.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  primaryBlue,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Preparando cámara...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Cabeza animada arriba que indica la dirección
+                  if (_isInitialDelayComplete)
+                    FadeInDown(
+                      child: _AnimatedHeadIndicatorWidget(
+                        currentStep: _currentStep,
+                        headRotationAnimation: _headRotationAnimation,
+                        size: isSmallPantalla ? 50.0 : 60.0,
+                      ),
+                    ),
+
+                  SizedBox(height: _isInitialDelayComplete ? 20 : 10),
+
+                  FadeInDown(
+                    child: Column(
+                      children: [
+                        // Instrucción con animación
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          transitionBuilder:
+                              (Widget child, Animation<double> animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: const Offset(0, 0.2),
+                                      end: Offset.zero,
+                                    ).animate(animation),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                          child: Text(
+                            _instruction,
+                            key: ValueKey(_instruction),
+                            style: TextStyle(
+                              fontSize: fontSize + 2,
+                              fontWeight: FontWeight.w800,
+                              color: _isConditionMet ? Colors.green : textDark,
+                              letterSpacing: -0.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Contador de fotos capturadas
+                        if (_capturedPhotos.isNotEmpty)
+                          FadeIn(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.camera_alt,
+                                    size: 14,
+                                    color: Colors.green,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${_capturedPhotos.length}/1 foto',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        const SizedBox(height: 8),
+
+                        // Indicador de Rostro Detectado con animación
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Row(
+                            key: ValueKey(_isFaceDetected),
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                child: Icon(
+                                  _isFaceDetected
+                                      ? Icons.face
+                                      : Icons.face_outlined,
+                                  size: 16,
+                                  color: _isFaceDetected
+                                      ? Colors.green
+                                      : Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _errorMessage.isNotEmpty
+                                    ? _errorMessage
+                                    : (_isFaceDetected
+                                          ? "Rostro detectado"
+                                          : "Buscando rostro..."),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      _errorMessage.contains("Solo") ||
+                                          _errorMessage.contains("Acércate") ||
+                                          _errorMessage.contains("Aléjate") ||
+                                          _errorMessage.contains("Mantén")
+                                      ? Colors.orangeAccent
+                                      : (_isFaceDetected
+                                            ? Colors.green
+                                            : Colors.grey),
+                                  fontWeight: _errorMessage.isNotEmpty
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Barra de progreso del paso actual
+                        if (_isConditionMet && _stepProgress > 0)
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            width: 200,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
+                              color: Colors.grey[200],
+                            ),
+                            child: FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: _stepProgress,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(2),
+                                  gradient: LinearGradient(
+                                    colors: [Colors.green, Colors.greenAccent],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: isSmallPantalla ? 20 : 40),
+
+                  // Radar / Camera Preview (FORMA DE CARA HUMANA)
+                  Expanded(
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Efecto de flash cuando se captura
+                          AnimatedBuilder(
+                            animation: _flashController,
+                            builder: (context, hijo) {
+                              return _showFlash
+                                  ? Container(
+                                      width: previewWidth + 20,
+                                      height: previewHeight + 20,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(
+                                          _flashController.value * 0.8,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink();
+                            },
+                          ),
+
+                          // Animación de éxito mejorada con Rive
+                          AnimatedBuilder(
+                            animation: _successScaleAnimation,
+                            builder: (context, hijo) {
+                              return _showSuccessAnimation
+                                  ? Transform.scale(
+                                      scale: _successScaleAnimation.value,
+                                      child: Container(
+                                        width: 120,
+                                        height: 120,
+                                        decoration: BoxDecoration(
+                                          gradient: RadialGradient(
+                                            colors: [
+                                              Colors.green.withOpacity(0.9),
+                                              Colors.greenAccent.withOpacity(
+                                                0.7,
+                                              ),
+                                            ],
+                                          ),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.green.withOpacity(
+                                                0.5,
+                                              ),
+                                              blurRadius: 20,
+                                              spreadRadius: 5,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            // Animación Rive de check
+                                            SizedBox(
+                                              width: 80,
+                                              height: 80,
+                                              child: RiveAnimation.asset(
+                                                'assets/RiveAssets/check.riv',
+                                                controllers: [
+                                                  ?_checkAnimationController,
+                                                ],
+                                                fit: BoxFit.contain,
+                                              ),
+                                            ),
+                                            // Fallback con icono si Rive no carga
+                                            if (_checkAnimationController ==
+                                                null)
+                                              const Icon(
+                                                Icons.check_circle,
+                                                color: Colors.white,
+                                                size: 70,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink();
+                            },
+                          ),
+
+                          // Radar Oval Background con efecto Glassmorphism
+                          AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, hijo) {
+                              return Transform.scale(
+                                scale: _isConditionMet
+                                    ? _pulseAnimation.value
+                                    : 1.0,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  width: previewWidth,
+                                  height: previewHeight,
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.all(
+                                      Radius.elliptical(130, 170),
+                                    ),
+                                    border: Border.all(
+                                      color: _isConditionMet
+                                          ? Colors.green.withOpacity(0.8)
+                                          : primaryBlue.withOpacity(0.15),
+                                      width: _isConditionMet ? 8 : 4,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            (_isConditionMet
+                                                    ? Colors.green
+                                                    : primaryBlue)
+                                                .withOpacity(0.1),
+                                        blurRadius: 30,
+                                        spreadRadius: 5,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // Progress Indicators (OVALADOS con CustomPainter)
+                          SizedBox(
+                            width: previewWidth + 10,
+                            height: previewHeight + 10,
+                            child: CustomPaint(
+                              painter: _OvalProgressPainter(
+                                progress: _progress,
+                                stepProgress: _stepProgress,
+                                color: primaryBlue,
+                                accentColor: _isConditionMet
+                                    ? Colors.greenAccent
+                                    : primaryBlue,
+                              ),
+                            ),
+                          ),
+
+                          // Camera Preview (CLIP OVALADO) con animación mejorada
+                          ClipPath(
+                            clipper: _FaceClipper(),
+                            child: AnimatedBuilder(
+                              animation: _pulseAnimation,
+                              builder: (context, hijo) {
+                                return Transform.scale(
+                                  scale: _isConditionMet
+                                      ? 1.0 +
+                                            (_pulseAnimation.value - 1.0) * 0.05
+                                      : 1.0,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    width: previewWidth - 10,
+                                    height: previewHeight - 10,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black,
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: _isConditionMet
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.green.withOpacity(
+                                                  0.3,
+                                                ),
+                                                blurRadius: 15,
+                                                spreadRadius: 2,
+                                              ),
+                                            ]
+                                          : [],
+                                    ),
+                                    child:
+                                        (_cameraController != null &&
+                                            _cameraController!
+                                                .value
+                                                .isInitialized)
+                                        ? Center(
+                                            child: AspectRatio(
+                                              aspectRatio:
+                                                  1 / 1.32, // Ratio ovoidal
+                                              child: FittedBox(
+                                                fit: BoxFit.cover,
+                                                child: SizedBox(
+                                                  width:
+                                                      _cameraController!
+                                                          .value
+                                                          .previewSize
+                                                          ?.height ??
+                                                      1,
+                                                  height:
+                                                      _cameraController!
+                                                          .value
+                                                          .previewSize
+                                                          ?.width ??
+                                                      1,
+                                                  child: CameraPreview(
+                                                    _cameraController!,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Container(color: Colors.black12),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          // Efecto de partículas cuando se completa un paso
+                          if (_showSuccessAnimation)
+                            ...List.generate(8, (index) {
+                              return _ParticleWidget(
+                                index: index,
+                                controller: _successController,
+                              );
+                            }),
+
+                          // Overlay con transparencia cuando no se cumple la condición
+                          if (!_isConditionMet &&
+                              _currentStep != FaceStep.completed)
+                            ClipPath(
+                              clipper: _FaceClipper(),
+                              child: Container(
+                                width: previewWidth - 10,
+                                height: previewHeight - 10,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.4),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                            ),
+
+                          // Scanning Effect (Scanner line)
+                          if (_currentStep != FaceStep.completed &&
+                              !_isConditionMet)
+                            _ScannerLineAnimation(
+                              width: previewWidth - 10,
+                              height: previewHeight - 10,
+                            ),
+
+                          // Flechas dinámicas que indican la dirección
+                          if (_currentStep != FaceStep.completed &&
+                              !_isConditionMet)
+                            _DirectionalArrowsWidget(
+                              currentStep: _currentStep,
+                              arrowAnimation: _arrowAnimation,
+                              isConditionMet: _isConditionMet,
+                              previewWidth: previewWidth,
+                              previewHeight: previewHeight,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Botón de captura manual - aparece cuando la detección automática falla
+                  if (_isInitialDelayComplete && !_showSuccessAnimation)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: PantallaWidth * 0.08,
+                        vertical: 8,
+                      ),
+                      child: Column(
+                        children: [
+                          // Botón principal: Tomar foto ahora
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton.icon(
+                              onPressed: _isCapturing
+                                  ? null
+                                  : () async {
+                                      await _capturePhoto();
+                                      _finishVerification();
+                                    },
+                              icon: _isCapturing
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 20,
+                                    ),
+                              label: Text(
+                                _isCapturing
+                                    ? 'Capturando...'
+                                    : 'Tomar foto ahora',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryBlue,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Botón secundario: Continuar sin foto
+                          TextButton(
+                            onPressed: () => _finishVerification(),
+                            child: const Text(
+                              'Continuar sin foto',
+                              style: TextStyle(
+                                color: Color(0xFF666666),
+                                fontSize: 13,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Passos
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: PantallaWidth * 0.1,
+                      vertical: isSmallPantalla ? 20 : 40,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _StepIndicator(
+                          active: _currentStep == FaceStep.center,
+                          done: _currentStep == FaceStep.completed,
+                          label: "Frente",
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: isSmallPantalla ? 10 : 20),
+                ],
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: _currentStep == FaceStep.completed
+                  ? RiveAnimation.asset(
+                      'assets/RiveAssets/confetti.riv',
+                      fit: BoxFit.cover,
+                      controllers: [_confettiController!],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepIndicator extends StatefulWidget {
+  final bool active;
+  final bool done;
+  final String label;
+
+  const _StepIndicator({
+    required this.active,
+    required this.done,
+    required this.label,
+  });
+
+  @override
+  State<_StepIndicator> createState() => _StepIndicatorState();
+}
+
+class _StepIndicatorState extends State<_StepIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  bool _wasDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
+    _wasDone = widget.done;
+  }
+
+  @override
+  void didUpdateWidget(_StepIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.done && !_wasDone) {
+      _animationController.forward().then((_) {
+        _animationController.reverse();
+      });
+      _wasDone = true;
+    } else if (!widget.done) {
+      _wasDone = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryBlue = Color(0xFF305BA4);
+    return Column(
+      children: [
+        AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, hijo) {
+            return Transform.scale(
+              scale: widget.done && widget.active ? _scaleAnimation.value : 1.0,
+              child: Container(
+                decoration: widget.done
+                    ? BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.5),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      )
+                    : null,
+                child: Icon(
+                  widget.done ? Icons.check_circle : Icons.circle_outlined,
+                  color: widget.done
+                      ? Colors.green
+                      : (widget.active ? primaryBlue : Colors.grey),
+                  size: 28,
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 4),
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: widget.active ? FontWeight.bold : FontWeight.normal,
+            color: widget.active
+                ? (widget.done ? Colors.green : primaryBlue)
+                : Colors.grey,
+          ),
+          child: Text(widget.label),
+        ),
+      ],
+    );
+  }
+}
+
+class _FaceClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    return _getHeadPath(size);
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class _OvalProgressPainter extends CustomPainter {
+  final double progress;
+  final double stepProgress;
+  final Color color;
+  final Color accentColor;
+
+  _OvalProgressPainter({
+    required this.progress,
+    required this.stepProgress,
+    required this.color,
+    required this.accentColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Usamos la misma ruta para el contorno
+    Path path = _getHeadPath(size);
+
+    // 1. Sombras y brillos externos (Efecto cristal)
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white.withOpacity(0.05)
+        ..style = PaintingStyle.fill,
+    );
+
+    // 2. Borde base (Gris elegante)
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+
+    // 3. Guía visual "Dashed" para indicar dónde poner el rostro (Visible si no hay progreso de paso)
+    if (stepProgress == 0 && progress < 1.0) {
+      _drawDashedPath(
+        canvas,
+        path,
+        Paint()
+          ..color = Colors.white.withOpacity(0.5)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
+    //Fondo aazul parametrizado
+    final pathMetrics = path.computeMetrics();
+    for (final metric in pathMetrics) {
+      // 4. Progreso General (Azul suave)
+      final extractGeneral = metric.extractPath(0, metric.length * progress);
+      canvas.drawPath(
+        extractGeneral,
+        Paint()
+          ..color = color.withOpacity(0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..strokeCap = StrokeCap.round,
+      );
+
+      // 5. Progreso de Estabilidad (Verde neón/Azul brillante)
+      if (stepProgress > 0) {
+        final extractStep = metric.extractPath(0, metric.length * stepProgress);
+        canvas.drawPath(
+          extractStep,
+          Paint()
+            ..color = accentColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 12
+            ..strokeCap = StrokeCap.round
+            ..maskFilter = const MaskFilter.blur(
+              BlurStyle.solid,
+              4,
+            ), // Efecto de brillo
+        );
+      }
+    }
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    Path dashPath = Path();
+    double dashWidth = 10.0;
+    double dashSpace = 5.0;
+    double distance = 0.0;
+    for (final pathMetric in path.computeMetrics()) {
+      while (distance < pathMetric.length) {
+        dashPath.addPath(
+          pathMetric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_OvalProgressPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.stepProgress != stepProgress;
+}
+
+// ... _ParticleWidget ...
+class _ParticleWidget extends StatelessWidget {
+  final int index;
+  final AnimationController controller;
+
+  const _ParticleWidget({required this.index, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = [
+      Colors.green,
+      Colors.greenAccent,
+      Colors.lightGreen,
+      Colors.white,
+    ];
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, hijo) {
+        final angle = (index * 45.0) * (math.pi / 180.0);
+        final distance = 120.0 * controller.value;
+        final x = distance * math.cos(angle);
+        final y = distance * math.sin(angle);
+        final opacity = 1.0 - controller.value;
+        final scale = 1.2 - controller.value * 1.0;
+
+        return Positioned(
+          left: 140 + x - 5,
+          top: 180 + y - 5,
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: opacity,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: colors[index % colors.length],
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ... _ScannerLineAnimation ...
+class _ScannerLineAnimation extends StatefulWidget {
+  final double width;
+  final double height;
+
+  const _ScannerLineAnimation({required this.width, required this.height});
+
+  @override
+  State<_ScannerLineAnimation> createState() => _ScannerLineAnimationState();
+}
+
+class _ScannerLineAnimationState extends State<_ScannerLineAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, hijo) {
+        return Positioned(
+          top: widget.height * _controller.value,
+          child: Opacity(
+            opacity: 0.8,
+            child: Container(
+              width: widget.width,
+              height: 4,
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF4FC3F7).withOpacity(0.6),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFF4FC3F7),
+                    const Color(0xFF305BA4),
+                    const Color(0xFF4FC3F7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ... _AnimatedHeadIndicatorWidget ...
+class _AnimatedHeadIndicatorWidget extends StatelessWidget {
+  final FaceStep currentStep;
+  final Animation<double> headRotationAnimation;
+  final double size;
+
+  const _AnimatedHeadIndicatorWidget({
+    required this.currentStep,
+    required this.headRotationAnimation,
+    this.size = 60.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    double baseRotation = 0.0;
+    IconData icon = Icons.face;
+    Color color = const Color(0xFF305BA4);
+    Widget? arrowWidget;
+
+    switch (currentStep) {
+      case FaceStep.center:
+        baseRotation = 0.0;
+        icon = Icons.face_retouching_natural;
+        color = const Color(0xFF305BA4);
+        break;
+      case FaceStep.completed:
+        baseRotation = 0.0;
+        icon = Icons.verified_user_rounded;
+        color = Colors.green;
+        break;
+    }
+
+    return AnimatedBuilder(
+      animation: headRotationAnimation,
+      builder: (context, hijo) {
+        final dynamicRotation =
+            baseRotation + (headRotationAnimation.value * 0.4);
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Transform.rotate(
+              angle: dynamicRotation,
+              child: Container(
+                padding: EdgeInsets.all(size * 0.25),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.5), width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Icon(icon, size: size, color: color),
+              ),
+            ),
+            ?arrowWidget,
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ... _DirectionalArrowsWidget ...
+class _DirectionalArrowsWidget extends StatelessWidget {
+  final FaceStep currentStep;
+  final Animation<double> arrowAnimation;
+  final bool isConditionMet;
+  final double previewWidth;
+  final double previewHeight;
+
+  const _DirectionalArrowsWidget({
+    required this.currentStep,
+    required this.arrowAnimation,
+    required this.isConditionMet,
+    required this.previewWidth,
+    required this.previewHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (currentStep == FaceStep.completed || isConditionMet) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedBuilder(
+      animation: arrowAnimation,
+      builder: (context, hijo) {
+        final offset = arrowAnimation.value * 15;
+        final centerY = previewHeight / 2;
+
+        switch (currentStep) {
+          default:
+            return const SizedBox.shrink();
+        }
+      },
+    );
+  }
+}
+
+//SECCION DE FUNCIONES DE LA CARA AUXILIARES
+Path _getHeadPath(Size size) {
+  Path path = Path();
+  double w = size.width;
+  double h = size.height;
+
+  // Silueta de rostro más definida (Hombros + Cabeza mejorada)
+  path.moveTo(w * 0.5, h * 0.05); // Frente (Top)
+
+  // Lado Derecho
+  path.cubicTo(
+    w * 0.9,
+    h * 0.05, // P1: Esquina superior derecha curva
+    w * 0.95,
+    h * 0.3, // P2: Lado derecho de la cara
+    w * 0.92,
+    h * 0.55, // Destino: Mandíbula/Mejilla derecha
+  );
+  path.quadraticBezierTo(
+    w * 0.9,
+    h * 0.75, // Control: Inclinación hacia cuello
+    w * 0.7,
+    h * 0.85, // Destino: Inicio cuello derecho
+  );
+
+  // Hombro Derecho (apertura)
+  path.quadraticBezierTo(w * 0.85, h * 0.95, w * 0.9, h * 1.0);
+
+  // Base (cortada por el frame)
+  path.lineTo(w * 0.1, h * 1.0);
+
+  // Hombro Izquierdo (cierre)
+  path.quadraticBezierTo(
+    w * 0.15,
+    h * 0.95,
+    w * 0.3,
+    h * 0.85, // Inicio cuello izquierdo
+  );
+
+  // Lado Izquierdo
+  path.quadraticBezierTo(
+    w * 0.1,
+    h * 0.75, // Control
+    w * 0.08,
+    h * 0.55, // Destino: Mandíbula/Mejilla izquierda
+  );
+
+  path.cubicTo(
+    w * 0.05,
+    h * 0.3, // P1
+    w * 0.1,
+    h * 0.05, // P2
+    w * 0.5,
+    h * 0.05, // Cierre en Frente
+  );
+
+  path.close();
+  return path;
+}
