@@ -133,13 +133,17 @@ class _CrearUsuarioDialogState extends State<CrearUsuarioDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _selectedRol,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Rol',
                     prefixIcon: Icon(Icons.admin_panel_settings_outlined),
                   ),
                   items: widget.roles.map((r) => DropdownMenuItem(
                     value: r,
-                    child: Text(_getRolDisplayName(r)),
+                    child: Text(
+                      _getRolDisplayName(r),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   )).toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => _selectedRol = v);
@@ -148,12 +152,16 @@ class _CrearUsuarioDialogState extends State<CrearUsuarioDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int?>(
                   value: _selectedAreaId,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Área (opcional)',
                     prefixIcon: Icon(Icons.business_outlined),
                   ),
                   items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('Sin área')),
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Sin área', overflow: TextOverflow.ellipsis),
+                    ),
                     ...widget.areas
                         .where((a) {
                           final nombre = a.nombre.toLowerCase();
@@ -170,7 +178,10 @@ class _CrearUsuarioDialogState extends State<CrearUsuarioDialog> {
                           }
                           return DropdownMenuItem<int?>(
                             value: a.id,
-                            child: Text(nombre),
+                            child: Text(
+                              nombre,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         }),
                   ],
@@ -182,6 +193,7 @@ class _CrearUsuarioDialogState extends State<CrearUsuarioDialog> {
                   onChanged: (v) => setState(() => _activo = v),
                   title: const Text('Activo'),
                   contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
                 ),
               ],
             ),
@@ -330,13 +342,17 @@ class _EditarUsuarioDialogState extends State<EditarUsuarioDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _selectedRol,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Rol',
                     prefixIcon: Icon(Icons.admin_panel_settings_outlined),
                   ),
                   items: widget.roles.map((r) => DropdownMenuItem(
                     value: r,
-                    child: Text(_getRolDisplayName(r)),
+                    child: Text(
+                      _getRolDisplayName(r),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   )).toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => _selectedRol = v);
@@ -345,12 +361,16 @@ class _EditarUsuarioDialogState extends State<EditarUsuarioDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int?>(
                   value: _selectedAreaId,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Área (opcional)',
                     prefixIcon: Icon(Icons.business_outlined),
                   ),
                   items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('Sin área')),
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Sin área', overflow: TextOverflow.ellipsis),
+                    ),
                     ...widget.areas
                         .where((a) {
                           final nombre = a.nombre.toLowerCase();
@@ -365,7 +385,10 @@ class _EditarUsuarioDialogState extends State<EditarUsuarioDialog> {
                           }
                           return DropdownMenuItem<int?>(
                             value: a.id,
-                            child: Text(nombre),
+                            child: Text(
+                              nombre,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         }),
                   ],

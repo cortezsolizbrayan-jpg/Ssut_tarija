@@ -716,12 +716,30 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         children: [
           Icon(Icons.folder_rounded, color: Colors.blue.shade700, size: 28),
           const SizedBox(width: 12),
-          Text(
-            'Carpetas',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
+          Expanded(
+            child: Text(
+              'Carpetas',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
+          ),
+          if (_gestionFilterCarpetas != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Chip(
+                label: Text('Gestión $_gestionFilterCarpetas'),
+                onDeleted: () => setState(() => _gestionFilterCarpetas = null),
+              ),
+            ),
+          IconButton(
+            onPressed: () => _abrirFiltroCarpetas(theme),
+            icon: Icon(
+              Icons.filter_list_rounded,
+              color: theme.colorScheme.primary,
+            ),
+            tooltip: 'Filtrar por gestión',
           ),
         ],
       ),
@@ -1777,17 +1795,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
               ],
             ),
           ),
-          const Spacer(),
-          IconButton.filledTonal(
-            onPressed: () => _abrirBusquedaAvanzada(theme),
-            icon: const Icon(Icons.tune_rounded, size: 20),
-            tooltip: 'Filtros avanzados',
-            style: IconButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -2115,8 +2122,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              _buildFilterButton(theme),
+              if (_carpetaSeleccionada != null) ...[
+                const SizedBox(width: 12),
+                _buildFilterButton(theme),
+              ],
             ],
           ),
         ],
@@ -2152,11 +2161,9 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       _numeroComprobanteFilter.trim().isNotEmpty ||
       _fechaDesdeFilter != null ||
       _fechaHastaFilter != null ||
-      _responsableIdFilter != null ||
-      _codigoQrFilter.trim().isNotEmpty;
+      _responsableIdFilter != null;
 
   void _abrirBusquedaAvanzada(ThemeData theme) {
-    _codigoQrFilterController.text = _codigoQrFilter;
     _numeroComprobanteFilterController.text = _numeroComprobanteFilter;
     showDialog(
       context: context,
@@ -2171,20 +2178,17 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                 fechaDesde: _fechaDesdeFilter,
                 fechaHasta: _fechaHastaFilter,
                 responsableId: _responsableIdFilter,
-                codigoQrController: _codigoQrFilterController,
                 onAplicar: (
                   numeroComprobante,
                   fechaDesde,
                   fechaHasta,
                   responsableId,
-                  codigoQr,
                 ) async {
                   setState(() {
                     _numeroComprobanteFilter = numeroComprobante;
                     _fechaDesdeFilter = fechaDesde;
                     _fechaHastaFilter = fechaHasta;
                     _responsableIdFilter = responsableId;
-                    _codigoQrFilter = codigoQr;
                   });
                   if (context.mounted) Navigator.pop(context);
                   if (context.mounted && _carpetaSeleccionada != null) {
@@ -2199,8 +2203,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                     _fechaDesdeFilter = null;
                     _fechaHastaFilter = null;
                     _responsableIdFilter = null;
-                    _codigoQrFilter = '';
-                    _codigoQrFilterController.clear();
                     _consultaBusqueda = '';
                     _searchController.clear();
                     _filtroSeleccionado = 'todos';
@@ -2218,12 +2220,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
   }
 
   Widget _buildFilterButton(ThemeData theme) {
-    final enVistaCarpetas = _carpetaSeleccionada == null;
-    final tieneFiltro =
-        enVistaCarpetas
-            ? (_gestionFilterCarpetas != null ||
-                _consultaBusqueda.trim().isNotEmpty)
-            : _tieneFiltrosAvanzados;
+    final tieneFiltro = _tieneFiltrosAvanzados;
     return Container(
       height: 54,
       width: 54,
@@ -2236,13 +2233,8 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       ),
       child: IconButton(
         icon: Icon(Icons.tune_rounded, color: theme.colorScheme.primary),
-        onPressed: () {
-          if (enVistaCarpetas) {
-            _abrirFiltroCarpetas(theme);
-          } else {
-            _abrirBusquedaAvanzada(theme);
-          }
-        },
+        onPressed: () => _abrirBusquedaAvanzada(theme),
+        tooltip: 'Búsqueda avanzada',
       ),
     );
   }

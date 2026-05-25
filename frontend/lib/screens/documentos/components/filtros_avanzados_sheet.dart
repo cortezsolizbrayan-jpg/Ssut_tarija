@@ -14,7 +14,6 @@ class FiltrosAvanzadosSheet extends StatefulWidget {
     required this.fechaDesde,
     required this.fechaHasta,
     required this.responsableId,
-    required this.codigoQrController,
     required this.onAplicar,
     required this.onLimpiar,
   });
@@ -24,13 +23,11 @@ class FiltrosAvanzadosSheet extends StatefulWidget {
   final DateTime? fechaDesde;
   final DateTime? fechaHasta;
   final int? responsableId;
-  final TextEditingController codigoQrController;
   final void Function(
     String numeroComprobante,
     DateTime? fechaDesde,
     DateTime? fechaHasta,
     int? responsableId,
-    String codigoQr,
   )
   onAplicar;
   final VoidCallback onLimpiar;
@@ -104,12 +101,14 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                     size: 28,
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'Búsqueda avanzada',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
+                  Expanded(
+                    child: Text(
+                      'Búsqueda avanzada',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
                 ],
@@ -123,7 +122,6 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                 ),
               ),
               const SizedBox(height: 24),
-              // 1. FECHA (desde / hasta)
               Row(
                 children: [
                   Expanded(
@@ -137,15 +135,21 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                             const Duration(days: 365),
                           ),
                         );
-                        if (picked != null && mounted)
+                        if (picked != null && mounted) {
                           setState(() => _fechaDesde = picked);
+                        }
                       },
-                      icon: const Icon(Icons.calendar_today_rounded, size: 20),
+                      icon: Icon(
+                        Icons.calendar_today_rounded,
+                        size: 20,
+                        color: theme.colorScheme.primary,
+                      ),
                       label: Text(
                         _fechaDesde == null
                             ? 'Fecha desde'
                             : _dateFormat.format(_fechaDesde!),
                         style: const TextStyle(fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -167,15 +171,21 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                             const Duration(days: 365),
                           ),
                         );
-                        if (picked != null && mounted)
+                        if (picked != null && mounted) {
                           setState(() => _fechaHasta = picked);
+                        }
                       },
-                      icon: const Icon(Icons.calendar_today_rounded, size: 20),
+                      icon: Icon(
+                        Icons.calendar_today_rounded,
+                        size: 20,
+                        color: theme.colorScheme.primary,
+                      ),
                       label: Text(
                         _fechaHasta == null
                             ? 'Fecha hasta'
                             : _dateFormat.format(_fechaHasta!),
                         style: const TextStyle(fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -188,7 +198,6 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              // 2. RESPONSABLE
               if (_loadingUsuarios)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
@@ -203,9 +212,13 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
               else
                 DropdownButtonFormField<int?>(
                   value: _responsableId,
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: 'Responsable',
-                    prefixIcon: const Icon(Icons.person_outline_rounded),
+                    prefixIcon: Icon(
+                      Icons.person_outline_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -222,20 +235,25 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                     ..._usuarios.map(
                       (u) => DropdownMenuItem<int?>(
                         value: u.id,
-                        child: Text('${u.nombreCompleto} (${u.nombreUsuario})'),
+                        child: Text(
+                          '${u.nombreCompleto} (${u.nombreUsuario})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ],
                   onChanged: (v) => setState(() => _responsableId = v),
                 ),
               const SizedBox(height: 16),
-              // 3. NÚMERO DE COMPROBANTE
               TextFormField(
                 controller: widget.numeroComprobanteController,
                 decoration: InputDecoration(
                   labelText: 'Número de comprobante',
                   hintText: 'Ej: 1, 5, 10',
-                  prefixIcon: const Icon(Icons.numbers_rounded),
+                  prefixIcon: Icon(
+                    Icons.numbers_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -245,27 +263,8 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                   ),
                 ),
                 keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
               ),
-              const SizedBox(height: 16),
-              // Código QR (opcional)
-              TextFormField(
-                controller: widget.codigoQrController,
-                decoration: InputDecoration(
-                  labelText: 'Código QR',
-                  hintText: 'Parte del código QR del documento',
-                  prefixIcon: const Icon(Icons.qr_code_rounded),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
@@ -274,42 +273,41 @@ class _FiltrosAvanzadosSheetState extends State<FiltrosAvanzadosSheet> {
                       icon: const Icon(Icons.clear_all_rounded, size: 20),
                       label: const Text('Limpiar'),
                       style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      widget.onAplicar(
-                        widget.numeroComprobanteController.text.trim(),
-                        _fechaDesde,
-                        _fechaHasta,
-                        _responsableId,
-                        widget.codigoQrController.text.trim(),
-                      );
-                    },
-                    icon: const Icon(Icons.check_rounded, size: 20),
-                    label: const Text('Aplicar filtros'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        widget.onAplicar(
+                          widget.numeroComprobanteController.text.trim(),
+                          _fechaDesde,
+                          _fechaHasta,
+                          _responsableId,
+                        );
+                      },
+                      icon: const Icon(Icons.check_rounded, size: 20),
+                      label: const Text('Aplicar filtros'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

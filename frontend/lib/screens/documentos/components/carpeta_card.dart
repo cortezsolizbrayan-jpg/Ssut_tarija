@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../models/carpeta.dart';
 import '../../../providers/autenticacion_provider.dart';
+import '../../../theme/tema_aplicacion.dart';
 
 class CarpetaCard extends StatelessWidget {
   final Carpeta carpeta;
@@ -32,7 +33,13 @@ class CarpetaCard extends StatelessWidget {
         ? '${carpeta.rangoInicio} - ${carpeta.rangoFin}'
         : null;
 
-    final colorPrimario = (carpeta.tipo?.contains('Ingreso') ?? false) ? Colors.teal : Colors.amber.shade700;
+    final esIngreso = carpeta.tipo?.contains('Ingreso') ?? false;
+    final colorPrimario =
+        esIngreso ? Colors.teal.shade600 : AppTheme.colorPrimario;
+    final esOscuro = theme.brightness == Brightness.dark;
+    final cardColor = esOscuro
+        ? const Color(0xFF1A2F4A)
+        : const Color(0xFFE3F2FD);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -51,8 +58,11 @@ class CarpetaCard extends StatelessWidget {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardColor,
             borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: colorPrimario.withOpacity(esOscuro ? 0.35 : 0.2),
+            ),
             boxShadow: [
               BoxShadow(
                 color: colorPrimario.withOpacity(0.08),
@@ -88,9 +98,12 @@ class CarpetaCard extends StatelessWidget {
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: (carpeta.tipo?.contains('Ingreso') ?? false)
+                                colors: esIngreso
                                     ? [Colors.teal.shade300, Colors.teal.shade500]
-                                    : [Colors.amber.shade400, Colors.orange.shade500],
+                                    : [
+                                        AppTheme.colorPrimario.withOpacity(0.85),
+                                        AppTheme.colorPrimario,
+                                      ],
                               ),
                               borderRadius: BorderRadius.circular(18),
                               boxShadow: [
